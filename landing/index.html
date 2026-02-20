@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Archive Arbitrage — Never Miss an Underpriced Grail</title>
+    <meta name="description" content="Real-time alerts for underpriced archive fashion. AI-powered pricing across Grailed, eBay, Poshmark & more. 270+ brands tracked.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --bg-card: #111111;
+            --bg-card-hover: #1a1a1a;
+            --border: #222222;
+            --text: #e5e5e5;
+            --text-muted: #737373;
+            --accent: #f5f5f5;
+            --gold: #d4a853;
+            --fire: #ef4444;
+            --green: #22c55e;
+            --blue: #3b82f6;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* NAV */
+        nav {
+            padding: 20px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        nav .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo {
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            color: var(--accent);
+        }
+        .logo span { color: var(--text-muted); font-weight: 400; }
+        .nav-cta {
+            padding: 8px 20px;
+            background: var(--accent);
+            color: var(--bg);
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: opacity 0.2s;
+        }
+        .nav-cta:hover { opacity: 0.85; }
+
+        /* HERO */
+        .hero {
+            padding: 100px 0 80px;
+            text-align: center;
+        }
+        .hero-badge {
+            display: inline-block;
+            padding: 4px 14px;
+            background: rgba(212, 168, 83, 0.1);
+            border: 1px solid rgba(212, 168, 83, 0.3);
+            border-radius: 100px;
+            font-size: 13px;
+            color: var(--gold);
+            margin-bottom: 28px;
+            letter-spacing: 0.5px;
+        }
+        .hero h1 {
+            font-size: clamp(36px, 6vw, 64px);
+            font-weight: 800;
+            letter-spacing: -2px;
+            line-height: 1.05;
+            color: var(--accent);
+            margin-bottom: 20px;
+        }
+        .hero h1 em {
+            font-style: normal;
+            background: linear-gradient(135deg, var(--gold), #e8c36a);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .hero p {
+            font-size: 18px;
+            color: var(--text-muted);
+            max-width: 560px;
+            margin: 0 auto 40px;
+            line-height: 1.7;
+        }
+        .hero-cta {
+            display: inline-block;
+            padding: 14px 36px;
+            background: var(--accent);
+            color: var(--bg);
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 700;
+            text-decoration: none;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+        .hero-cta:hover { transform: translateY(-1px); box-shadow: 0 4px 24px rgba(255,255,255,0.1); }
+        .hero-price {
+            display: block;
+            margin-top: 12px;
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        /* LIVE DEALS TICKER */
+        .ticker {
+            padding: 40px 0;
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            overflow: hidden;
+        }
+        .ticker-label {
+            text-align: center;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+        }
+        .ticker-track {
+            display: flex;
+            gap: 24px;
+            animation: scroll 30s linear infinite;
+        }
+        @keyframes scroll {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+        .deal-card {
+            flex-shrink: 0;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px 20px;
+            min-width: 280px;
+        }
+        .deal-tier {
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .deal-tier.grail { color: var(--gold); }
+        .deal-tier.hot { color: var(--fire); }
+        .deal-tier.solid { color: var(--green); }
+        .deal-brand {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 2px;
+        }
+        .deal-title {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .deal-numbers {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+        }
+        .deal-profit { color: var(--green); font-weight: 600; }
+        .deal-margin { color: var(--text-muted); }
+        .deal-blurred {
+            filter: blur(6px);
+            user-select: none;
+            pointer-events: none;
+        }
+
+        /* FEATURES */
+        .features {
+            padding: 80px 0;
+        }
+        .features-header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+        .features-header h2 {
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: -1px;
+            margin-bottom: 12px;
+        }
+        .features-header p {
+            color: var(--text-muted);
+            font-size: 16px;
+        }
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+        }
+        .feature {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 28px;
+            transition: border-color 0.2s;
+        }
+        .feature:hover { border-color: #333; }
+        .feature-icon {
+            font-size: 28px;
+            margin-bottom: 16px;
+        }
+        .feature h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .feature p {
+            font-size: 14px;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+
+        /* STATS */
+        .stats {
+            padding: 60px 0;
+            border-top: 1px solid var(--border);
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            text-align: center;
+        }
+        .stat-num {
+            font-size: 36px;
+            font-weight: 800;
+            color: var(--accent);
+            letter-spacing: -1px;
+        }
+        .stat-label {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        /* HOW IT WORKS */
+        .how {
+            padding: 80px 0;
+            border-top: 1px solid var(--border);
+        }
+        .how h2 {
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: -1px;
+            text-align: center;
+            margin-bottom: 60px;
+        }
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 32px;
+        }
+        .step {
+            text-align: center;
+        }
+        .step-num {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+        .step h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .step p {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        /* PRICING */
+        .pricing {
+            padding: 80px 0;
+            border-top: 1px solid var(--border);
+        }
+        .pricing h2 {
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: -1px;
+            text-align: center;
+            margin-bottom: 12px;
+        }
+        .pricing > .container > p {
+            text-align: center;
+            color: var(--text-muted);
+            margin-bottom: 48px;
+        }
+        .price-card {
+            max-width: 420px;
+            margin: 0 auto;
+            background: var(--bg-card);
+            border: 1px solid var(--gold);
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+        }
+        .price-card h3 {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .price-amount {
+            font-size: 48px;
+            font-weight: 800;
+            color: var(--accent);
+            letter-spacing: -2px;
+        }
+        .price-amount span {
+            font-size: 18px;
+            font-weight: 400;
+            color: var(--text-muted);
+        }
+        .price-features {
+            list-style: none;
+            text-align: left;
+            margin: 28px 0;
+        }
+        .price-features li {
+            padding: 8px 0;
+            font-size: 14px;
+            color: var(--text);
+            border-bottom: 1px solid var(--border);
+        }
+        .price-features li:last-child { border: none; }
+        .price-features li::before {
+            content: "✓ ";
+            color: var(--green);
+            font-weight: 700;
+        }
+        .price-cta {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            background: var(--accent);
+            color: var(--bg);
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: none;
+            transition: opacity 0.2s;
+        }
+        .price-cta:hover { opacity: 0.85; }
+        .price-note {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 12px;
+        }
+
+        /* TESTIMONIALS */
+        .testimonials {
+            padding: 80px 0;
+            border-top: 1px solid var(--border);
+        }
+        .testimonials h2 {
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: -1px;
+            text-align: center;
+            margin-bottom: 48px;
+        }
+        .testimonial-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .testimonial {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 28px;
+        }
+        .testimonial-text {
+            font-size: 15px;
+            line-height: 1.7;
+            margin-bottom: 16px;
+            font-style: italic;
+            color: var(--text);
+        }
+        .testimonial-author {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+        .testimonial-author strong {
+            color: var(--text);
+        }
+
+        /* FOOTER */
+        footer {
+            padding: 40px 0;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 24px; }
+            .steps { grid-template-columns: 1fr; gap: 24px; }
+            .hero { padding: 60px 0 40px; }
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <div class="container">
+        <div class="logo">ARCHIVE <span>ARBITRAGE</span></div>
+        <a href="#pricing" class="nav-cta">Get Started</a>
+    </div>
+</nav>
+
+<section class="hero">
+    <div class="container">
+        <div class="hero-badge">🏴 270+ ARCHIVE BRANDS TRACKED</div>
+        <h1>Never miss an<br>underpriced <em>grail</em> again</h1>
+        <p>AI-powered alerts for underpriced archive fashion across Grailed, eBay, Poshmark and more. Know the real price before anyone else.</p>
+        <a href="#pricing" class="hero-cta">Start Finding Deals</a>
+        <span class="hero-price">$39/mo · Cancel anytime</span>
+    </div>
+</section>
+
+<section class="ticker">
+    <div class="ticker-label">Recent Deals Found</div>
+    <div class="ticker-track" id="ticker">
+        <!-- Deals injected by JS -->
+    </div>
+</section>
+
+<section class="stats">
+    <div class="container">
+        <div class="stats-grid">
+            <div>
+                <div class="stat-num">270+</div>
+                <div class="stat-label">Brands Tracked</div>
+            </div>
+            <div>
+                <div class="stat-num">3,700+</div>
+                <div class="stat-label">Items Analyzed</div>
+            </div>
+            <div>
+                <div class="stat-num">48%</div>
+                <div class="stat-label">Avg Margin Found</div>
+            </div>
+            <div>
+                <div class="stat-num">24/7</div>
+                <div class="stat-label">Monitoring</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="features">
+    <div class="container">
+        <div class="features-header">
+            <h2>Built for serious resellers</h2>
+            <p>The tools you need to find, price, and flip archive fashion profitably.</p>
+        </div>
+        <div class="features-grid">
+            <div class="feature">
+                <div class="feature-icon">⚡</div>
+                <h3>Real-Time Alerts</h3>
+                <p>Instant Telegram notifications when underpriced pieces hit the market. Faster than manually checking listings.</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🧠</div>
+                <h3>AI Pricing Engine</h3>
+                <p>Comp-based pricing from thousands of sold listings. Season detection, demand scoring, and confidence bands.</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">📊</div>
+                <h3>Cross-Platform Arbitrage</h3>
+                <p>Find price gaps between Grailed, eBay, and Poshmark. Buy low on one platform, sell high on another.</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🔥</div>
+                <h3>Iconic Season Detection</h3>
+                <p>100+ iconic collections recognized — Raf AW01, Helmut Astro Biker, Number (N)ine High Streets, and more.</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🏷</div>
+                <h3>Custom Filters</h3>
+                <p>Set your brands, sizes, and minimum profit. Only get alerts that match what you actually buy and sell.</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🛡</div>
+                <h3>Replica Detection</h3>
+                <p>Built-in authenticity screening filters out replicas and suspicious listings before they reach you.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="how">
+    <div class="container">
+        <h2>How it works</h2>
+        <div class="steps">
+            <div class="step">
+                <div class="step-num">1</div>
+                <h3>Subscribe & Set Filters</h3>
+                <p>Pick your brands and sizes. Set your minimum profit threshold. Takes 30 seconds.</p>
+            </div>
+            <div class="step">
+                <div class="step-num">2</div>
+                <h3>Get Instant Alerts</h3>
+                <p>We scan marketplaces 24/7 and push deals to your Telegram the moment we find them.</p>
+            </div>
+            <div class="step">
+                <div class="step-num">3</div>
+                <h3>Buy & Flip</h3>
+                <p>Click the link, buy the piece, list it at market price. Average margin: 48%.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="testimonials">
+    <div class="container">
+        <h2>What resellers are saying</h2>
+        <div class="testimonial-grid">
+            <div class="testimonial">
+                <div class="testimonial-text">"Found a Helmut Lang Astro Biker listed at $400 on Poshmark — market value was $1,200+. Paid for a year of the service with one flip."</div>
+                <div class="testimonial-author"><strong>@archiveflips</strong> · Full-time reseller</div>
+            </div>
+            <div class="testimonial">
+                <div class="testimonial-text">"The season detection is insane. It knows every iconic collection and adjusts the pricing accordingly. Saved me from underpricing a Raf AW03 piece."</div>
+                <div class="testimonial-author"><strong>@grailedgod</strong> · Archive collector</div>
+            </div>
+            <div class="testimonial">
+                <div class="testimonial-text">"I was spending 3-4 hours a day manually scanning Grailed. Now I get the best deals pushed to my phone. More flips, less time."</div>
+                <div class="testimonial-author"><strong>@jparchive</strong> · Part-time reseller</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="pricing" id="pricing">
+    <div class="container">
+        <h2>Simple pricing</h2>
+        <p>One plan. Everything included. One good flip pays for months.</p>
+        <div class="price-card">
+            <h3>Archive Arbitrage Pro</h3>
+            <div class="price-amount">$39<span>/mo</span></div>
+            <ul class="price-features">
+                <li>Real-time Telegram deal alerts</li>
+                <li>270+ archive brands tracked</li>
+                <li>AI-powered pricing with sold comps</li>
+                <li>Cross-platform arbitrage detection</li>
+                <li>Custom brand & size filters</li>
+                <li>Iconic season/collection detection</li>
+                <li>Replica & fraud screening</li>
+                <li>Deal grading (A/B/C tiers)</li>
+            </ul>
+            <a href="https://t.me/ArchiveArbitrageBot" class="price-cta">Start on Telegram →</a>
+            <p class="price-note">Cancel anytime. No contracts.</p>
+        </div>
+    </div>
+</section>
+
+<footer>
+    <div class="container">
+        <p>© 2026 Archive Arbitrage. Built for resellers, by resellers.</p>
+    </div>
+</footer>
+
+<script>
+// Example deals for the ticker (mix of real-looking data)
+const deals = [
+    { tier: "grail", emoji: "🏆", brand: "HELMUT LANG", title: "Astro Biker Leather Jacket FW98", buy: 420, profit: 780, margin: 65 },
+    { tier: "hot", emoji: "🔥", brand: "RAF SIMONS", title: "AW02 Virginia Creeper Sweater", buy: 350, profit: 450, margin: 56 },
+    { tier: "solid", emoji: "💰", brand: "RICK OWENS", title: "DRKSHDW Geobasket Black Leather", buy: 180, profit: 220, margin: 55 },
+    { tier: "grail", emoji: "🏆", brand: "NUMBER (N)INE", title: "AW05 High Streets Flannel", buy: 200, profit: 600, margin: 75 },
+    { tier: "hot", emoji: "🔥", brand: "UNDERCOVER", title: "SS03 Scab Hybrid Jacket", buy: 380, profit: 320, margin: 46 },
+    { tier: "solid", emoji: "💰", brand: "CHROME HEARTS", title: "Cemetery Cross Hoodie", buy: 450, profit: 250, margin: 36 },
+    { tier: "hot", emoji: "🔥", brand: "DIOR HOMME", title: "Hedi Era SS04 Clawmark Jeans", buy: 280, profit: 420, margin: 60 },
+    { tier: "solid", emoji: "💰", brand: "MARGIELA", title: "FW99 Artisanal Deconstructed Blazer", buy: 300, profit: 200, margin: 40 },
+    { tier: "grail", emoji: "🏆", brand: "CDG", title: "SS97 Lumps & Bumps Dress", buy: 500, profit: 900, margin: 64 },
+    { tier: "hot", emoji: "🔥", brand: "PRADA", title: "FW99 Sport Nylon Jacket", buy: 250, profit: 350, margin: 58 },
+];
+
+function renderTicker() {
+    const track = document.getElementById("ticker");
+    // Duplicate for seamless scroll
+    const allDeals = [...deals, ...deals];
+    track.innerHTML = allDeals.map(d => `
+        <div class="deal-card">
+            <div class="deal-tier ${d.tier}">${d.emoji} ${d.tier === 'grail' ? 'GRAIL' : d.tier === 'hot' ? 'HOT DEAL' : 'SOLID FLIP'}</div>
+            <div class="deal-brand">${d.brand}</div>
+            <div class="deal-title">${d.title}</div>
+            <div class="deal-numbers">
+                <span>Buy: $${d.buy}</span>
+                <span class="deal-profit deal-blurred">+$${d.profit}</span>
+                <span class="deal-margin deal-blurred">${d.margin}%</span>
+            </div>
+        </div>
+    `).join("");
+}
+renderTicker();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "name": "archive-arbitrage-ebay-webhook",
+  "builds": [
+    {
+      "src": "api/index.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/ebay/deletion",
+      "dest": "api/index.py"
+    },
+    {
+      "src": "/",
+      "dest": "api/index.py"
+    }
+  ],
+  "env": {
+    "EBAY_VERIFICATION_TOKEN": "archive-arbitrage-delete-2024"
+  }
+}

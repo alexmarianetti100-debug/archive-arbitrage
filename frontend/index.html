@@ -1,0 +1,3351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Archive Arbitrage</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --bg-secondary: #141414;
+            --bg-card: #1a1a1a;
+            --bg-hover: #222;
+            --border: #2a2a2a;
+            --text: #fff;
+            --text-secondary: #888;
+            --text-muted: #555;
+            --accent: #fff;
+            --green: #22c55e;
+            --green-bg: rgba(34, 197, 94, 0.1);
+            --red: #ef4444;
+            --red-bg: rgba(239, 68, 68, 0.1);
+            --blue: #3b82f6;
+            --pink: #ec4899;
+            --pink-bg: rgba(236, 72, 153, 0.15);
+            --header-bg: rgba(10, 10, 10, 0.9);
+        }
+        
+        /* Light mode */
+        [data-theme="light"] {
+            --bg: #f5f5f5;
+            --bg-secondary: #ffffff;
+            --bg-card: #ffffff;
+            --bg-hover: #ebebeb;
+            --border: #e0e0e0;
+            --text: #1a1a1a;
+            --text-secondary: #666;
+            --text-muted: #999;
+            --accent: #1a1a1a;
+            --green: #16a34a;
+            --green-bg: rgba(22, 163, 74, 0.1);
+            --red: #dc2626;
+            --red-bg: rgba(220, 38, 38, 0.1);
+            --blue: #2563eb;
+            --pink: #db2777;
+            --pink-bg: rgba(219, 39, 119, 0.1);
+            --header-bg: rgba(255, 255, 255, 0.9);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+        
+        /* Header */
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: var(--header-bg);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 24px;
+        }
+        
+        .header-content {
+            max-width: 1600px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 24px;
+        }
+        
+        .logo {
+            font-size: 1.1rem;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        
+        .search-box {
+            flex: 1;
+            max-width: 400px;
+            position: relative;
+        }
+        
+        .search-box input {
+            width: 100%;
+            padding: 10px 16px 10px 40px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        
+        .search-box input:focus {
+            border-color: #444;
+        }
+        
+        .search-box::before {
+            content: "⌕";
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+        
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .header-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        
+        .header-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text);
+            border-color: #444;
+        }
+        
+        .header-btn.active {
+            background: var(--pink-bg);
+            border-color: var(--pink);
+            color: var(--pink);
+        }
+        
+        .header-btn .count {
+            background: var(--pink);
+            color: #000;
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 10px;
+            min-width: 18px;
+            text-align: center;
+        }
+        
+        .header-stats {
+            display: flex;
+            gap: 24px;
+        }
+        
+        .stat {
+            text-align: right;
+        }
+        
+        .stat-value {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+        
+        .stat-label {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        /* Main Layout */
+        .main-container {
+            display: flex;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        /* Sidebar Filters */
+        .sidebar {
+            width: 280px;
+            padding: 24px;
+            border-right: 1px solid var(--border);
+            position: sticky;
+            top: 73px;
+            height: calc(100vh - 73px);
+            overflow-y: auto;
+        }
+        
+        .filter-section {
+            margin-bottom: 28px;
+        }
+        
+        .filter-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .filter-clear {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            text-transform: none;
+            letter-spacing: 0;
+        }
+        
+        .filter-clear:hover {
+            color: var(--text);
+        }
+        
+        /* Checkbox filters */
+        .filter-options {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .filter-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            padding: 6px 8px;
+            margin: 0 -8px;
+            border-radius: 6px;
+            transition: background 0.15s;
+        }
+        
+        .filter-option:hover {
+            background: var(--bg-hover);
+        }
+        
+        .filter-option input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--text);
+            cursor: pointer;
+        }
+        
+        .filter-option label {
+            flex: 1;
+            cursor: pointer;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+        
+        .filter-option input:checked + label {
+            color: var(--text);
+        }
+        
+        .filter-count {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+        
+        /* Range sliders */
+        .range-filter {
+            padding: 8px 0;
+        }
+        
+        .range-values {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+        
+        .range-inputs {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        
+        .range-inputs input {
+            flex: 1;
+            padding: 8px 12px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 0.85rem;
+            width: 100%;
+        }
+        
+        .range-inputs span {
+            color: var(--text-muted);
+        }
+        
+        /* Sort dropdown */
+        .sort-select {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 0.85rem;
+            cursor: pointer;
+            outline: none;
+        }
+        
+        .sort-select option {
+            background: var(--bg-card);
+        }
+        
+        /* Active filters */
+        .active-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .filter-tag {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+        
+        .filter-tag-remove {
+            cursor: pointer;
+            opacity: 0.6;
+        }
+        
+        .filter-tag-remove:hover {
+            opacity: 1;
+        }
+        
+        .clear-all-filters {
+            padding: 8px 16px;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        
+        .clear-all-filters:hover {
+            background: var(--bg-hover);
+            color: var(--text);
+        }
+        
+        /* Content Area */
+        .content {
+            flex: 1;
+            padding: 24px;
+        }
+        
+        .results-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        
+        .results-count {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+        
+        .results-count strong {
+            color: var(--text);
+        }
+        
+        .view-toggles {
+            display: flex;
+            gap: 4px;
+            background: var(--bg-secondary);
+            padding: 4px;
+            border-radius: 8px;
+        }
+        
+        .view-toggle {
+            padding: 6px 12px;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            transition: all 0.15s;
+        }
+        
+        .view-toggle.active {
+            background: var(--bg-card);
+            color: var(--text);
+        }
+        
+        /* Keyboard hint */
+        .keyboard-hint {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-left: 12px;
+        }
+        
+        .keyboard-hint kbd {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 0.7rem;
+        }
+        
+        /* Grid */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 16px;
+        }
+        
+        .grid.large {
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+        }
+        
+        /* Cards */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .card:hover {
+            transform: translateY(-4px);
+            border-color: #3a3a3a;
+        }
+        
+        .card.selected {
+            border-color: var(--blue);
+            box-shadow: 0 0 0 1px var(--blue);
+        }
+        
+        .card-image-container {
+            position: relative;
+            aspect-ratio: 1;
+            overflow: hidden;
+            background: var(--bg-secondary);
+        }
+        
+        .card-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s;
+        }
+        
+        .card:hover .card-image {
+            transform: scale(1.05);
+        }
+        
+        .card-badges {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .badge-margin {
+            background: var(--green-bg);
+            color: var(--green);
+        }
+        
+        .badge-source {
+            background: rgba(255,255,255,0.1);
+            color: var(--text);
+        }
+        
+        .badge-hot {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            font-weight: 600;
+        }
+        
+        .badge-trending {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+            font-weight: 600;
+        }
+        
+        /* Favorite button */
+        .card-favorite {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 36px;
+            height: 36px;
+            background: rgba(0,0,0,0.6);
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            transition: all 0.2s;
+            opacity: 0;
+            backdrop-filter: blur(4px);
+        }
+        
+        .card:hover .card-favorite {
+            opacity: 1;
+        }
+        
+        .card-favorite:hover {
+            transform: scale(1.1);
+            background: rgba(0,0,0,0.8);
+        }
+        
+        .card-favorite.favorited {
+            opacity: 1;
+            background: var(--pink-bg);
+        }
+        
+        .card-favorite.favorited:hover {
+            background: var(--pink-bg);
+        }
+        
+        /* Image navigation dots */
+        .card-image-nav {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 6px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        
+        .card:hover .card-image-nav {
+            opacity: 1;
+        }
+        
+        .card-image-dot {
+            width: 6px;
+            height: 6px;
+            background: rgba(255,255,255,0.4);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        
+        .card-image-dot.active {
+            background: #fff;
+            transform: scale(1.2);
+        }
+        
+        .card-image-dot:hover {
+            background: rgba(255,255,255,0.8);
+        }
+        
+        .card-body {
+            padding: 14px;
+        }
+        
+        .card-brand {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+        
+        .card-title {
+            font-size: 0.9rem;
+            font-weight: 400;
+            line-height: 1.4;
+            margin-bottom: 10px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .card-meta {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        
+        .meta-tag {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            background: var(--bg-secondary);
+            padding: 3px 8px;
+            border-radius: 4px;
+        }
+        
+        .card-price {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+        }
+        
+        .price-current {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+        
+        .price-original {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-decoration: line-through;
+        }
+        
+        .price-savings {
+            font-size: 0.75rem;
+            color: var(--green);
+            margin-left: auto;
+        }
+        
+        /* Loading & Empty States */
+        .loading, .empty {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+        
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 2px solid var(--border);
+            border-top-color: var(--text);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .empty h2 {
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            z-index: 300;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(8px);
+        }
+        
+        .modal-overlay.visible {
+            display: flex;
+        }
+        
+        .modal {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            max-width: 900px;
+            width: 95%;
+            max-height: 90vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .modal-title {
+            font-size: 1rem;
+            font-weight: 500;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 4px;
+            line-height: 1;
+        }
+        
+        .modal-close:hover {
+            color: var(--text);
+        }
+        
+        .modal-body {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        .modal-images {
+            flex: 1;
+            background: var(--bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            min-height: 400px;
+        }
+        
+        .modal-image {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        
+        .modal-image-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.1);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            color: #fff;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: background 0.2s;
+        }
+        
+        .modal-image-nav:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        
+        .modal-image-nav.prev { left: 16px; }
+        .modal-image-nav.next { right: 16px; }
+        
+        .modal-image-dots {
+            position: absolute;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+        }
+        
+        .modal-image-dot {
+            width: 8px;
+            height: 8px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        
+        .modal-image-dot.active {
+            background: #fff;
+        }
+        
+        .modal-details {
+            width: 320px;
+            padding: 24px;
+            overflow-y: auto;
+            border-left: 1px solid var(--border);
+        }
+        
+        .modal-brand {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+        
+        .modal-item-title {
+            font-size: 1.1rem;
+            font-weight: 500;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .modal-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .modal-price-section {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+        
+        .modal-price {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .modal-price-original {
+            color: var(--text-muted);
+            text-decoration: line-through;
+            font-size: 0.9rem;
+        }
+        
+        .modal-margin {
+            display: inline-block;
+            background: var(--green-bg);
+            color: var(--green);
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+        
+        .price-history-indicator {
+            margin-top: 10px;
+            font-size: 0.8rem;
+        }
+        
+        .price-trend {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        
+        .price-trend.down {
+            background: var(--green-bg);
+            color: var(--green);
+        }
+        
+        .price-trend.up {
+            background: var(--red-bg);
+            color: var(--red);
+        }
+        
+        /* Market data */
+        .market-data {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 16px;
+        }
+        
+        .market-data-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .market-data-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+        }
+        
+        .market-stats {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+        
+        .market-data-grid {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+        }
+        
+        .market-item {
+            flex-shrink: 0;
+            width: 70px;
+            text-align: center;
+            text-decoration: none;
+        }
+        
+        .market-item img {
+            width: 100%;
+            aspect-ratio: 1;
+            object-fit: cover;
+            border-radius: 4px;
+            margin-bottom: 4px;
+            background: var(--bg);
+        }
+        
+        .market-item .mi-price {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+        
+        .demand-badge {
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+        
+        .demand-badge.high {
+            background: var(--green-bg);
+            color: var(--green);
+        }
+        
+        .demand-badge.medium {
+            background: rgba(234, 179, 8, 0.15);
+            color: #eab308;
+        }
+        
+        .demand-badge.low {
+            background: var(--red-bg);
+            color: var(--red);
+        }
+        
+        .demand-badge.unknown {
+            background: var(--bg);
+            color: var(--text-muted);
+        }
+        
+        /* Deal grade badges */
+        .badge-grade {
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+        .badge-grade-A {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.4);
+        }
+        .badge-grade-B {
+            background: rgba(59, 130, 246, 0.2);
+            color: #3b82f6;
+            border: 1px solid rgba(59, 130, 246, 0.4);
+        }
+        .badge-grade-C {
+            background: rgba(234, 179, 8, 0.15);
+            color: #eab308;
+            border: 1px solid rgba(234, 179, 8, 0.3);
+        }
+        .badge-grade-D {
+            background: rgba(100, 100, 100, 0.15);
+            color: #888;
+        }
+        
+        /* Qualification stats in modal */
+        .qual-section {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        .qual-section-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+        }
+        .qual-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .qual-stat {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .qual-stat-value {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+        .qual-stat-label {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .qual-reasoning {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid var(--border);
+        }
+        
+        .modal-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .modal-btn {
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            transition: all 0.15s;
+        }
+        
+        .modal-btn-primary {
+            background: var(--text);
+            color: var(--bg);
+            border: none;
+        }
+        
+        .modal-btn-primary:hover {
+            opacity: 0.9;
+        }
+        
+        .modal-btn-secondary {
+            background: transparent;
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+        
+        .modal-btn-secondary:hover {
+            background: var(--bg-hover);
+        }
+        
+        .modal-btn-favorite {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .modal-btn-favorite.favorited {
+            background: var(--pink-bg);
+            border-color: var(--pink);
+            color: var(--pink);
+        }
+        
+        /* Compare dropdown */
+        .compare-dropdown {
+            position: relative;
+        }
+        
+        .compare-menu {
+            display: none;
+            position: absolute;
+            bottom: 100%;
+            left: 0;
+            right: 0;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            overflow: hidden;
+            z-index: 10;
+        }
+        
+        .compare-menu.visible {
+            display: block;
+        }
+        
+        .compare-link {
+            display: block;
+            padding: 10px 16px;
+            color: var(--text);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: background 0.15s;
+        }
+        
+        .compare-link:hover {
+            background: var(--bg-hover);
+        }
+        
+        /* Similar items in modal */
+        .similar-items {
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+        }
+        
+        .similar-items-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+        
+        .similar-items-grid {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding-bottom: 8px;
+        }
+        
+        .similar-item {
+            flex-shrink: 0;
+            width: 100px;
+            cursor: pointer;
+            transition: opacity 0.15s;
+        }
+        
+        .similar-item:hover {
+            opacity: 0.8;
+        }
+        
+        .similar-item img {
+            width: 100%;
+            aspect-ratio: 1;
+            object-fit: cover;
+            border-radius: 6px;
+            margin-bottom: 6px;
+            background: var(--bg-secondary);
+        }
+        
+        .similar-item .si-brand {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .similar-item .si-price {
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        /* Recently viewed section */
+        .recently-viewed {
+            padding: 24px;
+            border-top: 1px solid var(--border);
+            background: var(--bg-secondary);
+            margin-top: 40px;
+        }
+        
+        .recently-viewed-title {
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+        }
+        
+        .recently-viewed-grid {
+            display: flex;
+            gap: 12px;
+            overflow-x: auto;
+            padding-bottom: 8px;
+        }
+        
+        .recently-viewed-item {
+            flex-shrink: 0;
+            width: 120px;
+            cursor: pointer;
+        }
+        
+        .recently-viewed-item img {
+            width: 100%;
+            aspect-ratio: 1;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+        
+        .recently-viewed-item .rv-title {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .recently-viewed-item .rv-price {
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        /* Auto-refresh indicator */
+        .refresh-indicator {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .refresh-indicator.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .refresh-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--green);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* Keyboard shortcuts modal */
+        .shortcuts-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            z-index: 400;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .shortcuts-modal.visible {
+            display: flex;
+        }
+        
+        .shortcuts-content {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 400px;
+            width: 90%;
+        }
+        
+        .shortcuts-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+        
+        .shortcut-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .shortcut-row:last-child {
+            border-bottom: none;
+        }
+        
+        .shortcut-keys kbd {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 0.8rem;
+            margin-right: 4px;
+        }
+        
+        .shortcut-desc {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+        
+        /* Mobile sidebar toggle */
+        .mobile-filter-toggle {
+            display: none;
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 24px;
+            background: var(--text);
+            color: var(--bg);
+            border: none;
+            border-radius: 24px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            z-index: 90;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+        
+        /* Toast notifications */
+        .toast-container {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 500;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .toast {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            animation: slideUp 0.3s ease;
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* Responsive */
+        @media (max-width: 900px) {
+            .sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                height: 100vh;
+                z-index: 200;
+                background: var(--bg);
+                transform: translateX(-100%);
+                transition: transform 0.3s;
+            }
+            
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            
+            .sidebar-overlay {
+                position: fixed;
+                inset: 0;
+                background: rgba(0,0,0,0.6);
+                z-index: 199;
+                display: none;
+            }
+            
+            .sidebar-overlay.visible {
+                display: block;
+            }
+            
+            .mobile-filter-toggle {
+                display: block;
+            }
+            
+            .header-stats {
+                display: none;
+            }
+            
+            .search-box {
+                max-width: 100%;
+            }
+            
+            .modal-body {
+                flex-direction: column;
+            }
+            
+            .modal-details {
+                width: 100%;
+                border-left: none;
+                border-top: 1px solid var(--border);
+            }
+            
+            .modal-images {
+                min-height: 300px;
+            }
+            
+            .keyboard-hint {
+                display: none;
+            }
+        }
+        
+        @media (max-width: 600px) {
+            .grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+            }
+            
+            .card-body {
+                padding: 10px;
+            }
+            
+            .card-title {
+                font-size: 0.8rem;
+            }
+            
+            .content {
+                padding: 16px;
+            }
+            
+            .header-actions {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo">Archive Arbitrage</div>
+            <div class="search-box">
+                <input type="text" id="search-input" placeholder="Search items... (press /)">
+            </div>
+            <div class="header-actions">
+                <button class="header-btn" id="favorites-btn" onclick="toggleFavoritesView()">
+                    <span>♥</span>
+                    <span>Favorites</span>
+                    <span class="count" id="favorites-count" style="display: none;">0</span>
+                </button>
+                <button class="header-btn" onclick="showShortcuts()">
+                    <span>⌘</span>
+                    <span>Shortcuts</span>
+                </button>
+                <button class="header-btn" id="theme-toggle" onclick="toggleTheme()">
+                    <span id="theme-icon">☀️</span>
+                </button>
+            </div>
+            <div class="header-stats">
+                <div class="stat">
+                    <div class="stat-value" id="stat-items">—</div>
+                    <div class="stat-label">Items</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="stat-brands">—</div>
+                    <div class="stat-label">Brands</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="stat-margin">—</div>
+                    <div class="stat-label">Avg Margin</div>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+    
+    <div class="main-container">
+        <aside class="sidebar" id="sidebar">
+            <div class="filter-section">
+                <div class="filter-title">
+                    Sort By
+                </div>
+                <select class="sort-select" id="filter-sort">
+                    <option value="newest">Newest First</option>
+                    <option value="volume_score_desc">📊 Highest Volume Score</option>
+                    <option value="sales_per_day_desc">🚀 Most Sales/Day</option>
+                    <option value="trending">📈 Trending (Accel + High Vol)</option>
+                    <option value="sold_count_desc">🔥 Highest Selling Volume</option>
+                    <option value="grade_asc">Deal Grade (A→D)</option>
+                    <option value="profit_desc">Highest Profit</option>
+                    <option value="margin_desc">Highest Margin</option>
+                    <option value="sellthrough_desc">Best Sell-Through</option>
+                    <option value="days_asc">Fastest to Sell</option>
+                    <option value="price_asc">Price: Low to High</option>
+                    <option value="price_desc">Price: High to Low</option>
+                </select>
+            </div>
+            
+            <div class="filter-section">
+                <div class="filter-title">
+                    Source
+                    <span class="filter-clear" data-filter="sources">Clear</span>
+                </div>
+                <div class="filter-options" id="source-filters">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+            
+            <div class="filter-section">
+                <div class="filter-title">
+                    Deal Grade
+                    <span class="filter-clear" data-filter="grades">Clear</span>
+                </div>
+                <div class="filter-options" id="grade-filters">
+                    <label class="filter-option">
+                        <input type="checkbox" value="A" data-filter="grade">
+                        <label>🅰️ Grade A — Guaranteed</label>
+                    </label>
+                    <label class="filter-option">
+                        <input type="checkbox" value="B" data-filter="grade">
+                        <label>🅱️ Grade B — Likely</label>
+                    </label>
+                    <label class="filter-option">
+                        <input type="checkbox" value="C" data-filter="grade">
+                        <label>🔵 Grade C — Speculative</label>
+                    </label>
+                    <label class="filter-option">
+                        <input type="checkbox" value="ungraded" data-filter="grade">
+                        <label>⬜ Ungraded</label>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="filter-section">
+                <div class="filter-title">
+                    Price Range
+                    <span class="filter-clear" data-filter="price">Reset</span>
+                </div>
+                <div class="range-filter">
+                    <div class="range-inputs">
+                        <input type="number" id="price-min" placeholder="Min" min="0">
+                        <span>—</span>
+                        <input type="number" id="price-max" placeholder="Max" min="0">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="filter-section">
+                <div class="filter-title">
+                    Minimum Margin
+                    <span class="filter-clear" data-filter="margin">Reset</span>
+                </div>
+                <div class="range-filter">
+                    <div class="range-inputs">
+                        <input type="number" id="margin-min" placeholder="e.g. 30" min="0" max="100">
+                        <span>%</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="filter-section">
+                <div class="filter-title">
+                    🔥 Min Grailed Sales
+                    <span class="filter-clear" data-filter="sold_count">Reset</span>
+                </div>
+                <div class="range-filter">
+                    <div class="range-inputs">
+                        <input type="number" id="sold-count-min" placeholder="e.g. 5" min="0">
+                        <span>sales</span>
+                    </div>
+                </div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 6px;">
+                    Only show items with this many recent Grailed sales
+                </div>
+            </div>
+            
+            <div class="filter-section">
+                <div class="filter-title">
+                    📊 Min Volume Score
+                    <span class="filter-clear" data-filter="volume_score">Reset</span>
+                </div>
+                <div class="range-filter">
+                    <div class="range-inputs">
+                        <input type="number" id="volume-score-min" placeholder="e.g. 50" min="0">
+                        <span>score</span>
+                    </div>
+                </div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 6px;">
+                    Time-weighted volume (0-1000+). Higher = more recent sales
+                </div>
+            </div>
+            
+            <div class="filter-section">
+                <div class="filter-title">
+                    📈 Volume Trend
+                    <span class="filter-clear" data-filter="volume_trend">Clear</span>
+                </div>
+                <div class="filter-options">
+                    <div class="filter-option">
+                        <input type="checkbox" id="trend-accelerating" value="accelerating">
+                        <label for="trend-accelerating">📈 Accelerating</label>
+                    </div>
+                    <div class="filter-option">
+                        <input type="checkbox" id="trend-steady" value="steady">
+                        <label for="trend-steady">➡️ Steady</label>
+                    </div>
+                    <div class="filter-option">
+                        <input type="checkbox" id="trend-decelerating" value="decelerating">
+                        <label for="trend-decelerating">📉 Decelerating</label>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="filter-section">
+                <div class="filter-title">
+                    Brands
+                    <span class="filter-clear" data-filter="brands">Clear</span>
+                </div>
+                <div class="filter-options" id="brand-filters">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+            
+            <div class="filter-section">
+                <div class="filter-title">
+                    Category
+                    <span class="filter-clear" data-filter="categories">Clear</span>
+                </div>
+                <div class="filter-options" id="category-filters">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+            
+            <div class="filter-section">
+                <div class="filter-title">
+                    Size
+                    <span class="filter-clear" data-filter="sizes">Clear</span>
+                </div>
+                <div class="filter-options" id="size-filters">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+            
+            <div class="filter-section">
+                <div class="filter-title">
+                    Condition
+                    <span class="filter-clear" data-filter="conditions">Clear</span>
+                </div>
+                <div class="filter-options" id="condition-filters">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+            
+            <!-- Season/Year Filters (Quick Win) -->
+            <div class="filter-section">
+                <div class="filter-title">
+                    Season
+                    <span class="filter-clear" data-filter="season">Clear</span>
+                </div>
+                <div class="filter-options">
+                    <label class="filter-option">
+                        <input type="checkbox" value="FW" data-filter="season">
+                        <label>Fall/Winter (FW)</label>
+                    </label>
+                    <label class="filter-option">
+                        <input type="checkbox" value="SS" data-filter="season">
+                        <label>Spring/Summer (SS)</label>
+                    </label>
+                    <label class="filter-option">
+                        <input type="checkbox" value="RESORT" data-filter="season">
+                        <label>Resort/Cruise</label>
+                    </label>
+                    <label class="filter-option">
+                        <input type="checkbox" value="PF" data-filter="season">
+                        <label>Pre-Fall</label>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="filter-section">
+                <div class="filter-title">
+                    Year Range
+                    <span class="filter-clear" data-filter="year">Reset</span>
+                </div>
+                <div class="range-filter">
+                    <div class="range-inputs">
+                        <input type="number" id="year-min" placeholder="From" min="1970" max="2030">
+                        <span>—</span>
+                        <input type="number" id="year-max" placeholder="To" min="1970" max="2030">
+                    </div>
+                </div>
+            </div>
+        </aside>
+        
+        <main class="content">
+            <div class="results-header">
+                <div class="results-count" id="results-count">
+                    Loading...
+                    <span class="keyboard-hint">Press <kbd>?</kbd> for shortcuts</span>
+                </div>
+                <div style="display: flex; gap: 12px; align-items: center;">
+                    <button class="header-btn" onclick="exportToCSV()" title="Export filtered items to CSV">
+                        <span>📥</span>
+                        <span>Export</span>
+                    </button>
+                    <div class="view-toggles">
+                        <button class="view-toggle active" data-view="default">Default</button>
+                        <button class="view-toggle" data-view="large">Large</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="active-filters" id="active-filters"></div>
+            
+            <div class="grid" id="items-grid">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    Loading items...
+                </div>
+            </div>
+            
+            <section class="recently-viewed" id="recently-viewed" style="display: none;">
+                <div class="recently-viewed-title">Recently Viewed</div>
+                <div class="recently-viewed-grid" id="recently-viewed-grid"></div>
+            </section>
+        </main>
+    </div>
+    
+    <button class="mobile-filter-toggle" id="mobile-filter-btn">
+        ☰ Filters
+    </button>
+    
+    <div class="refresh-indicator" id="refresh-indicator">
+        <span class="refresh-dot"></span>
+        <span>New items found</span>
+    </div>
+    
+    <!-- Item Detail Modal -->
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title" id="modal-source"></div>
+                <button class="modal-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-images">
+                    <img class="modal-image" id="modal-image" src="" alt="">
+                    <button class="modal-image-nav prev" onclick="prevImage()">‹</button>
+                    <button class="modal-image-nav next" onclick="nextImage()">›</button>
+                    <div class="modal-image-dots" id="modal-image-dots"></div>
+                </div>
+                <div class="modal-details">
+                    <div class="modal-brand" id="modal-brand"></div>
+                    <div class="modal-item-title" id="modal-title"></div>
+                    <div class="modal-meta" id="modal-meta"></div>
+                    <div class="modal-price-section">
+                        <div class="modal-price" id="modal-price"></div>
+                        <div class="modal-price-original" id="modal-original"></div>
+                        <div class="modal-margin" id="modal-margin"></div>
+                        <div class="price-history-indicator" id="price-history" style="display: none;">
+                            <span class="price-trend" id="price-trend"></span>
+                        </div>
+                    </div>
+                    
+                    <!-- Deal Qualification -->
+                    <div class="qual-section" id="qual-section" style="display: none;">
+                        <div class="qual-section-title">Deal Qualification</div>
+                        <div class="qual-grid" id="qual-grid"></div>
+                        <div class="qual-reasoning" id="qual-reasoning"></div>
+                    </div>
+                    
+                    <!-- Market Data -->
+                    <div class="market-data" id="market-data" style="display: none;">
+                        <div class="market-data-header">
+                            <span class="market-data-title">Market Activity</span>
+                            <div style="display: flex; gap: 12px; align-items: center;">
+                                <span class="market-stats" id="market-stats"></span>
+                                <span class="demand-badge" id="demand-badge"></span>
+                            </div>
+                        </div>
+                        <div class="market-data-grid" id="market-data-grid"></div>
+                    </div>
+                    
+                    <div class="modal-actions">
+                        <a class="modal-btn modal-btn-primary" id="modal-link" href="#" target="_blank">View on Source</a>
+                        <button class="modal-btn modal-btn-secondary modal-btn-favorite" id="modal-favorite" onclick="toggleFavoriteModal()">
+                            <span id="modal-favorite-icon">♡</span>
+                            <span id="modal-favorite-text">Add to Favorites</span>
+                        </button>
+                        <div class="compare-dropdown" id="compare-dropdown">
+                            <button class="modal-btn modal-btn-secondary" onclick="toggleCompareDropdown(event)">
+                                🔍 Compare Prices ▾
+                            </button>
+                            <div class="compare-menu" id="compare-menu">
+                                <a class="compare-link" id="compare-grailed" href="#" target="_blank">Grailed</a>
+                                <a class="compare-link" id="compare-ebay" href="#" target="_blank">eBay</a>
+                                <a class="compare-link" id="compare-poshmark" href="#" target="_blank">Poshmark</a>
+                                <a class="compare-link" id="compare-depop" href="#" target="_blank">Depop</a>
+                                <a class="compare-link" id="compare-mercari" href="#" target="_blank">Mercari</a>
+                            </div>
+                        </div>
+                        <button class="modal-btn modal-btn-secondary" onclick="copyLink()">Copy Link</button>
+                    </div>
+                    
+                    <!-- Similar Items -->
+                    <div class="similar-items" id="similar-items">
+                        <div class="similar-items-title">Similar Items</div>
+                        <div class="similar-items-grid" id="similar-items-grid"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Keyboard Shortcuts Modal -->
+    <div class="shortcuts-modal" id="shortcuts-modal">
+        <div class="shortcuts-content">
+            <div class="shortcuts-title">Keyboard Shortcuts</div>
+            <div class="shortcut-row">
+                <div class="shortcut-keys"><kbd>J</kbd> <kbd>K</kbd></div>
+                <div class="shortcut-desc">Navigate items</div>
+            </div>
+            <div class="shortcut-row">
+                <div class="shortcut-keys"><kbd>Enter</kbd></div>
+                <div class="shortcut-desc">Open item detail</div>
+            </div>
+            <div class="shortcut-row">
+                <div class="shortcut-keys"><kbd>O</kbd></div>
+                <div class="shortcut-desc">Open on source site</div>
+            </div>
+            <div class="shortcut-row">
+                <div class="shortcut-keys"><kbd>F</kbd></div>
+                <div class="shortcut-desc">Toggle favorite</div>
+            </div>
+            <div class="shortcut-row">
+                <div class="shortcut-keys"><kbd>/</kbd></div>
+                <div class="shortcut-desc">Focus search</div>
+            </div>
+            <div class="shortcut-row">
+                <div class="shortcut-keys"><kbd>Esc</kbd></div>
+                <div class="shortcut-desc">Close modal / Clear search</div>
+            </div>
+            <div class="shortcut-row">
+                <div class="shortcut-keys"><kbd>?</kbd></div>
+                <div class="shortcut-desc">Show this help</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+    
+    <script>
+        // Config
+        const API_BASE = window.location.protocol === 'file:' ? 'http://localhost:8000' : '';
+        const REFRESH_INTERVAL = 30000;
+        
+        // State
+        let allItems = [];
+        let filteredItems = [];
+        let filters = {
+            search: '',
+            brands: [],
+            categories: [],
+            sizes: [],
+            conditions: [],
+            sources: [],
+            grades: [],
+            minPrice: null,
+            maxPrice: null,
+            minMargin: null,
+            minSoldCount: null,
+            minVolumeScore: null,
+            volumeTrends: [],
+            season: null,       // Quick Win: season filter
+            yearMin: null,      // Quick Win: year range min
+            yearMax: null,      // Quick Win: year range max
+            sort: 'newest'
+        };
+        let lastItemCount = 0;
+        let selectedIndex = -1;
+        let favorites = new Set(JSON.parse(localStorage.getItem('favorites') || '[]'));
+        let recentlyViewed = JSON.parse(localStorage.getItem('recentlyViewed') || '[]');
+        let showingFavorites = false;
+        let modalItem = null;
+        let modalImageIndex = 0;
+        let displayedCount = 0;
+        const ITEMS_PER_PAGE = 48;
+        let isLoadingMore = false;
+        
+        // Theme handling
+        function getPreferredTheme() {
+            const stored = localStorage.getItem('theme');
+            if (stored) return stored;
+            return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+        }
+        
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+            const icon = document.getElementById('theme-icon');
+            if (icon) {
+                icon.textContent = theme === 'light' ? '🌙' : '☀️';
+            }
+        }
+        
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme') || 'dark';
+            setTheme(current === 'light' ? 'dark' : 'light');
+        }
+        
+        // Initialize theme immediately
+        setTheme(getPreferredTheme());
+        
+        // DOM Elements
+        const grid = document.getElementById('items-grid');
+        const resultsCount = document.getElementById('results-count');
+        const activeFiltersContainer = document.getElementById('active-filters');
+        const searchInput = document.getElementById('search-input');
+        const sidebar = document.getElementById('sidebar');
+        const sidebarOverlay = document.getElementById('sidebar-overlay');
+        const mobileFilterBtn = document.getElementById('mobile-filter-btn');
+        const refreshIndicator = document.getElementById('refresh-indicator');
+        const modalOverlay = document.getElementById('modal-overlay');
+        const shortcutsModal = document.getElementById('shortcuts-modal');
+        
+        // Initialize from URL params
+        function loadFiltersFromURL() {
+            const params = new URLSearchParams(window.location.search);
+            
+            if (params.has('q')) filters.search = params.get('q');
+            if (params.has('brands')) filters.brands = params.get('brands').split(',');
+            if (params.has('categories')) filters.categories = params.get('categories').split(',');
+            if (params.has('sizes')) filters.sizes = params.get('sizes').split(',');
+            if (params.has('conditions')) filters.conditions = params.get('conditions').split(',');
+            if (params.has('sources')) filters.sources = params.get('sources').split(',');
+            if (params.has('grades')) filters.grades = params.get('grades').split(',');
+            if (params.has('minPrice')) filters.minPrice = parseFloat(params.get('minPrice'));
+            if (params.has('maxPrice')) filters.maxPrice = parseFloat(params.get('maxPrice'));
+            if (params.has('minMargin')) filters.minMargin = parseFloat(params.get('minMargin'));
+            if (params.has('minSoldCount')) filters.minSoldCount = parseInt(params.get('minSoldCount'));
+            if (params.has('minVolumeScore')) filters.minVolumeScore = parseInt(params.get('minVolumeScore'));
+            if (params.has('volumeTrends')) filters.volumeTrends = params.get('volumeTrends').split(',');
+            if (params.has('sort')) filters.sort = params.get('sort');
+            if (params.has('favorites')) showingFavorites = params.get('favorites') === 'true';
+            
+            // Update UI
+            searchInput.value = filters.search;
+            document.getElementById('filter-sort').value = filters.sort;
+            if (filters.minPrice) document.getElementById('price-min').value = filters.minPrice;
+            if (filters.maxPrice) document.getElementById('price-max').value = filters.maxPrice;
+            if (filters.minMargin) document.getElementById('margin-min').value = filters.minMargin;
+            if (filters.minSoldCount) document.getElementById('sold-count-min').value = filters.minSoldCount;
+            if (filters.minVolumeScore) document.getElementById('volume-score-min').value = filters.minVolumeScore;
+            if (filters.volumeTrends.includes('accelerating')) document.getElementById('trend-accelerating').checked = true;
+            if (filters.volumeTrends.includes('steady')) document.getElementById('trend-steady').checked = true;
+            if (filters.volumeTrends.includes('decelerating')) document.getElementById('trend-decelerating').checked = true;
+        }
+        
+        function updateURL() {
+            const params = new URLSearchParams();
+            
+            if (filters.search) params.set('q', filters.search);
+            if (filters.brands.length) params.set('brands', filters.brands.join(','));
+            if (filters.categories.length) params.set('categories', filters.categories.join(','));
+            if (filters.sizes.length) params.set('sizes', filters.sizes.join(','));
+            if (filters.conditions.length) params.set('conditions', filters.conditions.join(','));
+            if (filters.sources.length) params.set('sources', filters.sources.join(','));
+            if (filters.grades.length) params.set('grades', filters.grades.join(','));
+            if (filters.minPrice) params.set('minPrice', filters.minPrice);
+            if (filters.maxPrice) params.set('maxPrice', filters.maxPrice);
+            if (filters.minMargin) params.set('minMargin', filters.minMargin);
+            if (filters.minSoldCount) params.set('minSoldCount', filters.minSoldCount);
+            if (filters.minVolumeScore) params.set('minVolumeScore', filters.minVolumeScore);
+            if (filters.volumeTrends.length) params.set('volumeTrends', filters.volumeTrends.join(','));
+            if (filters.sort !== 'newest') params.set('sort', filters.sort);
+            if (showingFavorites) params.set('favorites', 'true');
+            
+            const newURL = params.toString() ? `?${params.toString()}` : window.location.pathname;
+            history.replaceState(null, '', newURL);
+        }
+        
+        // Fetch functions
+        async function fetchStats() {
+            try {
+                const res = await fetch(`${API_BASE}/api/stats`);
+                const stats = await res.json();
+                document.getElementById('stat-items').textContent = stats.active_items;
+                document.getElementById('stat-brands').textContent = stats.unique_brands;
+                document.getElementById('stat-margin').textContent = stats.avg_margin.toFixed(1) + '%';
+                
+                if (lastItemCount > 0 && stats.active_items > lastItemCount) {
+                    showRefreshIndicator();
+                }
+                lastItemCount = stats.active_items;
+            } catch (e) {
+                console.error('Failed to fetch stats:', e);
+            }
+        }
+        
+        async function fetchAllItems() {
+            try {
+                const res = await fetch(`${API_BASE}/api/items?page_size=500`);
+                const data = await res.json();
+                allItems = data.items;
+                
+                buildFilterOptions();
+                applyFilters();
+                renderRecentlyViewed();
+            } catch (e) {
+                console.error('Failed to fetch items:', e);
+                grid.innerHTML = `
+                    <div class="empty">
+                        <h2>Could not connect to API</h2>
+                        <p>Start the server: python pipeline.py serve</p>
+                    </div>
+                `;
+            }
+        }
+        
+        function buildFilterOptions() {
+            const brands = {};
+            const categories = {};
+            const sizes = {};
+            const conditions = {};
+            const sources = {};
+            
+            allItems.forEach(item => {
+                if (item.brand) brands[item.brand] = (brands[item.brand] || 0) + 1;
+                if (item.category) categories[item.category] = (categories[item.category] || 0) + 1;
+                if (item.size) sizes[item.size] = (sizes[item.size] || 0) + 1;
+                if (item.condition) conditions[item.condition] = (conditions[item.condition] || 0) + 1;
+                if (item.source) sources[item.source] = (sources[item.source] || 0) + 1;
+            });
+            
+            // Sources
+            const sourceContainer = document.getElementById('source-filters');
+            sourceContainer.innerHTML = Object.entries(sources)
+                .sort((a, b) => b[1] - a[1])
+                .map(([source, count]) => `
+                    <label class="filter-option">
+                        <input type="checkbox" value="${source}" data-filter="source" ${filters.sources.includes(source) ? 'checked' : ''}>
+                        <label>${source}</label>
+                        <span class="filter-count">${count}</span>
+                    </label>
+                `).join('');
+            
+            // Brands
+            const brandContainer = document.getElementById('brand-filters');
+            brandContainer.innerHTML = Object.entries(brands)
+                .sort((a, b) => b[1] - a[1])
+                .map(([brand, count]) => `
+                    <label class="filter-option">
+                        <input type="checkbox" value="${brand}" data-filter="brand" ${filters.brands.includes(brand) ? 'checked' : ''}>
+                        <label>${brand}</label>
+                        <span class="filter-count">${count}</span>
+                    </label>
+                `).join('');
+            
+            // Categories
+            const categoryContainer = document.getElementById('category-filters');
+            categoryContainer.innerHTML = Object.entries(categories)
+                .sort((a, b) => b[1] - a[1])
+                .map(([cat, count]) => `
+                    <label class="filter-option">
+                        <input type="checkbox" value="${cat}" data-filter="category" ${filters.categories.includes(cat) ? 'checked' : ''}>
+                        <label>${cat}</label>
+                        <span class="filter-count">${count}</span>
+                    </label>
+                `).join('');
+            
+            // Sizes
+            const sizeOrder = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+            const sizeContainer = document.getElementById('size-filters');
+            sizeContainer.innerHTML = Object.entries(sizes)
+                .sort((a, b) => {
+                    const aIdx = sizeOrder.indexOf(a[0].toUpperCase());
+                    const bIdx = sizeOrder.indexOf(b[0].toUpperCase());
+                    if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
+                    if (aIdx !== -1) return -1;
+                    if (bIdx !== -1) return 1;
+                    return a[0].localeCompare(b[0]);
+                })
+                .map(([size, count]) => `
+                    <label class="filter-option">
+                        <input type="checkbox" value="${size}" data-filter="size" ${filters.sizes.includes(size) ? 'checked' : ''}>
+                        <label>${size}</label>
+                        <span class="filter-count">${count}</span>
+                    </label>
+                `).join('');
+            
+            // Conditions
+            const conditionOrder = ['New', 'NWT', 'BNWT', 'Like New', 'Excellent', 'Very Good', 'Good', 'Fair', 'Used'];
+            const conditionContainer = document.getElementById('condition-filters');
+            if (conditionContainer) {
+                conditionContainer.innerHTML = Object.entries(conditions)
+                    .sort((a, b) => {
+                        const aIdx = conditionOrder.findIndex(c => a[0].toLowerCase().includes(c.toLowerCase()));
+                        const bIdx = conditionOrder.findIndex(c => b[0].toLowerCase().includes(c.toLowerCase()));
+                        if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
+                        if (aIdx !== -1) return -1;
+                        if (bIdx !== -1) return 1;
+                        return b[1] - a[1];
+                    })
+                    .map(([cond, count]) => `
+                        <label class="filter-option">
+                            <input type="checkbox" value="${cond}" data-filter="condition" ${filters.conditions.includes(cond) ? 'checked' : ''}>
+                            <label>${cond}</label>
+                            <span class="filter-count">${count}</span>
+                        </label>
+                    `).join('');
+            }
+        }
+        
+        function applyFilters() {
+            let items = showingFavorites 
+                ? allItems.filter(item => favorites.has(item.id))
+                : allItems;
+            
+            filteredItems = items.filter(item => {
+                if (filters.search) {
+                    const search = filters.search.toLowerCase();
+                    const matchTitle = item.title.toLowerCase().includes(search);
+                    const matchBrand = item.brand?.toLowerCase().includes(search);
+                    if (!matchTitle && !matchBrand) return false;
+                }
+                
+                if (filters.brands.length > 0 && !filters.brands.includes(item.brand)) return false;
+                if (filters.categories.length > 0 && !filters.categories.includes(item.category)) return false;
+                if (filters.sizes.length > 0 && !filters.sizes.includes(item.size)) return false;
+                if (filters.conditions.length > 0 && !filters.conditions.includes(item.condition)) return false;
+                if (filters.sources.length > 0 && !filters.sources.includes(item.source)) return false;
+                if (filters.grades.length > 0) {
+                    const itemGrade = item.deal_grade || 'ungraded';
+                    if (!filters.grades.includes(itemGrade)) return false;
+                }
+                if (filters.minPrice && item.price < filters.minPrice) return false;
+                if (filters.maxPrice && item.price > filters.maxPrice) return false;
+                if (filters.minMargin && (item.margin_percent || 0) * 100 < filters.minMargin) return false;
+                if (filters.minSoldCount && (item.sold_count || 0) < filters.minSoldCount) return false;
+                if (filters.minVolumeScore && (item.weighted_volume || 0) < filters.minVolumeScore) return false;
+                if (filters.volumeTrends.length > 0 && !filters.volumeTrends.includes(item.volume_trend || 'unknown')) return false;
+                
+                // Season/Year filters (Quick Win)
+                if (filters.season && item.exact_season !== filters.season) return false;
+                if (filters.yearMin && (item.exact_year || 0) < filters.yearMin) return false;
+                if (filters.yearMax && (item.exact_year || 0) > filters.yearMax) return false;
+                
+                return true;
+            });
+            
+            filteredItems.sort((a, b) => {
+                const gradeOrder = { A: 0, B: 1, C: 2, D: 3 };
+                switch (filters.sort) {
+                    case 'grade_asc':
+                        const gA = gradeOrder[a.deal_grade] ?? 4;
+                        const gB = gradeOrder[b.deal_grade] ?? 4;
+                        return gA - gB || (b.exact_profit || 0) - (a.exact_profit || 0);
+                    case 'profit_desc': return (b.exact_profit || 0) - (a.exact_profit || 0);
+                    case 'sellthrough_desc': return (b.sell_through_rate || 0) - (a.sell_through_rate || 0);
+                    case 'days_asc':
+                        const dA = a.est_days_to_sell || 999;
+                        const dB = b.est_days_to_sell || 999;
+                        return dA - dB;
+                    case 'price_asc': return a.price - b.price;
+                    case 'price_desc': return b.price - a.price;
+                    case 'margin_desc': return (b.margin_percent || 0) - (a.margin_percent || 0);
+                    case 'sold_count_desc': return (b.sold_count || 0) - (a.sold_count || 0);
+                    case 'volume_score_desc': return (b.weighted_volume || 0) - (a.weighted_volume || 0);
+                    case 'sales_per_day_desc': return (b.sales_per_day || 0) - (a.sales_per_day || 0);
+                    case 'trending': 
+                        // Accelerating first, then by volume score
+                        const aAccel = (a.volume_trend === 'accelerating') ? 1 : 0;
+                        const bAccel = (b.volume_trend === 'accelerating') ? 1 : 0;
+                        if (bAccel !== aAccel) return bAccel - aAccel;
+                        return (b.weighted_volume || 0) - (a.weighted_volume || 0);
+                    case 'newest':
+                    default: return b.id - a.id;
+                }
+            });
+            
+            selectedIndex = -1;
+            renderItems();
+            renderActiveFilters();
+            updateResultsCount();
+            updateURL();
+            updateFavoritesButton();
+        }
+        
+        function renderItemCard(item, index) {
+            return `
+                <div class="card ${selectedIndex === index ? 'selected' : ''}" 
+                     data-index="${index}" 
+                     data-id="${item.id}"
+                     onclick="openModal(${index})">
+                    <div class="card-image-container">
+                        <img 
+                            class="card-image" 
+                            src="${item.images[0] || ''}" 
+                            alt="${item.title}"
+                            loading="lazy"
+                            onerror="this.style.display='none'"
+                            data-images='${JSON.stringify(item.images)}'
+                            data-current="0"
+                        >
+                        <div class="card-badges">
+                            ${item.deal_grade && item.deal_grade !== 'D' ? `<span class="badge badge-grade badge-grade-${item.deal_grade}">${item.deal_grade}</span>` : ''}
+                            ${item.margin_percent ? `<span class="badge badge-margin">${(item.margin_percent * 100).toFixed(0)}% margin</span>` : ''}
+                            ${item.weighted_volume >= 500 ? `<span class="badge badge-hot">🔥 Hot</span>` : ''}
+                            ${item.volume_trend === 'accelerating' && item.weighted_volume >= 200 ? `<span class="badge badge-trending">📈 Trending</span>` : ''}
+                            ${item.exact_season || item.exact_year ? `<span class="badge" style="background:rgba(100,100,255,0.2);color:#88f">${item.exact_season || ''}${item.exact_year ? "'" + item.exact_year.toString().slice(-2) : ''}</span>` : ''}
+                            <span class="badge badge-source">${item.source}</span>
+                        </div>
+                        <button class="card-favorite ${favorites.has(item.id) ? 'favorited' : ''}" 
+                                onclick="event.stopPropagation(); toggleFavorite(${item.id})">
+                            ${favorites.has(item.id) ? '♥' : '♡'}
+                        </button>
+                        ${item.images.length > 1 ? `
+                            <div class="card-image-nav">
+                                ${item.images.slice(0, 5).map((_, i) => `
+                                    <span class="card-image-dot ${i === 0 ? 'active' : ''}" 
+                                          data-index="${i}"
+                                          onclick="event.stopPropagation(); cycleImage(this, ${index}, ${i})"></span>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+                    <div class="card-body">
+                        <div class="card-brand">${item.brand || 'Unknown'}</div>
+                        <div class="card-title">${item.title}</div>
+                        <div class="card-meta">
+                            ${item.size ? `<span class="meta-tag">${item.size}</span>` : ''}
+                            ${item.category ? `<span class="meta-tag">${item.category}</span>` : ''}
+                        </div>
+                        <div class="card-price">
+                            <span class="price-current">$${item.price.toFixed(0)}</span>
+                            <span class="price-original">$${item.original_price.toFixed(0)}</span>
+                            ${item.exact_profit ? `<span class="price-savings">$${item.exact_profit.toFixed(0)} profit</span>` : 
+                              item.margin_percent ? `<span class="price-savings">Save $${(item.original_price - item.price).toFixed(0)}</span>` : ''}
+                        </div>
+                        ${item.sell_through_rate != null || item.demand_level || item.sold_count || item.weighted_volume ? `
+                            <div style="display:flex;gap:8px;margin-top:6px;font-size:0.72rem;color:var(--text-muted);">
+                                ${item.weighted_volume ? `<span>📊 ${item.weighted_volume.toFixed(0)} vol</span>` : ''}
+                                ${item.volume_trend && item.volume_trend !== 'unknown' ? `<span>${{accelerating:'📈',steady:'➡️',decelerating:'📉'}[item.volume_trend] || ''}</span>` : ''}
+                                ${item.sales_per_day ? `<span>${item.sales_per_day.toFixed(1)}/day</span>` : ''}
+                                ${item.sold_count ? `<span>🔥 ${item.sold_count} sold</span>` : ''}
+                                ${item.sell_through_rate != null ? `<span>${(item.sell_through_rate * 100).toFixed(0)}% sell-through</span>` : ''}
+                                ${item.est_days_to_sell && item.est_days_to_sell < 999 ? `<span>~${item.est_days_to_sell.toFixed(0)}d</span>` : ''}
+                                ${item.demand_level && item.demand_level !== 'unknown' ? `<span>${{hot:'🔥',warm:'🟡',cold:'🔵',dead:'💀'}[item.demand_level] || ''}</span>` : ''}
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+        
+        function renderItems(reset = true) {
+            if (filteredItems.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty">
+                        <h2>${showingFavorites ? 'No favorites yet' : 'No items match your filters'}</h2>
+                        <p>${showingFavorites ? 'Click the heart on items to save them' : 'Try adjusting your filters or run the scraper to add more items'}</p>
+                    </div>
+                `;
+                displayedCount = 0;
+                return;
+            }
+            
+            if (reset) {
+                displayedCount = 0;
+                grid.innerHTML = '';
+            }
+            
+            const startIndex = displayedCount;
+            const endIndex = Math.min(displayedCount + ITEMS_PER_PAGE, filteredItems.length);
+            const itemsToRender = filteredItems.slice(startIndex, endIndex);
+            
+            // Remove existing sentinel if present
+            const existingSentinel = document.getElementById('scroll-sentinel');
+            if (existingSentinel) existingSentinel.remove();
+            
+            // Render new items
+            const fragment = document.createDocumentFragment();
+            itemsToRender.forEach((item, i) => {
+                const div = document.createElement('div');
+                div.innerHTML = renderItemCard(item, startIndex + i);
+                fragment.appendChild(div.firstElementChild);
+            });
+            grid.appendChild(fragment);
+            
+            displayedCount = endIndex;
+            
+            // Add sentinel for infinite scroll if there are more items
+            if (displayedCount < filteredItems.length) {
+                const sentinel = document.createElement('div');
+                sentinel.id = 'scroll-sentinel';
+                sentinel.style.cssText = 'grid-column: 1 / -1; height: 100px; display: flex; align-items: center; justify-content: center;';
+                sentinel.innerHTML = '<div class="spinner"></div>';
+                grid.appendChild(sentinel);
+                observeScrollSentinel();
+            }
+        }
+        
+        function loadMoreItems() {
+            if (isLoadingMore || displayedCount >= filteredItems.length) return;
+            isLoadingMore = true;
+            
+            // Small delay for smoother UX
+            setTimeout(() => {
+                renderItems(false);
+                isLoadingMore = false;
+            }, 100);
+        }
+        
+        let scrollObserver = null;
+        function observeScrollSentinel() {
+            const sentinel = document.getElementById('scroll-sentinel');
+            if (!sentinel) return;
+            
+            if (scrollObserver) scrollObserver.disconnect();
+            
+            scrollObserver = new IntersectionObserver((entries) => {
+                if (entries[0].isIntersecting) {
+                    loadMoreItems();
+                }
+            }, { rootMargin: '200px' });
+            
+            scrollObserver.observe(sentinel);
+        }
+        
+        function cycleImage(dot, cardIndex, imageIndex) {
+            const card = document.querySelector(`[data-index="${cardIndex}"]`);
+            const img = card.querySelector('.card-image');
+            const images = JSON.parse(img.dataset.images);
+            const dots = card.querySelectorAll('.card-image-dot');
+            
+            img.src = images[imageIndex];
+            img.dataset.current = imageIndex;
+            dots.forEach((d, i) => d.classList.toggle('active', i === imageIndex));
+        }
+        
+        function renderActiveFilters() {
+            const tags = [];
+            
+            if (filters.search) tags.push({ type: 'search', label: `"${filters.search}"`, value: filters.search });
+            filters.brands.forEach(b => tags.push({ type: 'brand', label: b, value: b }));
+            filters.categories.forEach(c => tags.push({ type: 'category', label: c, value: c }));
+            filters.sizes.forEach(s => tags.push({ type: 'size', label: s, value: s }));
+            filters.conditions.forEach(c => tags.push({ type: 'condition', label: c, value: c }));
+            filters.sources.forEach(s => tags.push({ type: 'source', label: s, value: s }));
+            filters.grades.forEach(g => tags.push({ type: 'grade', label: `Grade ${g}`, value: g }));
+            if (filters.minPrice) tags.push({ type: 'minPrice', label: `Min $${filters.minPrice}`, value: filters.minPrice });
+            if (filters.maxPrice) tags.push({ type: 'maxPrice', label: `Max $${filters.maxPrice}`, value: filters.maxPrice });
+            if (filters.minMargin) tags.push({ type: 'minMargin', label: `>${filters.minMargin}% margin`, value: filters.minMargin });
+            if (filters.minSoldCount) tags.push({ type: 'minSoldCount', label: `≥${filters.minSoldCount} Grailed sales`, value: filters.minSoldCount });
+            if (filters.minVolumeScore) tags.push({ type: 'minVolumeScore', label: `≥${filters.minVolumeScore} volume score`, value: filters.minVolumeScore });
+            filters.volumeTrends.forEach(t => tags.push({ type: 'volumeTrend', label: `Trend: ${t}`, value: t }));
+            
+            // Season/Year filters (Quick Win)
+            if (filters.season) tags.push({ type: 'season', label: `Season: ${filters.season}`, value: filters.season });
+            if (filters.yearMin && filters.yearMax) tags.push({ type: 'yearRange', label: `${filters.yearMin}-${filters.yearMax}`, value: 'range' });
+            else if (filters.yearMin) tags.push({ type: 'yearMin', label: `From ${filters.yearMin}`, value: filters.yearMin });
+            else if (filters.yearMax) tags.push({ type: 'yearMax', label: `To ${filters.yearMax}`, value: filters.yearMax });
+            
+            if (tags.length === 0) {
+                activeFiltersContainer.innerHTML = '';
+                return;
+            }
+            
+            activeFiltersContainer.innerHTML = tags.map(tag => `
+                <span class="filter-tag">
+                    ${tag.label}
+                    <span class="filter-tag-remove" data-type="${tag.type}" data-value="${tag.value}">✕</span>
+                </span>
+            `).join('') + `<button class="clear-all-filters" onclick="clearAllFilters()">Clear all</button>`;
+        }
+        
+        function updateResultsCount() {
+            const prefix = showingFavorites ? 'Favorites: ' : '';
+            const scrollHint = filteredItems.length > ITEMS_PER_PAGE ? ' (scroll for more)' : '';
+            resultsCount.innerHTML = `${prefix}<strong>${filteredItems.length}</strong> items${scrollHint} <span class="keyboard-hint">Press <kbd>?</kbd> for shortcuts</span>`;
+        }
+        
+        // Favorites
+        function toggleFavorite(itemId) {
+            if (favorites.has(itemId)) {
+                favorites.delete(itemId);
+                showToast('Removed from favorites');
+            } else {
+                favorites.add(itemId);
+                showToast('Added to favorites ♥');
+            }
+            localStorage.setItem('favorites', JSON.stringify([...favorites]));
+            updateFavoritesButton();
+            
+            // Update card UI
+            const card = document.querySelector(`[data-id="${itemId}"]`);
+            if (card) {
+                const btn = card.querySelector('.card-favorite');
+                btn.classList.toggle('favorited', favorites.has(itemId));
+                btn.textContent = favorites.has(itemId) ? '♥' : '♡';
+            }
+            
+            // Update modal if open
+            if (modalItem && modalItem.id === itemId) {
+                updateModalFavoriteButton();
+            }
+            
+            // Re-render if showing favorites view
+            if (showingFavorites) {
+                applyFilters();
+            }
+        }
+        
+        function toggleFavoriteModal() {
+            if (modalItem) toggleFavorite(modalItem.id);
+        }
+        
+        function updateModalFavoriteButton() {
+            const btn = document.getElementById('modal-favorite');
+            const icon = document.getElementById('modal-favorite-icon');
+            const text = document.getElementById('modal-favorite-text');
+            const isFav = favorites.has(modalItem.id);
+            
+            btn.classList.toggle('favorited', isFav);
+            icon.textContent = isFav ? '♥' : '♡';
+            text.textContent = isFav ? 'Remove from Favorites' : 'Add to Favorites';
+        }
+        
+        function updateFavoritesButton() {
+            const btn = document.getElementById('favorites-btn');
+            const count = document.getElementById('favorites-count');
+            
+            btn.classList.toggle('active', showingFavorites);
+            
+            if (favorites.size > 0) {
+                count.style.display = 'inline';
+                count.textContent = favorites.size;
+            } else {
+                count.style.display = 'none';
+            }
+        }
+        
+        function toggleFavoritesView() {
+            showingFavorites = !showingFavorites;
+            applyFilters();
+        }
+        
+        // Recently Viewed
+        function addToRecentlyViewed(item) {
+            recentlyViewed = recentlyViewed.filter(i => i.id !== item.id);
+            recentlyViewed.unshift({
+                id: item.id,
+                title: item.title,
+                price: item.price,
+                image: item.images[0]
+            });
+            recentlyViewed = recentlyViewed.slice(0, 10);
+            localStorage.setItem('recentlyViewed', JSON.stringify(recentlyViewed));
+            renderRecentlyViewed();
+        }
+        
+        function renderRecentlyViewed() {
+            const container = document.getElementById('recently-viewed');
+            const gridEl = document.getElementById('recently-viewed-grid');
+            
+            if (recentlyViewed.length === 0) {
+                container.style.display = 'none';
+                return;
+            }
+            
+            container.style.display = 'block';
+            gridEl.innerHTML = recentlyViewed.map(item => `
+                <div class="recently-viewed-item" onclick="openItemById(${item.id})">
+                    <img src="${item.image}" alt="${item.title}" loading="lazy">
+                    <div class="rv-title">${item.title}</div>
+                    <div class="rv-price">$${item.price.toFixed(0)}</div>
+                </div>
+            `).join('');
+        }
+        
+        function openItemById(id) {
+            const index = filteredItems.findIndex(item => item.id === id);
+            if (index !== -1) {
+                openModal(index);
+            } else {
+                // Item not in current filter, find in all items
+                const item = allItems.find(i => i.id === id);
+                if (item) {
+                    window.open(item.source_url, '_blank');
+                }
+            }
+        }
+        
+        // Similar items
+        function findSimilarItems(item, limit = 6) {
+            // Score items by similarity
+            return allItems
+                .filter(other => other.id !== item.id)
+                .map(other => {
+                    let score = 0;
+                    
+                    // Same brand = high score
+                    if (item.brand && other.brand && 
+                        item.brand.toLowerCase() === other.brand.toLowerCase()) {
+                        score += 50;
+                    }
+                    
+                    // Same category = medium score
+                    if (item.category && other.category && 
+                        item.category.toLowerCase() === other.category.toLowerCase()) {
+                        score += 30;
+                    }
+                    
+                    // Similar price range (within 50%)
+                    const priceDiff = Math.abs(item.price - other.price) / item.price;
+                    if (priceDiff < 0.5) {
+                        score += 20 * (1 - priceDiff);
+                    }
+                    
+                    // Same size = bonus
+                    if (item.size && other.size && 
+                        item.size.toLowerCase() === other.size.toLowerCase()) {
+                        score += 10;
+                    }
+                    
+                    return { item: other, score };
+                })
+                .filter(s => s.score > 20)
+                .sort((a, b) => b.score - a.score)
+                .slice(0, limit)
+                .map(s => s.item);
+        }
+        
+        function renderSimilarItems(item) {
+            const container = document.getElementById('similar-items-grid');
+            const section = document.getElementById('similar-items');
+            const similar = findSimilarItems(item);
+            
+            if (similar.length === 0) {
+                section.style.display = 'none';
+                return;
+            }
+            
+            section.style.display = 'block';
+            container.innerHTML = similar.map((s, i) => {
+                const idx = allItems.findIndex(a => a.id === s.id);
+                return `
+                    <div class="similar-item" onclick="openSimilarItem(${s.id})">
+                        <img src="${s.images[0] || ''}" alt="${s.title}" loading="lazy" onerror="this.style.display='none'">
+                        <div class="si-brand">${s.brand || 'Unknown'}</div>
+                        <div class="si-price">$${s.price.toFixed(0)}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function renderQualification(item) {
+            const section = document.getElementById('qual-section');
+            const grid = document.getElementById('qual-grid');
+            const reasoning = document.getElementById('qual-reasoning');
+            
+            if (!item.deal_grade) {
+                section.style.display = 'none';
+                return;
+            }
+            
+            const gradeLabels = { A: '🅰️ Guaranteed Flip', B: '🅱️ Likely Flip', C: '🔵 Speculative', D: '⬜ Skip' };
+            const demandEmoji = { hot: '🔥 Hot', warm: '🟡 Warm', cold: '🔵 Cold', dead: '💀 Dead', unknown: '❓' };
+            const trendEmoji = { accelerating: '📈', steady: '➡️', decelerating: '📉', unknown: '❓' };
+            const daysStr = item.est_days_to_sell && item.est_days_to_sell < 999 
+                ? `~${item.est_days_to_sell.toFixed(0)}d` 
+                : 'N/A';
+            const sellThrough = item.sell_through_rate != null 
+                ? `${(item.sell_through_rate * 100).toFixed(0)}%` 
+                : 'N/A';
+            
+            grid.innerHTML = `
+                <div class="qual-stat">
+                    <div class="qual-stat-value">${gradeLabels[item.deal_grade] || item.deal_grade}</div>
+                    <div class="qual-stat-label">Deal Grade</div>
+                </div>
+                <div class="qual-stat">
+                    <div class="qual-stat-value">${item.weighted_volume ? item.weighted_volume.toFixed(0) : 'N/A'}</div>
+                    <div class="qual-stat-label">📊 Volume Score${item.sales_per_day ? ` (${item.sales_per_day.toFixed(1)}/day)` : ''}</div>
+                </div>
+                <div class="qual-stat">
+                    <div class="qual-stat-value">${item.volume_trend ? trendEmoji[item.volume_trend] : '❓'} ${item.volume_trend || 'unknown'}</div>
+                    <div class="qual-stat-label">Volume Trend</div>
+                </div>
+                <div class="qual-stat">
+                    <div class="qual-stat-value">${item.same_size_sold || 0}</div>
+                    <div class="qual-stat-label">Same Size Sold</div>
+                </div>
+                <div class="qual-stat">
+                    <div class="qual-stat-value">${item.sold_count || 0}</div>
+                    <div class="qual-stat-label">🔥 Grailed Sales (30d)</div>
+                </div>
+                <div class="qual-stat">
+                    <div class="qual-stat-value">${demandEmoji[item.demand_level] || '❓'}</div>
+                    <div class="qual-stat-label">Demand (${item.demand_score ? (item.demand_score * 100).toFixed(0) + '%' : '?'})</div>
+                </div>
+                <div class="qual-stat">
+                    <div class="qual-stat-value">${sellThrough}</div>
+                    <div class="qual-stat-label">Sell-Through Rate</div>
+                </div>
+                <div class="qual-stat">
+                    <div class="qual-stat-value">${daysStr}</div>
+                    <div class="qual-stat-label">Est. Time to Sell</div>
+                </div>
+                <div class="qual-stat">
+                    <div class="qual-stat-value">${item.comp_count || 0}</div>
+                    <div class="qual-stat-label">Comps Found${item.high_quality_comps ? ` (${item.high_quality_comps} exact)` : ''}</div>
+                </div>
+                <div class="qual-stat">
+                    <div class="qual-stat-value">${item.exact_profit ? '$' + item.exact_profit.toFixed(0) : 'N/A'}</div>
+                    <div class="qual-stat-label">Verified Profit${item.exact_margin ? ` (${(item.exact_margin * 100).toFixed(0)}%)` : ''}</div>
+                </div>
+                ${item.exact_season || item.exact_year ? `
+                <div class="qual-stat">
+                    <div class="qual-stat-value">${item.exact_season || ''}${item.exact_year ? "'" + item.exact_year.toString().slice(-2) : ''}</div>
+                    <div class="qual-stat-label">Season/Year${item.season_confidence ? ` (${item.season_confidence})` : ''}</div>
+                </div>
+                ` : ''}
+            `;
+            
+            reasoning.textContent = item.deal_grade_reasoning || '';
+            section.style.display = 'block';
+        }
+        
+        async function fetchMarketData(itemId) {
+            const section = document.getElementById('market-data');
+            const grid = document.getElementById('market-data-grid');
+            const statsEl = document.getElementById('market-stats');
+            const badge = document.getElementById('demand-badge');
+            
+            section.style.display = 'none';
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/items/${itemId}/market-data`);
+                const data = await res.json();
+                
+                if (data.listings && data.listings.length > 0) {
+                    // Show stats
+                    if (data.stats) {
+                        statsEl.textContent = `${data.stats.count} active · Avg $${data.stats.avg_price?.toFixed(0) || '?'}`;
+                    }
+                    
+                    // Show demand badge
+                    const demandLabels = {
+                        high: '🔥 High Demand',
+                        medium: '📈 Good Demand', 
+                        low: '🎲 Niche',
+                        unknown: '❓ Unknown'
+                    };
+                    badge.className = `demand-badge ${data.demand_level}`;
+                    badge.textContent = demandLabels[data.demand_level] || demandLabels.unknown;
+                    
+                    // Render listings
+                    grid.innerHTML = data.listings.map(item => `
+                        <a class="market-item" href="${item.url || '#'}" target="_blank">
+                            <img src="${item.image_url || ''}" alt="" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22/>'">
+                            <div class="mi-price">$${item.price}</div>
+                        </a>
+                    `).join('');
+                    
+                    section.style.display = 'block';
+                }
+            } catch (e) {
+                console.log('Market data not available:', e);
+            }
+        }
+        
+        async function fetchPriceHistory(itemId) {
+            const indicator = document.getElementById('price-history');
+            const trend = document.getElementById('price-trend');
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/items/${itemId}/price-history`);
+                const data = await res.json();
+                
+                if (data.history && data.history.length > 0) {
+                    const oldest = data.history[data.history.length - 1];
+                    const priceDiff = data.current.source_price - oldest.source_price;
+                    const percentChange = ((priceDiff / oldest.source_price) * 100).toFixed(0);
+                    
+                    if (priceDiff < 0) {
+                        trend.className = 'price-trend down';
+                        trend.innerHTML = `↓ $${Math.abs(priceDiff).toFixed(0)} (${Math.abs(percentChange)}% drop)`;
+                        indicator.style.display = 'block';
+                    } else if (priceDiff > 0) {
+                        trend.className = 'price-trend up';
+                        trend.innerHTML = `↑ $${priceDiff.toFixed(0)} (${percentChange}% increase)`;
+                        indicator.style.display = 'block';
+                    } else {
+                        indicator.style.display = 'none';
+                    }
+                } else {
+                    indicator.style.display = 'none';
+                }
+            } catch (e) {
+                indicator.style.display = 'none';
+            }
+        }
+        
+        function openSimilarItem(itemId) {
+            const index = filteredItems.findIndex(i => i.id === itemId);
+            if (index >= 0) {
+                openModal(index);
+            } else {
+                // Item not in current filter, switch to it anyway
+                const allIndex = allItems.findIndex(i => i.id === itemId);
+                if (allIndex >= 0) {
+                    // Temporarily add to filtered for modal viewing
+                    const item = allItems[allIndex];
+                    filteredItems.push(item);
+                    openModal(filteredItems.length - 1);
+                }
+            }
+        }
+        
+        // Modal
+        function openModal(index) {
+            const item = filteredItems[index];
+            if (!item) return;
+            
+            modalItem = item;
+            modalImageIndex = 0;
+            selectedIndex = index;
+            
+            addToRecentlyViewed(item);
+            
+            document.getElementById('modal-source').textContent = item.source;
+            document.getElementById('modal-brand').textContent = item.brand || 'Unknown';
+            document.getElementById('modal-title').textContent = item.title;
+            document.getElementById('modal-image').src = item.images[0] || '';
+            document.getElementById('modal-link').href = item.source_url;
+            document.getElementById('modal-price').textContent = `$${item.price.toFixed(0)}`;
+            document.getElementById('modal-original').textContent = `$${item.original_price.toFixed(0)}`;
+            document.getElementById('modal-margin').textContent = item.margin_percent 
+                ? `${(item.margin_percent * 100).toFixed(0)}% margin` 
+                : '';
+            
+            // Meta tags
+            const meta = [];
+            if (item.size) meta.push(item.size);
+            if (item.category) meta.push(item.category);
+            if (item.condition) meta.push(item.condition);
+            // Season/Year (Quick Win)
+            if (item.exact_season || item.exact_year) {
+                const seasonLabel = item.exact_season || 'Unknown';
+                const yearLabel = item.exact_year || '';
+                meta.push(`${seasonLabel} ${yearLabel}`.trim());
+            }
+            document.getElementById('modal-meta').innerHTML = meta.map(m => 
+                `<span class="meta-tag">${m}</span>`
+            ).join('');
+            
+            // Image dots
+            const dotsContainer = document.getElementById('modal-image-dots');
+            if (item.images.length > 1) {
+                dotsContainer.innerHTML = item.images.map((_, i) => 
+                    `<span class="modal-image-dot ${i === 0 ? 'active' : ''}" onclick="goToImage(${i})"></span>`
+                ).join('');
+            } else {
+                dotsContainer.innerHTML = '';
+            }
+            
+            // Update compare links
+            const searchQuery = encodeURIComponent(`${item.brand || ''} ${item.title}`.trim().slice(0, 100));
+            document.getElementById('compare-grailed').href = `https://www.grailed.com/shop?query=${searchQuery}`;
+            document.getElementById('compare-ebay').href = `https://www.ebay.com/sch/i.html?_nkw=${searchQuery}`;
+            document.getElementById('compare-poshmark').href = `https://poshmark.com/search?query=${searchQuery}`;
+            document.getElementById('compare-depop').href = `https://www.depop.com/search/?q=${searchQuery}`;
+            document.getElementById('compare-mercari').href = `https://www.mercari.com/search/?keyword=${searchQuery}`;
+            
+            // Hide compare menu if open
+            document.getElementById('compare-menu')?.classList.remove('visible');
+            
+            // Render qualification data
+            renderQualification(item);
+            
+            // Find and render similar items
+            renderSimilarItems(item);
+            
+            // Fetch price history and market data
+            fetchPriceHistory(item.id);
+            fetchMarketData(item.id);
+            
+            updateModalFavoriteButton();
+            modalOverlay.classList.add('visible');
+            document.body.style.overflow = 'hidden';
+            
+            // Update card selection
+            document.querySelectorAll('.card').forEach(c => c.classList.remove('selected'));
+            document.querySelector(`[data-index="${index}"]`)?.classList.add('selected');
+        }
+        
+        function closeModal() {
+            modalOverlay.classList.remove('visible');
+            document.body.style.overflow = '';
+            modalItem = null;
+            document.getElementById('compare-menu')?.classList.remove('visible');
+        }
+        
+        function toggleCompareDropdown(event) {
+            event.stopPropagation();
+            const menu = document.getElementById('compare-menu');
+            menu.classList.toggle('visible');
+        }
+        
+        // Close compare menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.compare-dropdown')) {
+                document.getElementById('compare-menu')?.classList.remove('visible');
+            }
+        });
+        
+        function prevImage() {
+            if (!modalItem || modalItem.images.length <= 1) return;
+            modalImageIndex = (modalImageIndex - 1 + modalItem.images.length) % modalItem.images.length;
+            updateModalImage();
+        }
+        
+        function nextImage() {
+            if (!modalItem || modalItem.images.length <= 1) return;
+            modalImageIndex = (modalImageIndex + 1) % modalItem.images.length;
+            updateModalImage();
+        }
+        
+        function goToImage(index) {
+            modalImageIndex = index;
+            updateModalImage();
+        }
+        
+        function updateModalImage() {
+            document.getElementById('modal-image').src = modalItem.images[modalImageIndex];
+            document.querySelectorAll('.modal-image-dot').forEach((dot, i) => {
+                dot.classList.toggle('active', i === modalImageIndex);
+            });
+        }
+        
+        function copyLink() {
+            if (modalItem) {
+                navigator.clipboard.writeText(modalItem.source_url);
+                showToast('Link copied to clipboard');
+            }
+        }
+        
+        // Toast
+        function showToast(message) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = message;
+            container.appendChild(toast);
+            
+            setTimeout(() => toast.remove(), 3000);
+        }
+        
+        // Refresh indicator
+        function showRefreshIndicator() {
+            refreshIndicator.classList.add('visible');
+            setTimeout(() => refreshIndicator.classList.remove('visible'), 5000);
+        }
+        
+        function clearAllFilters() {
+            filters = {
+                search: '',
+                brands: [],
+                categories: [],
+                sizes: [],
+                conditions: [],
+                sources: [],
+                grades: [],
+                minPrice: null,
+                maxPrice: null,
+                minMargin: null,
+                minSoldCount: null,
+                minVolumeScore: null,
+                volumeTrends: [],
+                season: null,       // Quick Win
+                yearMin: null,      // Quick Win
+                yearMax: null,      // Quick Win
+                sort: filters.sort
+            };
+
+            searchInput.value = '';
+            document.querySelectorAll('[data-filter] input[type="checkbox"]').forEach(cb => cb.checked = false);
+            document.getElementById('price-min').value = '';
+            document.getElementById('price-max').value = '';
+            document.getElementById('margin-min').value = '';
+            document.getElementById('sold-count-min').value = '';
+            document.getElementById('volume-score-min').value = '';
+            document.getElementById('year-min').value = '';      // Quick Win
+            document.getElementById('year-max').value = '';      // Quick Win
+            document.getElementById('trend-accelerating').checked = false;
+            document.getElementById('trend-steady').checked = false;
+            document.getElementById('trend-decelerating').checked = false;
+
+            applyFilters();
+        }
+        
+        // Export to CSV
+        function exportToCSV() {
+            if (filteredItems.length === 0) {
+                showToast('No items to export');
+                return;
+            }
+            
+            const headers = ['Title', 'Brand', 'Category', 'Size', 'Condition', 'Price', 'Original Price', 'Market Price', 'Margin %', 'Deal Grade', 'Profit', 'Sell-Through %', 'Est Days to Sell', 'Demand', 'Comps', 'Source', 'URL'];
+            const rows = filteredItems.map(item => [
+                `"${(item.title || '').replace(/"/g, '""')}"`,
+                `"${(item.brand || '').replace(/"/g, '""')}"`,
+                `"${(item.category || '').replace(/"/g, '""')}"`,
+                `"${(item.size || '').replace(/"/g, '""')}"`,
+                `"${(item.condition || '').replace(/"/g, '""')}"`,
+                item.price || '',
+                item.original_price || '',
+                item.market_price || '',
+                item.margin_percent ? (item.margin_percent * 100).toFixed(1) : '',
+                item.deal_grade || '',
+                item.exact_profit ? item.exact_profit.toFixed(0) : '',
+                item.sell_through_rate ? (item.sell_through_rate * 100).toFixed(1) : '',
+                item.est_days_to_sell && item.est_days_to_sell < 999 ? item.est_days_to_sell.toFixed(0) : '',
+                item.demand_level || '',
+                item.comp_count || '',
+                item.source || '',
+                item.source_url || ''
+            ]);
+            
+            const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `archive-arbitrage-${new Date().toISOString().slice(0,10)}.csv`;
+            link.click();
+            
+            showToast(`Exported ${filteredItems.length} items`);
+        }
+        
+        function showShortcuts() {
+            shortcutsModal.classList.add('visible');
+        }
+        
+        function hideShortcuts() {
+            shortcutsModal.classList.remove('visible');
+        }
+        
+        // Keyboard navigation
+        function selectItem(delta) {
+            const newIndex = Math.max(0, Math.min(filteredItems.length - 1, selectedIndex + delta));
+            if (newIndex !== selectedIndex) {
+                selectedIndex = newIndex;
+                
+                document.querySelectorAll('.card').forEach(c => c.classList.remove('selected'));
+                const card = document.querySelector(`[data-index="${selectedIndex}"]`);
+                if (card) {
+                    card.classList.add('selected');
+                    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            }
+        }
+        
+        // Event Listeners
+        searchInput.addEventListener('input', debounce(e => {
+            filters.search = e.target.value;
+            applyFilters();
+        }, 300));
+        
+        document.getElementById('filter-sort').addEventListener('change', e => {
+            filters.sort = e.target.value;
+            applyFilters();
+        });
+        
+        document.getElementById('price-min').addEventListener('input', debounce(e => {
+            filters.minPrice = e.target.value ? parseFloat(e.target.value) : null;
+            applyFilters();
+        }, 500));
+        
+        document.getElementById('price-max').addEventListener('input', debounce(e => {
+            filters.maxPrice = e.target.value ? parseFloat(e.target.value) : null;
+            applyFilters();
+        }, 500));
+        
+        document.getElementById('margin-min').addEventListener('input', debounce(e => {
+            filters.minMargin = e.target.value ? parseFloat(e.target.value) : null;
+            applyFilters();
+        }, 500));
+        
+        document.getElementById('sold-count-min').addEventListener('input', debounce(e => {
+            filters.minSoldCount = e.target.value ? parseInt(e.target.value) : null;
+            applyFilters();
+        }, 500));
+        
+        document.getElementById('volume-score-min').addEventListener('input', debounce(e => {
+            filters.minVolumeScore = e.target.value ? parseInt(e.target.value) : null;
+            applyFilters();
+        }, 500));
+        
+        // Season/Year filters (Quick Win)
+        document.getElementById('year-min').addEventListener('input', debounce(e => {
+            filters.yearMin = e.target.value ? parseInt(e.target.value) : null;
+            applyFilters();
+        }, 500));
+        
+        document.getElementById('year-max').addEventListener('input', debounce(e => {
+            filters.yearMax = e.target.value ? parseInt(e.target.value) : null;
+            applyFilters();
+        }, 500));
+        
+        // Volume trend checkboxes
+        document.getElementById('trend-accelerating').addEventListener('change', e => {
+            if (e.target.checked) filters.volumeTrends.push('accelerating');
+            else filters.volumeTrends = filters.volumeTrends.filter(t => t !== 'accelerating');
+            applyFilters();
+        });
+        document.getElementById('trend-steady').addEventListener('change', e => {
+            if (e.target.checked) filters.volumeTrends.push('steady');
+            else filters.volumeTrends = filters.volumeTrends.filter(t => t !== 'steady');
+            applyFilters();
+        });
+        document.getElementById('trend-decelerating').addEventListener('change', e => {
+            if (e.target.checked) filters.volumeTrends.push('decelerating');
+            else filters.volumeTrends = filters.volumeTrends.filter(t => t !== 'decelerating');
+            applyFilters();
+        });
+        
+        // Checkbox filters
+        document.addEventListener('change', e => {
+            if (e.target.matches('[data-filter="brand"]')) {
+                if (e.target.checked) filters.brands.push(e.target.value);
+                else filters.brands = filters.brands.filter(b => b !== e.target.value);
+                applyFilters();
+            }
+            if (e.target.matches('[data-filter="category"]')) {
+                if (e.target.checked) filters.categories.push(e.target.value);
+                else filters.categories = filters.categories.filter(c => c !== e.target.value);
+                applyFilters();
+            }
+            if (e.target.matches('[data-filter="size"]')) {
+                if (e.target.checked) filters.sizes.push(e.target.value);
+                else filters.sizes = filters.sizes.filter(s => s !== e.target.value);
+                applyFilters();
+            }
+            if (e.target.matches('[data-filter="condition"]')) {
+                if (e.target.checked) filters.conditions.push(e.target.value);
+                else filters.conditions = filters.conditions.filter(c => c !== e.target.value);
+                applyFilters();
+            }
+            if (e.target.matches('[data-filter="source"]')) {
+                if (e.target.checked) filters.sources.push(e.target.value);
+                else filters.sources = filters.sources.filter(s => s !== e.target.value);
+                applyFilters();
+            }
+            if (e.target.matches('[data-filter="grade"]')) {
+                if (e.target.checked) filters.grades.push(e.target.value);
+                else filters.grades = filters.grades.filter(g => g !== e.target.value);
+                applyFilters();
+            }
+            if (e.target.matches('[data-filter="season"]')) {
+                // Only one season can be selected at a time
+                if (e.target.checked) {
+                    filters.season = e.target.value;
+                    // Uncheck other season boxes
+                    document.querySelectorAll('[data-filter="season"]').forEach(cb => {
+                        if (cb !== e.target) cb.checked = false;
+                    });
+                } else {
+                    filters.season = null;
+                }
+                applyFilters();
+            }
+        });
+        
+        // Clear individual filter types
+        document.addEventListener('click', e => {
+            if (e.target.matches('.filter-clear')) {
+                const filterType = e.target.dataset.filter;
+                if (filterType === 'price') {
+                    filters.minPrice = null;
+                    filters.maxPrice = null;
+                    document.getElementById('price-min').value = '';
+                    document.getElementById('price-max').value = '';
+                } else if (filterType === 'margin') {
+                    filters.minMargin = null;
+                    document.getElementById('margin-min').value = '';
+                } else if (filterType === 'sold_count') {
+                    filters.minSoldCount = null;
+                    document.getElementById('sold-count-min').value = '';
+                } else if (filterType === 'brands') {
+                    filters.brands = [];
+                    document.querySelectorAll('[data-filter="brand"]').forEach(cb => cb.checked = false);
+                } else if (filterType === 'categories') {
+                    filters.categories = [];
+                    document.querySelectorAll('[data-filter="category"]').forEach(cb => cb.checked = false);
+                } else if (filterType === 'sizes') {
+                    filters.sizes = [];
+                    document.querySelectorAll('[data-filter="size"]').forEach(cb => cb.checked = false);
+                } else if (filterType === 'conditions') {
+                    filters.conditions = [];
+                    document.querySelectorAll('[data-filter="condition"]').forEach(cb => cb.checked = false);
+                } else if (filterType === 'sources') {
+                    filters.sources = [];
+                    document.querySelectorAll('[data-filter="source"]').forEach(cb => cb.checked = false);
+                } else if (filterType === 'grades') {
+                    filters.grades = [];
+                    document.querySelectorAll('[data-filter="grade"]').forEach(cb => cb.checked = false);
+                } else if (filterType === 'season') {
+                    filters.season = null;
+                    document.querySelectorAll('[data-filter="season"]').forEach(cb => cb.checked = false);
+                } else if (filterType === 'year') {
+                    filters.yearMin = null;
+                    filters.yearMax = null;
+                    document.getElementById('year-min').value = '';
+                    document.getElementById('year-max').value = '';
+                }
+                applyFilters();
+            }
+            
+            if (e.target.matches('.filter-tag-remove')) {
+                const { type, value } = e.target.dataset;
+                if (type === 'search') {
+                    filters.search = '';
+                    searchInput.value = '';
+                } else if (type === 'brand') {
+                    filters.brands = filters.brands.filter(b => b !== value);
+                    const cb = document.querySelector(`[data-filter="brand"][value="${value}"]`);
+                    if (cb) cb.checked = false;
+                } else if (type === 'category') {
+                    filters.categories = filters.categories.filter(c => c !== value);
+                    const cb = document.querySelector(`[data-filter="category"][value="${value}"]`);
+                    if (cb) cb.checked = false;
+                } else if (type === 'size') {
+                    filters.sizes = filters.sizes.filter(s => s !== value);
+                    const cb = document.querySelector(`[data-filter="size"][value="${value}"]`);
+                    if (cb) cb.checked = false;
+                } else if (type === 'condition') {
+                    filters.conditions = filters.conditions.filter(c => c !== value);
+                    const cb = document.querySelector(`[data-filter="condition"][value="${value}"]`);
+                    if (cb) cb.checked = false;
+                } else if (type === 'source') {
+                    filters.sources = filters.sources.filter(s => s !== value);
+                    const cb = document.querySelector(`[data-filter="source"][value="${value}"]`);
+                    if (cb) cb.checked = false;
+                } else if (type === 'grade') {
+                    filters.grades = filters.grades.filter(g => g !== value);
+                    const cb = document.querySelector(`[data-filter="grade"][value="${value}"]`);
+                    if (cb) cb.checked = false;
+                } else if (type === 'minPrice') {
+                    filters.minPrice = null;
+                    document.getElementById('price-min').value = '';
+                } else if (type === 'maxPrice') {
+                    filters.maxPrice = null;
+                    document.getElementById('price-max').value = '';
+                } else if (type === 'minMargin') {
+                    filters.minMargin = null;
+                    document.getElementById('margin-min').value = '';
+                } else if (type === 'minSoldCount') {
+                    filters.minSoldCount = null;
+                    document.getElementById('sold-count-min').value = '';
+                } else if (type === 'season') {
+                    filters.season = null;
+                    document.querySelectorAll('[data-filter="season"]').forEach(cb => cb.checked = false);
+                } else if (type === 'yearRange' || type === 'yearMin' || type === 'yearMax') {
+                    filters.yearMin = null;
+                    filters.yearMax = null;
+                    document.getElementById('year-min').value = '';
+                    document.getElementById('year-max').value = '';
+                }
+                applyFilters();
+            }
+        });
+        
+        // View toggles
+        document.querySelectorAll('.view-toggle').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.view-toggle').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                grid.className = 'grid' + (btn.dataset.view === 'large' ? ' large' : '');
+            });
+        });
+        
+        // Mobile sidebar
+        mobileFilterBtn.addEventListener('click', () => {
+            sidebar.classList.add('open');
+            sidebarOverlay.classList.add('visible');
+        });
+        
+        sidebarOverlay.addEventListener('click', () => {
+            sidebar.classList.remove('open');
+            sidebarOverlay.classList.remove('visible');
+        });
+        
+        // Refresh indicator click
+        refreshIndicator.addEventListener('click', () => {
+            fetchAllItems();
+            refreshIndicator.classList.remove('visible');
+        });
+        
+        // Shortcuts modal click outside
+        shortcutsModal.addEventListener('click', e => {
+            if (e.target === shortcutsModal) hideShortcuts();
+        });
+        
+        // Modal click outside
+        modalOverlay.addEventListener('click', e => {
+            if (e.target === modalOverlay) closeModal();
+        });
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', e => {
+            // Don't handle if typing in input
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+                if (e.key === 'Escape') {
+                    e.target.blur();
+                    if (filters.search) {
+                        filters.search = '';
+                        searchInput.value = '';
+                        applyFilters();
+                    }
+                }
+                return;
+            }
+            
+            switch (e.key) {
+                case 'j':
+                    e.preventDefault();
+                    if (modalOverlay.classList.contains('visible')) {
+                        nextImage();
+                    } else {
+                        selectItem(1);
+                    }
+                    break;
+                case 'k':
+                    e.preventDefault();
+                    if (modalOverlay.classList.contains('visible')) {
+                        prevImage();
+                    } else {
+                        selectItem(-1);
+                    }
+                    break;
+                case 'Enter':
+                    e.preventDefault();
+                    if (selectedIndex >= 0 && !modalOverlay.classList.contains('visible')) {
+                        openModal(selectedIndex);
+                    }
+                    break;
+                case 'o':
+                    e.preventDefault();
+                    if (modalItem) {
+                        window.open(modalItem.source_url, '_blank');
+                    } else if (selectedIndex >= 0) {
+                        window.open(filteredItems[selectedIndex].source_url, '_blank');
+                    }
+                    break;
+                case 'f':
+                    e.preventDefault();
+                    if (modalItem) {
+                        toggleFavorite(modalItem.id);
+                    } else if (selectedIndex >= 0) {
+                        toggleFavorite(filteredItems[selectedIndex].id);
+                    }
+                    break;
+                case '/':
+                    e.preventDefault();
+                    searchInput.focus();
+                    break;
+                case 'Escape':
+                    if (shortcutsModal.classList.contains('visible')) {
+                        hideShortcuts();
+                    } else if (modalOverlay.classList.contains('visible')) {
+                        closeModal();
+                    }
+                    break;
+                case '?':
+                    e.preventDefault();
+                    if (shortcutsModal.classList.contains('visible')) {
+                        hideShortcuts();
+                    } else {
+                        showShortcuts();
+                    }
+                    break;
+                case 'ArrowLeft':
+                    if (modalOverlay.classList.contains('visible')) {
+                        e.preventDefault();
+                        prevImage();
+                    }
+                    break;
+                case 'ArrowRight':
+                    if (modalOverlay.classList.contains('visible')) {
+                        e.preventDefault();
+                        nextImage();
+                    }
+                    break;
+            }
+        });
+        
+        // Utility
+        function debounce(fn, delay) {
+            let timeout;
+            return (...args) => {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => fn(...args), delay);
+            };
+        }
+        
+        // Initialize
+        loadFiltersFromURL();
+        fetchStats();
+        fetchAllItems();
+        updateFavoritesButton();
+        
+        // Auto-refresh
+        setInterval(() => {
+            fetchStats();
+        }, REFRESH_INTERVAL);
+    </script>
+</body>
+</html>

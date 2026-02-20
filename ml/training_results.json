@@ -1,0 +1,24 @@
+{
+  "accuracy": 0.955,
+  "feature_importance": {
+    "initial_liquidity_sol": 0.04242782559253997,
+    "token_symbol_length": 0.017036365928106808,
+    "has_numbers": 0.006085686878066551,
+    "has_special_chars": 0.005649814587192074,
+    "market_cap_estimate": 0.03888479033643977,
+    "social_mentions_24h": 0.03599586597627395,
+    "launch_hour": 0.030498348236566025,
+    "day_of_week": 0.016382023342921968,
+    "gas_price_sol": 0.04456727631186926,
+    "has_verified_contract": 0.033699526540385605,
+    "num_holders_initial": 0.7113703733090707,
+    "is_meme_token": 0.004641930628748478,
+    "similar_tokens_count": 0.012760172331818809
+  },
+  "test_prediction": {
+    "symbol": "TESTAI",
+    "prediction": "SUCCESS",
+    "confidence": 0.9949211356466877
+  },
+  "timestamp": "2026-02-14T19:35:18.609493"
+}
