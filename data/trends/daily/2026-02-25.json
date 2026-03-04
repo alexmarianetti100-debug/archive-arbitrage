@@ -1,0 +1,275 @@
+{
+  "date": "2026-02-25",
+  "generated_at": "2026-02-25T18:27:44.656973",
+  "queries": [
+    "grailed yeat zine",
+    "Rick Owens boots",
+    "dior homme hedi slimane",
+    "number nine leather jacket",
+    "undercover scab",
+    "dior homme hedi slimane jacket",
+    "maison martin margiela replica GAT",
+    "rick owens geobasket",
+    "rick owens ramones high",
+    "rick owens dunks",
+    "rick owens stooges leather jacket",
+    "rick owens kiss boots",
+    "margiela tabi boots",
+    "chrome hearts cross pendant silver",
+    "chrome hearts cross ring",
+    "raf simons peter saville joy division",
+    "raf simons ozweego",
+    "helmut lang bondage jacket",
+    "Yohji Yamamoto jacket",
+    "Kapital jacket",
+    "Raf Simons boots",
+    "Maison Margiela boots",
+    "Undercover",
+    "prada ring",
+    "kapital denim jacket",
+    "undercover bag",
+    "vivienne westwood coat",
+    "bottega veneta bag",
+    "visvim cargo pants",
+    "maison margiela bomber jacket",
+    "celine sneakers",
+    "rick owens ring",
+    "visvim leather jacket",
+    "on post archive facti",
+    "Chrome Hearts boots",
+    "Balenciaga accessories",
+    "Saint Laurent jacket",
+    "Number (N)ine hoodie",
+    "Hysteric Glamour",
+    "Needles accessories",
+    "Issey Miyake pants",
+    "Visvim",
+    "Bottega Veneta hoodie",
+    "Prada jacket",
+    "Comme Des Garcons sneakers",
+    "Jean Paul Gaultier jacket"
+  ],
+  "trend_count": 21,
+  "top_trends": [
+    {
+      "query": "grailed yeat zine",
+      "brand": "Grailed",
+      "score": 0.42,
+      "direction": "stable",
+      "sources": [
+        "grailed_velocity"
+      ],
+      "velocity_change": 0.0,
+      "price_change": 0.0
+    },
+    {
+      "query": "Rick Owens boots",
+      "brand": "Rick Owens",
+      "score": 0.4,
+      "direction": "rising",
+      "sources": [
+        "reddit"
+      ],
+      "velocity_change": 1.0,
+      "price_change": 0.0
+    },
+    {
+      "query": "dior homme hedi slimane",
+      "brand": "Dior",
+      "score": 0.34,
+      "direction": "stable",
+      "sources": [
+        "grailed_velocity"
+      ],
+      "velocity_change": 0.0,
+      "price_change": 0.0
+    },
+    {
+      "query": "Yohji Yamamoto jacket",
+      "brand": "Yohji Yamamoto",
+      "score": 0.28,
+      "direction": "rising",
+      "sources": [
+        "reddit"
+      ],
+      "velocity_change": 1.0,
+      "price_change": 0.0
+    },
+    {
+      "query": "Kapital jacket",
+      "brand": "Kapital",
+      "score": 0.28,
+      "direction": "rising",
+      "sources": [
+        "reddit"
+      ],
+      "velocity_change": 1.0,
+      "price_change": 0.0
+    },
+    {
+      "query": "Raf Simons boots",
+      "brand": "Raf Simons",
+      "score": 0.23,
+      "direction": "rising",
+      "sources": [
+        "reddit"
+      ],
+      "velocity_change": 1.0,
+      "price_change": 0.0
+    },
+    {
+      "query": "Maison Margiela boots",
+      "brand": "Maison Margiela",
+      "score": 0.23,
+      "direction": "rising",
+      "sources": [
+        "reddit"
+      ],
+      "velocity_change": 1.0,
+      "price_change": 0.0
+    },
+    {
+      "query": "Undercover",
+      "brand": "Undercover",
+      "score": 0.23,
+      "direction": "rising",
+      "sources": [
+        "reddit"
+      ],
+      "velocity_change": 1.0,
+      "price_change": 0.0
+    },
+    {
+      "query": "on post archive facti",
+      "brand": "On",
+      "score": 0.153,
+      "direction": "stable",
+      "sources": [
+        "grailed_velocity"
+      ],
+      "velocity_change": 0.0,
+      "price_change": 0.0
+    },
+    {
+      "query": "Chrome Hearts boots",
+      "brand": "Chrome Hearts",
+      "score": 0.12,
+      "direction": "stable",
+      "sources": [
+        "reddit"
+      ],
+      "velocity_change": 0.5,
+      "price_change": 0.0
+    },
+    {
+      "query": "Balenciaga accessories",
+      "brand": "Balenciaga",
+      "score": 0.12,
+      "direction": "stable",
+      "sources": [
+        "reddit"
+      ],
+      "velocity_change": 0.5,
+      "price_change": 0.0
+    },
+    {
+      "query": "Saint Laurent jacket",
+      "brand": "Saint Laurent",
+      "score": 0.12,
+      "direction": "stable",
+      "sources": [
+        "reddit"
+      ],
+      "velocity_change": 0.5,
+      "price_change": 0.0
+    },
+    {
+      "query": "Number (N)ine hoodie",
+      "brand": "Number (N)ine",
+      "score": 0.12,
+      "direction": "stable",
+      "sources": [
+        "reddit"
+      ],
+      "velocity_change": 0.5,
+      "price_change": 0.0
+    },
+    {
+      "query": "Hysteric Glamour",
+      "brand": "Hysteric Glamour",
+      "score": 0.12,
+      "direction": "stable",
+      "sources": [
+        "reddit"
+      ],
+      "velocity_change": 0.5,
+      "price_change": 0.0
+    },
+    {
+      "query": "Needles accessories",
+      "brand": "Needles",
+      "score": 0.12,
+      "direction": "stable",
+      "sources": [
+        "reddit"
+      ],
+      "velocity_change": 0.5,
+      "price_change": 0.0
+    },
+    {
+      "query": "Issey Miyake pants",
+      "brand": "Issey Miyake",
+      "score": 0.11,
+      "direction": "stable",
+      "sources": [
+        "reddit"
+      ],
+      "velocity_change": 0.5,
+      "price_change": 0.0
+    },
+    {
+      "query": "Visvim",
+      "brand": "Visvim",
+      "score": 0.11,
+      "direction": "stable",
+      "sources": [
+        "reddit"
+      ],
+      "velocity_change": 0.5,
+      "price_change": 0.0
+    },
+    {
+      "query": "Bottega Veneta hoodie",
+      "brand": "Bottega Veneta",
+      "score": 0.11,
+      "direction": "stable",
+      "sources": [
+        "reddit"
+      ],
+      "velocity_change": 0.5,
+      "price_change": 0.0
+    },
+    {
+      "query": "Prada jacket",
+      "brand": "Prada",
+      "score": 0.11,
+      "direction": "stable",
+      "sources": [
+        "reddit"
+      ],
+      "velocity_change": 0.5,
+      "price_change": 0.0
+    },
+    {
+      "query": "Comme Des Garcons sneakers",
+      "brand": "Comme Des Garcons",
+      "score": 0.11,
+      "direction": "stable",
+      "sources": [
+        "reddit"
+      ],
+      "velocity_change": 0.5,
+      "price_change": 0.0
+    }
+  ]
+}

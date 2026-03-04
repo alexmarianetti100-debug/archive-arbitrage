@@ -24,6 +24,7 @@ from typing import Optional, List, Dict, Any
 
 import httpx
 from dotenv import load_dotenv
+from core.authenticity_checker import format_auth_confidence_bar
 
 load_dotenv()
 
@@ -46,6 +47,10 @@ GRAIL_PROFIT = float(os.getenv("ALERT_GRAIL_PROFIT", "500"))
 FIRE_PROFIT = float(os.getenv("ALERT_FIRE_PROFIT", "300"))
 MIN_PROFIT = float(os.getenv("ALERT_MIN_PROFIT", "150"))
 MIN_MARGIN = float(os.getenv("ALERT_MIN_MARGIN", "0.40"))
+
+# Private channel for deal alerts (bot must be admin)
+TELEGRAM_CHANNEL_ID = os.getenv("TELEGRAM_CHANNEL_ID", "")
+TELEGRAM_CHANNEL_INVITE = os.getenv("TELEGRAM_CHANNEL_INVITE", "")
 
 
 # ---------------------------------------------------------------------------
@@ -245,6 +250,22 @@ def format_deal_message(item_data: dict) -> str:
     if demand_emoji:
         lines.append(f"📊 Demand: {demand_emoji} {demand.upper()}")
 
+    # Authenticity confidence score
+    auth_confidence = item_data.get("auth_confidence")
+    auth_grade = item_data.get("auth_grade")
+    auth_status = item_data.get("auth_status")
+    auth_flags = item_data.get("auth_flags", [])
+    if auth_confidence is not None:
+        filled = round(auth_confidence * 5)
+        bar = "🟢" * filled + "⚪" * (5 - filled)
+        grade_emoji = {"A": "🏆", "B": "✅", "C": "🟡", "D": "⚠️", "F": "🚫"}.get(auth_grade, "")
+        grade_str = f" {grade_emoji} Grade {auth_grade}" if auth_grade else ""
+        lines.append(f"🔐 Auth: {bar} {auth_confidence * 100:.0f}%{grade_str}")
+        if auth_flags:
+            # Only show non-emoji-prefixed flags cleaner
+            flag = auth_flags[0]
+            lines.append(f"   {flag}")
+
     if source_url:
         lines.append(f"\n<a href=\"{source_url}\">🔗 View Listing</a>")
 
@@ -255,7 +276,7 @@ def format_deal_message(item_data: dict) -> str:
 # Send deals to subscribers
 # ---------------------------------------------------------------------------
 
-async def send_deal_to_subscribers(scraped_item, price_info, brand: str = ""):
+async def send_deal_to_subscribers(scraped_item, price_info, brand: str = "", auth_result=None, auth_v2=None):
     """
     Send a deal alert to all matching Telegram subscribers.
     Called from pipeline.py alongside Discord alerts.
@@ -291,6 +312,10 @@ async def send_deal_to_subscribers(scraped_item, price_info, brand: str = ""):
         "grade": getattr(price_info, "grade", ""),
         "comps_count": getattr(price_info, "comps_count", 0),
         "image_url": scraped_item.images[0] if scraped_item.images else None,
+        "auth_confidence": auth_v2.confidence if auth_v2 else (auth_result.confidence if auth_result else None),
+        "auth_grade": auth_v2.grade if auth_v2 else None,
+        "auth_status": auth_v2.status.value if auth_v2 else None,
+        "auth_flags": (auth_v2.reasons if auth_v2 else (auth_result.reasons if auth_result else []))[:2],
     }
 
     message = format_deal_message(item_data)
@@ -342,6 +367,31 @@ async def send_deal_to_subscribers(scraped_item, price_info, brand: str = ""):
 
         # Small delay to avoid rate limiting
         await asyncio.sleep(0.1)
+
+    # Also post to the private channel (if configured)
+    if TELEGRAM_CHANNEL_ID:
+        try:
+            view_btn = {
+                "inline_keyboard": [[
+                    {"text": "🔗 View Listing", "url": item_data["source_url"]}
+                ]]
+            } if item_data.get("source_url") else None
+
+            if item_data.get("image_url"):
+                await send_photo(
+                    TELEGRAM_CHANNEL_ID,
+                    item_data["image_url"],
+                    message,
+                    reply_markup=view_btn,
+                )
+            else:
+                await send_message(
+                    TELEGRAM_CHANNEL_ID,
+                    message,
+                    reply_markup=view_btn,
+                )
+        except Exception as e:
+            logger.error(f"Failed to post to channel: {e}")
 
 
 # ---------------------------------------------------------------------------

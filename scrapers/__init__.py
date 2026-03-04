@@ -15,6 +15,12 @@ from .grailed import GrailedScraper
 from .nobids import NoBidsScraper
 from .gem import GemScraper
 
+# Vinted (pip install vinted_scraper)
+try:
+    from .vinted import VintedScraperWrapper as VintedScraper
+except ImportError:
+    VintedScraper = None
+
 # API-based scrapers (more reliable, no blocking)
 try:
     from .ebay_api import EbayApiScraper

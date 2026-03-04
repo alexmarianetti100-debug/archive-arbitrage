@@ -1,0 +1,18 @@
+id,epic,story,priority,size,doD,acceptance_criteria
+A1,A1 - Sold Data Contract,Define SoldComp schema and normalization rules,P0,S,Implemented,The SoldComp schema exists with fields: platform, item_id/url, sold_price, currency, sold_at, title, brand/model fingerprint (optional), condition, size, confidence. Documented currency normalization rules and platform quirks.
+A2,A2 - Poshmark sold comps ingestion,Ingest Poshmark sold comps (MVP),P0,M,Implemented,Function returns recent sold comps for a query, data cached, and quality filters applied.
+A3,A3 - eBay sold comps ingestion,Ingest eBay sold comps (MVP),P1,M,Implemented,Support production keys or documented fallback, stored and queryable.
+A4,A4 - Price consensus module,Weighted fusion for consensus price, P0,M,Implemented,Consensus price computed across sources with configurable weights and provenance.
+A5,A5 - Pricing provenance logging,Provenance logging for pricing, P0,S,Implemented,Provenance blob stored per item: sources, counts, filters, season/demand, final price, margin.
+B1,B1 - Catalog expansion pipeline,Expand product catalog generation, P0,M,Implemented,Catalog builds to 250+ canonical products from sold comps with idempotent runs.
+B2,B2 - Days-to-sell integration,Integrate days-to-sell estimation, P0,M,Implemented,Compute days-to-sell per product and incorporate into deal grading.
+B3,B3 - Low-risk gating for alerts,Gate alerts to low risk, P0,S,Implemented,Alerts require high velocity and tight price band with min comp count.
+C1,C1 - Net-profit calculator module,Implement fee/shipping net-profit calc, P0,S,Implemented,Centralized fee calculator with unit tests.
+C2,C2 - Minimal arbitrage verifier,Arbitrage verifier with fingerprint + prices, P0,M,Implemented,Outputs net profit, confidence, provenance; includes guardrails.
+C3,C3 - Image similarity matching MVP,Image similarity for cross-posted items, P2,L,Pending,Prototype with perceptual hash; thresholds defined.
+D1,D1 - Harmonize decision pipeline,Single canonical decision path, P1,M,Implemented,Shared module for desirability/auth/pricing/decision across modes.
+D2,D2 - Reduce false positives,Improve results quality, P0,S,Implemented,Sharper matching rules; configurable thresholds; rejected patterns documented.
+E1,E1 - Guaranteed/Low-risk filter in UI,Add low-risk toggle, P1,S,Implemented,Frontend filter wired; API param support.
+E2,E2 - Product detail velocity view,Show sold history and velocity, P1,M,Implemented,Detail page with velocity, comp counts, time windows, and trends.
+F1,F1 - Smoke tests for core flows,Add basic regression tests, P0,S,Implemented,Smoke tests for pipeline, pricing, and grading.
+F2,F2 - Secrets hygiene & env validation,Runtime health checks, P1,S,Implemented,Health checks; missing env var reporting; documented doctor command.

@@ -76,7 +76,10 @@ class ScrapedItem:
     images: list[str] = field(default_factory=list)
     description: Optional[str] = None
     seller: Optional[str] = None
+    seller_sales: Optional[int] = None
+    seller_rating: Optional[float] = None
     shipping_cost: Optional[float] = None
+    listed_at: Optional[datetime] = None
     ends_at: Optional[datetime] = None
     is_auction: bool = False
     raw_data: dict = field(default_factory=dict)

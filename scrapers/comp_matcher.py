@@ -10,9 +10,14 @@ Instead of generic "brand + category" searches, this module:
 This dramatically improves pricing accuracy vs. the generic approach.
 """
 
+import logging
+import math
 import re
+from datetime import datetime, timedelta
 from typing import Optional, List, Tuple
 from dataclasses import dataclass, field
+
+logger = logging.getLogger("comp_matcher")
 
 
 # Sub-brands / lines that distinguish pricing tiers
@@ -107,6 +112,14 @@ class ScoredComp:
     similarity: float  # 0.0 to 1.0
     url: str = ""
     source_id: str = ""
+    platform: str = ""
+    sold_date: Optional[datetime] = None
+    condition: Optional[str] = None
+    size: Optional[str] = None
+    is_auction: bool = False
+    num_bids: Optional[int] = None
+    shipping_cost: Optional[float] = None
+    normalized_price: Optional[float] = None  # After all normalizations
 
 
 @dataclass
@@ -116,9 +129,10 @@ class CompResult:
     simple_median: float            # Simple median for comparison
     comps_count: int                # Total comps found
     high_quality_count: int         # Comps with similarity > 0.5
-    confidence: str                 # high, medium, low
+    confidence: str                 # high, medium, low (kept for backward compat)
     query_used: str                 # Which query found the best comps
     top_comps: List[ScoredComp] = field(default_factory=list)
+    confidence_score: float = 0.0   # Numeric 0.0-1.0
     # Season extraction from comps (Quick Win)
     exact_season: Optional[str] = None      # "FW", "SS", etc.
     exact_year: Optional[int] = None        # 2018, 2005, etc.
@@ -327,46 +341,364 @@ def score_comp_similarity(source_parsed: ParsedTitle, comp_title: str) -> float:
     return min(score / factors, 1.0)
 
 
-def weighted_median(scored_comps: List[ScoredComp]) -> float:
+# ══════════════════════════════════════════════════════════════
+# CATEGORY-SPECIFIC PARAMETERS
+# ══════════════════════════════════════════════════════════════
+
+CATEGORY_CONFIG = {
+    "leather_jacket": {
+        "time_decay_halflife": 90,      # Leathers hold value, slow change
+        "condition_sensitivity": 0.7,    # Patina is acceptable
+    },
+    "jacket": {
+        "time_decay_halflife": 60,
+        "condition_sensitivity": 0.85,
+    },
+    "boots": {
+        "time_decay_halflife": 60,
+        "condition_sensitivity": 0.9,
+    },
+    "shoes": {
+        "time_decay_halflife": 30,       # Sneaker prices move fast
+        "condition_sensitivity": 1.3,     # Condition matters a lot
+    },
+    "tee": {
+        "time_decay_halflife": 45,
+        "condition_sensitivity": 1.1,
+    },
+    "hoodie": {
+        "time_decay_halflife": 45,
+        "condition_sensitivity": 1.0,
+    },
+    "sweater": {
+        "time_decay_halflife": 50,
+        "condition_sensitivity": 1.0,
+    },
+    "pants": {
+        "time_decay_halflife": 60,
+        "condition_sensitivity": 0.9,
+    },
+    "bag": {
+        "time_decay_halflife": 60,
+        "condition_sensitivity": 1.0,
+    },
+    "accessories": {
+        "time_decay_halflife": 60,
+        "condition_sensitivity": 0.9,
+    },
+}
+
+DEFAULT_HALFLIFE = 45
+DEFAULT_CONDITION_SENSITIVITY = 1.0
+
+
+def get_category_config(item_type: str) -> dict:
+    """Get category-specific parameters, falling back to defaults."""
+    item_type = (item_type or "").lower()
+    # Check for leather jacket specifically
+    if "leather" in item_type and ("jacket" in item_type or "coat" in item_type):
+        return CATEGORY_CONFIG["leather_jacket"]
+    for key, config in CATEGORY_CONFIG.items():
+        if key in item_type:
+            return config
+    return {"time_decay_halflife": DEFAULT_HALFLIFE, "condition_sensitivity": DEFAULT_CONDITION_SENSITIVITY}
+
+
+# ══════════════════════════════════════════════════════════════
+# TIME-DECAY WEIGHTING
+# ══════════════════════════════════════════════════════════════
+
+def time_decay_weight(sold_date: Optional[datetime], half_life_days: int = 45) -> float:
     """
-    Calculate similarity-weighted median price.
-    High-similarity comps have more influence.
+    Exponential decay: a sale from half_life_days ago has half the weight.
+    Returns 1.0 for today, 0.5 for half_life_days ago, etc.
     """
-    if not scored_comps:
+    if sold_date is None:
+        return 0.5  # Unknown date — assume ~half-life old
+
+    age_days = (datetime.now(tz=None) - sold_date).total_seconds() / 86400
+    if age_days < 0:
+        age_days = 0
+    return math.exp(-0.693 * age_days / max(half_life_days, 1))
+
+
+# ══════════════════════════════════════════════════════════════
+# CONDITION ADJUSTMENT
+# ══════════════════════════════════════════════════════════════
+
+CONDITION_MULTIPLIERS = {
+    "deadstock": 1.35,
+    "nwt": 1.35,
+    "near_deadstock": 1.25,
+    "nwot": 1.25,
+    "excellent": 1.15,
+    "very_good": 1.05,
+    "good": 1.00,
+    "gently_used": 0.85,
+    "used": 0.75,
+    "fair": 0.65,
+    "poor": 0.50,
+}
+
+# How much condition affects price for specific brands
+BRAND_CONDITION_SENSITIVITY = {
+    "rick owens": 0.8,       # Leather patina is expected/desired
+    "number nine": 0.85,     # Vintage wear expected
+    "helmut lang": 0.85,     # Vintage pieces
+    "undercover": 0.9,
+    "maison margiela": 0.9,  # Deconstructed aesthetic
+    "raf simons": 1.0,
+    "supreme": 1.2,          # Collectors — condition matters MORE
+    "bape": 1.2,
+    "chrome hearts": 1.1,
+}
+
+
+def normalize_condition(condition: Optional[str]) -> Optional[str]:
+    """Normalize condition strings to our tier keys."""
+    if not condition:
+        return None
+    c = condition.lower().strip()
+
+    mappings = [
+        (["deadstock", "ds", "bnwt", "brand new with tags", "new with tags", "nwt"], "nwt"),
+        (["nwot", "new without tags", "like new", "vnds"], "nwot"),
+        (["excellent", "pristine", "mint", "worn once"], "excellent"),
+        (["very good", "great condition", "lightly worn"], "very_good"),
+        (["good", "pre-owned", "preowned"], "good"),
+        (["gently used", "gently_used"], "gently_used"),
+        (["used", "normal wear"], "used"),
+        (["fair", "worn", "stained", "flaw"], "fair"),
+        (["poor", "beater", "thrashed", "damaged"], "poor"),
+    ]
+
+    for keywords, tier in mappings:
+        for kw in keywords:
+            if kw in c:
+                return tier
+    return "good"  # Default assumption for archive fashion
+
+
+def adjust_for_condition(
+    comp_price: float,
+    comp_condition: Optional[str],
+    listing_condition: Optional[str],
+    brand: str = "",
+    category_sensitivity: float = 1.0,
+) -> float:
+    """
+    Adjust a comp's price based on condition difference from listing.
+    If comp is NWT and listing is used, adjust comp price down.
+    """
+    comp_cond = normalize_condition(comp_condition)
+    list_cond = normalize_condition(listing_condition)
+
+    if comp_cond is None or list_cond is None:
+        return comp_price  # Can't adjust without both conditions
+
+    comp_mult = CONDITION_MULTIPLIERS.get(comp_cond, 1.0)
+    list_mult = CONDITION_MULTIPLIERS.get(list_cond, 1.0)
+
+    if comp_mult == 0:
+        return comp_price
+
+    # Raw adjustment ratio
+    ratio = list_mult / comp_mult
+
+    # Apply brand sensitivity (dampens or amplifies the adjustment)
+    brand_sens = BRAND_CONDITION_SENSITIVITY.get(brand.lower().strip(), 1.0)
+    sensitivity = brand_sens * category_sensitivity
+
+    # Blend toward 1.0 based on sensitivity (1.0 = full adjustment, 0.5 = half)
+    adjusted_ratio = 1.0 + (ratio - 1.0) * sensitivity
+
+    # Cap extreme adjustments
+    adjusted_ratio = max(0.40, min(1.60, adjusted_ratio))
+
+    return comp_price * adjusted_ratio
+
+
+# ══════════════════════════════════════════════════════════════
+# BUNDLE DETECTION (delegates to price_normalizer)
+# ══════════════════════════════════════════════════════════════
+
+BUNDLE_RE = [
+    re.compile(p, re.IGNORECASE) for p in [
+        r"\blot\s+of\b",
+        r"\bbundle\b",
+        r"\bset\s+of\s+\d+\b",
+        r"\b\d+\s*(?:pc|piece|item)s?\b",
+        r"\b[2-9]x\b",
+    ]
+]
+
+
+def is_bundle(title: str) -> bool:
+    """Quick check if a listing title indicates a bundle/lot."""
+    for pattern in BUNDLE_RE:
+        if pattern.search(title):
+            return True
+    return False
+
+
+# ══════════════════════════════════════════════════════════════
+# NUMERIC CONFIDENCE SCORING
+# ══════════════════════════════════════════════════════════════
+
+def calculate_confidence_score(comps: List[ScoredComp]) -> float:
+    """
+    Calculate a numeric confidence score (0.0 - 1.0) for a comp set.
+
+    Factors:
+    - sample_size (25%): more comps = higher confidence
+    - price_agreement (30%): low coefficient of variation = prices agree
+    - recency (15%): recent comps are more reliable
+    - similarity (20%): high-similarity comps = better match
+    - platform_diversity (10%): cross-platform validation
+    """
+    if not comps:
         return 0.0
-    
-    # Sort by price
-    sorted_comps = sorted(scored_comps, key=lambda c: c.price)
-    
-    # Calculate weighted cumulative
-    total_weight = sum(c.similarity for c in sorted_comps)
-    if total_weight == 0:
-        # Fall back to simple median
-        return sorted_comps[len(sorted_comps) // 2].price
-    
-    cumulative = 0.0
-    for comp in sorted_comps:
-        cumulative += comp.similarity
-        if cumulative >= total_weight / 2:
-            return comp.price
-    
-    return sorted_comps[-1].price
+
+    prices = [c.price for c in comps if c.price > 0]
+    if not prices:
+        return 0.0
+
+    n = len(prices)
+
+    # Sample size: 0→0, 3→0.5, 8+→1.0
+    f_sample = min(1.0, n / 8.0)
+
+    # Price agreement: coefficient of variation (lower = better)
+    import numpy as np
+    mean_p = np.mean(prices)
+    if mean_p > 0:
+        cv = np.std(prices) / mean_p
+        f_agreement = max(0.0, 1.0 - cv)
+    else:
+        f_agreement = 0.0
+
+    # Recency: how many comps are from the last 60 days
+    now = datetime.now(tz=None)
+    recent = sum(1 for c in comps if c.sold_date and (now - c.sold_date).days < 60)
+    dated = sum(1 for c in comps if c.sold_date is not None)
+    if dated > 0:
+        f_recency = min(1.0, recent / 3.0)
+    else:
+        f_recency = 0.3  # Unknown dates — moderate confidence
+
+    # Similarity: average similarity of comps
+    avg_sim = np.mean([c.similarity for c in comps])
+    f_similarity = avg_sim
+
+    # Platform diversity
+    platforms = set(c.platform for c in comps if c.platform)
+    f_diversity = min(1.0, len(platforms) / 2.0) if platforms else 0.3
+
+    # Weighted combination
+    score = (
+        0.25 * f_sample
+        + 0.30 * f_agreement
+        + 0.15 * f_recency
+        + 0.20 * f_similarity
+        + 0.10 * f_diversity
+    )
+
+    return round(max(0.0, min(1.0, score)), 3)
 
 
-def filter_outliers(comps: List[ScoredComp]) -> List[ScoredComp]:
-    """Remove price outliers using IQR method."""
+# ══════════════════════════════════════════════════════════════
+# IMPROVED OUTLIER REMOVAL
+# ══════════════════════════════════════════════════════════════
+
+def filter_outliers_mad(comps: List[ScoredComp]) -> List[ScoredComp]:
+    """
+    Remove outliers using Median Absolute Deviation (MAD).
+    More robust than IQR for skewed distributions common in archive fashion.
+    Falls back to IQR if MAD is too aggressive.
+    """
     if len(comps) < 4:
         return comps
-    
+
+    import numpy as np
+
+    prices = np.array([c.price for c in comps])
+    median = np.median(prices)
+    mad = np.median(np.abs(prices - median))
+
+    if mad == 0:
+        # All prices identical or nearly so — use IQR fallback
+        return filter_outliers_iqr(comps)
+
+    # Modified Z-score with MAD
+    modified_z = 0.6745 * (prices - median) / mad
+    threshold = 3.0
+
+    filtered = [c for c, z in zip(comps, modified_z) if abs(z) < threshold]
+
+    # If MAD was too aggressive (removed too many), fall back to IQR
+    if len(filtered) < 3 and len(comps) >= 4:
+        return filter_outliers_iqr(comps)
+
+    return filtered if filtered else comps
+
+
+def filter_outliers_iqr(comps: List[ScoredComp]) -> List[ScoredComp]:
+    """Original IQR outlier removal — used as fallback."""
+    if len(comps) < 4:
+        return comps
+
     prices = sorted(c.price for c in comps)
     q1 = prices[len(prices) // 4]
     q3 = prices[3 * len(prices) // 4]
     iqr = q3 - q1
-    
+
     lower = q1 - 1.5 * iqr
     upper = q3 + 1.5 * iqr
-    
-    return [c for c in comps if lower <= c.price <= upper]
+
+    filtered = [c for c in comps if lower <= c.price <= upper]
+    return filtered if filtered else comps
+
+
+def weighted_median(
+    scored_comps: List[ScoredComp],
+    half_life_days: int = 45,
+    use_normalized_price: bool = True,
+) -> float:
+    """
+    Calculate similarity + time-decay weighted median price.
+    Uses normalized_price when available, otherwise raw price.
+    """
+    if not scored_comps:
+        return 0.0
+
+    # Sort by price
+    sorted_comps = sorted(scored_comps, key=lambda c: c.normalized_price if (use_normalized_price and c.normalized_price) else c.price)
+
+    # Calculate combined weights: similarity × time_decay
+    total_weight = 0.0
+    weights = []
+    for c in sorted_comps:
+        decay = time_decay_weight(c.sold_date, half_life_days)
+        w = c.similarity * decay
+        weights.append(w)
+        total_weight += w
+
+    if total_weight == 0:
+        return sorted_comps[len(sorted_comps) // 2].price
+
+    cumulative = 0.0
+    for comp, w in zip(sorted_comps, weights):
+        cumulative += w
+        if cumulative >= total_weight / 2:
+            price = comp.normalized_price if (use_normalized_price and comp.normalized_price) else comp.price
+            return price
+
+    return sorted_comps[-1].price
+
+
+def filter_outliers(comps: List[ScoredComp]) -> List[ScoredComp]:
+    """Remove price outliers — now uses MAD (more robust), with IQR fallback."""
+    return filter_outliers_mad(comps)
 
 def save_sold_comp_to_db(search_key: str, item, brand: str = ""):
     """Save a sold comp to the database for catalog building."""
@@ -398,76 +730,227 @@ async def find_best_comps(
     max_comps: int = 20,
     min_comps: int = 5,
     save_comps: bool = True,
+    listing_condition: Optional[str] = None,
+    listing_size: Optional[str] = None,
+    use_embeddings: bool = False,
+    use_historical_db: bool = False,
 ) -> CompResult:
     """
     Find the best comparable sold items for pricing.
-    
+
     Tries increasingly specific queries, scores results by similarity,
-    and returns a weighted price.
+    applies normalization (platform fees, auction adjustment, condition,
+    size, time decay), and returns a confidence-scored weighted price.
+
+    New in Phase 3:
+    - use_embeddings: Use sentence-transformer embeddings for hybrid similarity
+    - use_historical_db: Also search the local historical comp database
     """
     try:
         from .grailed import GrailedScraper
     except ImportError:
         from scrapers.grailed import GrailedScraper
-    
+
+    try:
+        from .price_normalizer import PriceNormalizer, is_bundle as check_bundle
+    except ImportError:
+        from scrapers.price_normalizer import PriceNormalizer, is_bundle as check_bundle
+
+    try:
+        from .size_normalizer import adjust_for_size
+    except ImportError:
+        from scrapers.size_normalizer import adjust_for_size
+
+    # Embedding support (Phase 3)
+    listing_embedding = None
+    if use_embeddings:
+        try:
+            from .title_matcher import (
+                get_title_embedding, hybrid_similarity as calc_hybrid,
+                save_comp_with_embedding, search_comps_by_embedding,
+                canonicalize_brand,
+            )
+            listing_embedding = get_title_embedding(title)
+        except Exception as e:
+            logger.warning(f"Embedding init failed, falling back to keyword matching: {e}")
+            use_embeddings = False
+
     # Parse the title
     parsed = parse_title(brand, title)
-    
+
+    # Get category-specific config
+    cat_config = get_category_config(parsed.item_type or parsed.item_type_specific)
+    half_life = cat_config.get("time_decay_halflife", DEFAULT_HALFLIFE)
+    cond_sensitivity = cat_config.get("condition_sensitivity", DEFAULT_CONDITION_SENSITIVITY)
+
     # Build search queries
     queries = build_search_queries(parsed)
-    
+
     all_comps = []
     best_query = ""
     seen_ids = set()
-    
+
+    # ── Phase 3: Search historical DB first ──
+    if use_historical_db and use_embeddings and listing_embedding is not None:
+        try:
+            historical = search_comps_by_embedding(
+                listing_embedding, brand=brand, limit=30
+            )
+            for h in historical:
+                if h.get("source_id") in seen_ids:
+                    continue
+                if not h.get("sold_price") or h["sold_price"] <= 0:
+                    continue
+
+                seen_ids.add(h.get("source_id", ""))
+                sim = h.get("similarity", 0.5)
+
+                # Parse sold_date
+                sd = None
+                if h.get("sold_date"):
+                    try:
+                        sd = datetime.fromisoformat(h["sold_date"])
+                    except (ValueError, TypeError):
+                        pass
+
+                norm_price = h.get("normalized_price") or h["sold_price"]
+
+                all_comps.append(ScoredComp(
+                    title=h["title"],
+                    price=h["sold_price"],
+                    similarity=sim,
+                    url=h.get("url", ""),
+                    source_id=h.get("source_id", ""),
+                    platform=h.get("platform", ""),
+                    sold_date=sd,
+                    condition=h.get("condition"),
+                    size=h.get("size"),
+                    is_auction=h.get("is_auction", False),
+                    num_bids=h.get("num_bids"),
+                    shipping_cost=h.get("shipping_cost"),
+                    normalized_price=norm_price,
+                ))
+
+            if all_comps:
+                best_query = "historical_db"
+                logger.info(f"Found {len(all_comps)} historical comps for '{title[:50]}'")
+        except Exception as e:
+            logger.warning(f"Historical DB search failed: {e}")
+
     async with GrailedScraper() as scraper:
         for query, query_quality in queries:
             try:
                 sold_items = await scraper.search_sold(query, max_results=max_comps)
-                
+
                 if not sold_items:
                     continue
-                
+
                 new_comps = 0
                 for item in sold_items:
                     if item.source_id in seen_ids:
                         continue
                     if not item.price or item.price <= 0:
                         continue
-                    
+
+                    # ── Bundle detection: skip bundles ──
+                    if is_bundle(item.title) or check_bundle(item.title):
+                        continue
+
                     seen_ids.add(item.source_id)
-                    
+
                     # Save to database for catalog building
                     if save_comps:
                         save_sold_comp_to_db(query, item, brand)
-                    
-                    # Score similarity
+
+                    # Score similarity (keyword-based)
                     similarity = score_comp_similarity(parsed, item.title)
-                    
+
+                    # Boost with embedding similarity if available
+                    if use_embeddings and listing_embedding is not None:
+                        try:
+                            comp_embedding = get_title_embedding(item.title)
+                            if comp_embedding is not None:
+                                similarity = calc_hybrid(
+                                    item.title, item.title,
+                                    similarity,
+                                    listing_embedding, comp_embedding,
+                                )
+                        except Exception:
+                            pass  # Fall back to keyword-only
+
                     # Boost similarity by query quality
-                    # Comps from specific queries are inherently more relevant
                     adjusted_similarity = similarity * 0.7 + query_quality * 0.3
-                    
+
+                    # Extract platform from item source
+                    platform = getattr(item, "source", "grailed")
+                    sold_date = getattr(item, "listed_at", None)  # Best available date proxy
+                    condition = getattr(item, "condition", None)
+                    size = getattr(item, "size", None)
+                    is_auction = getattr(item, "is_auction", False)
+                    num_bids = getattr(item, "raw_data", {}).get("num_bids") if hasattr(item, "raw_data") else None
+                    shipping = getattr(item, "shipping_cost", None)
+
+                    # ── Normalize price ──
+                    norm_price = item.price
+
+                    # 1. Auction adjustment
+                    norm_price = PriceNormalizer.auction_adjustment(
+                        norm_price, is_auction, num_bids
+                    )
+
+                    # 2. Cross-platform fee normalization
+                    norm_price = PriceNormalizer.normalize_price(
+                        norm_price, shipping, platform
+                    )
+
+                    # 3. Condition adjustment
+                    if listing_condition or condition:
+                        norm_price = adjust_for_condition(
+                            norm_price,
+                            comp_condition=condition,
+                            listing_condition=listing_condition,
+                            brand=brand,
+                            category_sensitivity=cond_sensitivity,
+                        )
+
+                    # 4. Size adjustment
+                    if listing_size and size:
+                        norm_price = adjust_for_size(
+                            norm_price,
+                            listing_size=listing_size,
+                            comp_size=size,
+                            item_type=parsed.item_type or parsed.item_type_specific,
+                            brand=brand,
+                        )
+
                     all_comps.append(ScoredComp(
                         title=item.title,
                         price=item.price,
                         similarity=adjusted_similarity,
                         url=item.url,
                         source_id=item.source_id,
+                        platform=platform,
+                        sold_date=sold_date,
+                        condition=condition,
+                        size=size,
+                        is_auction=is_auction,
+                        num_bids=num_bids,
+                        shipping_cost=shipping,
+                        normalized_price=norm_price,
                     ))
                     new_comps += 1
-                
+
                 if not best_query and new_comps > 0:
                     best_query = query
-                
+
                 # If we have enough high-quality comps, stop searching
                 high_quality = [c for c in all_comps if c.similarity >= 0.5]
                 if len(high_quality) >= min_comps:
                     break
-                    
+
             except Exception as e:
                 continue
-    
+
     if not all_comps:
         return CompResult(
             weighted_price=0,
@@ -475,55 +958,59 @@ async def find_best_comps(
             comps_count=0,
             high_quality_count=0,
             confidence="none",
+            confidence_score=0.0,
             query_used="",
         )
-    
-    # Filter outliers
+
+    # ── Filter outliers (using MAD with IQR fallback) ──
     filtered = filter_outliers(all_comps)
     if not filtered:
         filtered = all_comps
-    
+
     # Sort by similarity (best matches first)
     filtered.sort(key=lambda c: -c.similarity)
-    
-    # Calculate prices
-    w_median = weighted_median(filtered)
-    
-    prices = sorted(c.price for c in filtered)
+
+    # ── Calculate prices with time-decay weighting ──
+    w_median = weighted_median(filtered, half_life_days=half_life, use_normalized_price=True)
+
+    prices = sorted(c.normalized_price or c.price for c in filtered)
     simple_med = prices[len(prices) // 2]
-    
+
     high_quality = [c for c in filtered if c.similarity >= 0.5]
-    
-    # Determine confidence
-    if len(high_quality) >= 8:
+
+    # ── Confidence: both string (backward compat) and numeric ──
+    confidence_score = calculate_confidence_score(filtered)
+
+    if confidence_score >= 0.65:
         confidence = "high"
-    elif len(high_quality) >= 3:
+    elif confidence_score >= 0.40:
         confidence = "medium"
-    elif len(filtered) >= 5:
+    elif confidence_score >= 0.20:
         confidence = "low"
     else:
         confidence = "very_low"
-    
-    # Extract season data from top comps (Quick Win)
+
+    # Extract season data from top comps
     exact_season = None
     exact_year = None
     season_confidence = "unknown"
-    
+
     try:
         from .seasons import aggregate_seasons_from_comps
     except ImportError:
         from scrapers.seasons import aggregate_seasons_from_comps
-    
+
     if filtered:
-        comp_titles = [c.title for c in filtered[:10]]  # Use top 10 comps
+        comp_titles = [c.title for c in filtered[:10]]
         exact_season, exact_year, season_confidence = aggregate_seasons_from_comps(comp_titles)
-    
+
     return CompResult(
         weighted_price=w_median,
         simple_median=simple_med,
         comps_count=len(filtered),
         high_quality_count=len(high_quality),
         confidence=confidence,
+        confidence_score=confidence_score,
         query_used=best_query,
         top_comps=filtered[:5],
         exact_season=exact_season,

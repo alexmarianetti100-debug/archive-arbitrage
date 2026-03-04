@@ -102,6 +102,14 @@ class ReverseImageSearcher:
             except Exception as e:
                 print(f"SerpAPI search failed: {e}")
         
+        # Try free Google Lens scrape (no API key needed)
+        if not self.serpapi_key and not all_results:
+            try:
+                results = await self._search_google_lens_free(image_url, max_results)
+                all_results.extend(results)
+            except Exception as e:
+                print(f"Google Lens free search failed: {e}")
+
         # Try TinEye if key available
         if self.tineye_key:
             try:
@@ -172,6 +180,119 @@ class ReverseImageSearcher:
         
         return results
     
+    async def _search_google_lens_free(self, image_url: str, max_results: int = 10) -> List[ReverseImageResult]:
+        """
+        Search Google Lens without an API key.
+        
+        Uses Google's public Lens URL which returns an HTML page with visual matches.
+        Rate-limited but works for moderate volumes.
+        """
+        results = []
+
+        try:
+            # Google Lens accepts an image URL as a query param
+            lens_url = f"https://lens.google.com/uploadbyurl?url={quote(image_url)}"
+
+            response = await self._http_client.get(lens_url, follow_redirects=True)
+            if response.status_code != 200:
+                return results
+
+            html = response.text
+
+            # Google Lens embeds structured data in the page as AF_initDataCallback chunks
+            # Extract visual match data from the HTML
+            import json as _json
+
+            # Method 1: Look for product/shopping results in structured data
+            # Google embeds JSON arrays in script tags with AF_initDataCallback
+            for pattern in [
+                r'AF_initDataCallback\(\{[^}]*key:\s*\'ds:1\'[^}]*data:(.*?)\}\s*\)\s*;',
+                r'AF_initDataCallback\(\{[^}]*key:\s*\'ds:0\'[^}]*data:(.*?)\}\s*\)\s*;',
+            ]:
+                match = re.search(pattern, html, re.DOTALL)
+                if match:
+                    try:
+                        # This is deeply nested — we extract what we can
+                        raw = match.group(1).strip()
+                        # Truncate at reasonable length to avoid parsing issues
+                        if len(raw) > 100000:
+                            raw = raw[:100000]
+                        data = _json.loads(raw)
+                        results.extend(self._parse_lens_data(data, max_results))
+                        if results:
+                            break
+                    except (_json.JSONDecodeError, Exception):
+                        continue
+
+            # Method 2: Fallback — extract titles and URLs from meta/link tags
+            if not results:
+                from bs4 import BeautifulSoup
+                soup = BeautifulSoup(html, "lxml")
+
+                # Look for visual match cards
+                for link in soup.select("a[href*='imgres'], a[data-action-url]"):
+                    href = link.get("href", "") or link.get("data-action-url", "")
+                    title_el = link.select_one("div, span, h3")
+                    title = title_el.get_text(strip=True) if title_el else ""
+
+                    if not title or len(title) < 5:
+                        continue
+
+                    # Extract actual URL from Google redirect
+                    url_match = re.search(r'(?:url|imgurl)=([^&]+)', href)
+                    actual_url = url_match.group(1) if url_match else href
+
+                    result = ReverseImageResult(
+                        title=title,
+                        url=actual_url,
+                        source="google_lens_free",
+                        confidence=self._calculate_confidence({"title": title, "source": actual_url}),
+                    )
+                    result.price = self._extract_price(title)
+                    results.append(result)
+
+                    if len(results) >= max_results:
+                        break
+
+        except Exception as e:
+            print(f"Google Lens free error: {e}")
+
+        return results[:max_results]
+
+    def _parse_lens_data(self, data, max_results: int) -> List[ReverseImageResult]:
+        """Parse structured data from Google Lens AF_initDataCallback."""
+        results = []
+
+        def _walk(obj, depth=0):
+            """Recursively walk nested arrays looking for result-like structures."""
+            if depth > 15 or len(results) >= max_results:
+                return
+            if isinstance(obj, list):
+                # Look for [title, url, ...] patterns
+                if (len(obj) >= 3
+                    and isinstance(obj[0], str) and len(obj[0]) > 5
+                    and isinstance(obj[1], str) and obj[1].startswith("http")):
+                    title = obj[0]
+                    url = obj[1]
+                    # Skip Google's own URLs
+                    if "google.com" not in url:
+                        result = ReverseImageResult(
+                            title=title,
+                            url=url,
+                            source="google_lens_free",
+                            confidence=self._calculate_confidence({"title": title, "source": url}),
+                        )
+                        result.price = self._extract_price(title)
+                        results.append(result)
+                for item in obj:
+                    _walk(item, depth + 1)
+            elif isinstance(obj, dict):
+                for v in obj.values():
+                    _walk(v, depth + 1)
+
+        _walk(data)
+        return results
+
     async def _search_tineye(self, image_url: str, max_results: int = 10) -> List[ReverseImageResult]:
         """
         Search via TinEye API.

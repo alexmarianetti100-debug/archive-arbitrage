@@ -79,6 +79,16 @@ class AlertItem:
     demand_score: float = 0.0
 
 
+
+# Optional: Whop integration for cross-posting profitable deals
+try:
+    from .whop_alerts import send_whop_alert, format_whop_deal_content  # type: ignore
+except Exception:
+    # If the module is unavailable or import fails, define fallbacks so alerts still work
+    def send_whop_alert(*args, **kwargs):
+        return False
+    def format_whop_deal_content(*args, **kwargs):
+        return ("Whop Post", "Content placeholder")
 class AlertService:
     """Send alerts to Discord via webhooks."""
 
@@ -536,7 +546,25 @@ async def alert_if_profitable(
         demand_score=getattr(price_info, "demand_score", 0.0),
     )
 
-    return await alerts.send_item_alert(alert_item)
+    
+    sent_discord = await alerts.send_item_alert(alert_item)
+    
+    # NEW: Send to Whop after pricing if it qualifies (A-grade only)
+    is_a_grade = getattr(price_info, "deal_grade", getattr(price_info, "grade", "")) == "A"
+    if is_a_grade:
+        try:
+            from core.whop_alerts import send_whop_alert, format_whop_deal_content
+            title, content = format_whop_deal_content(
+                scraped_item, price_info, price_info.margin_percent, float(price_info.profit_estimate)
+            )
+            await send_whop_alert(title, content)
+        except Exception as e:
+            print(f"  [Whop Hook] Failed to trigger Whop alert: {e}")
+    else:
+        print(f"  [Whop Hook] Skipped: Not an A-grade deal (Grade: {getattr(price_info, deal_grade, None)})")
+        
+    return sent_discord
+
 
 
 # CLI

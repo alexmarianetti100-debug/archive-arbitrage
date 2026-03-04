@@ -1,0 +1,278 @@
+{
+  "date": "2026-02-27",
+  "generated_at": "2026-02-27T15:22:24.413270",
+  "queries": [
+    "rick owens",
+    "adidas raf simons ozweego",
+    "Rick Owens boots",
+    "jean paul gaultier",
+    "margiela tabi",
+    "dior homme hedi slimane",
+    "raf simons",
+    "helmut lang",
+    "vivienne westwood",
+    "maison margiela",
+    "dior homme hedi slimane jacket",
+    "maison martin margiela replica GAT",
+    "rick owens geobasket",
+    "rick owens ramones high",
+    "rick owens dunks",
+    "rick owens stooges leather jacket",
+    "rick owens kiss boots",
+    "margiela tabi boots",
+    "chrome hearts cross pendant silver",
+    "chrome hearts cross ring",
+    "raf simons peter saville joy division",
+    "raf simons ozweego",
+    "helmut lang bondage jacket",
+    "balenciaga triple s",
+    "balenciaga track",
+    "bottega veneta orbit sneakers",
+    "Comme Des Garcons pants",
+    "yohji yamamoto",
+    "kapital sneakers",
+    "balenciaga leather jacket",
+    "prada hoodie",
+    "undercover coat",
+    "celine sneakers",
+    "bape hoodie",
+    "jean paul gaultier denim jacket",
+    "issey miyake sneakers",
+    "bape pendant",
+    "neighborhood ring",
+    "Number (N)ine",
+    "grailed yeat zine",
+    "Saint Laurent jacket",
+    "chrome hearts ring",
+    "issey miyake",
+    "prada",
+    "Kapital jacket",
+    "Yohji Yamamoto jacket"
+  ],
+  "trend_count": 21,
+  "top_trends": [
+    {
+      "query": "rick owens",
+      "brand": "Rick Owens",
+      "score": 0.566,
+      "direction": "rising",
+      "sources": [
+        "editorial",
+        "google_trends"
+      ],
+      "velocity_change": 1.0,
+      "price_change": 0.0
+    },
+    {
+      "query": "adidas raf simons ozweego",
+      "brand": "Adidas",
+      "score": 0.545,
+      "direction": "stable",
+      "sources": [
+        "grailed_velocity"
+      ],
+      "velocity_change": 0.25,
+      "price_change": 0.08
+    },
+    {
+      "query": "Rick Owens boots",
+      "brand": "Rick Owens",
+      "score": 0.5,
+      "direction": "stable",
+      "sources": [
+        "reddit"
+      ],
+      "velocity_change": -0.09,
+      "price_change": 0.0
+    },
+    {
+      "query": "jean paul gaultier",
+      "brand": "Jean Paul Gaultier",
+      "score": 0.48,
+      "direction": "rising",
+      "sources": [
+        "google_trends"
+      ],
+      "velocity_change": -0.06,
+      "price_change": 0.0
+    },
+    {
+      "query": "margiela tabi",
+      "brand": "Maison Margiela",
+      "score": 0.477,
+      "direction": "rising",
+      "sources": [
+        "google_trends"
+      ],
+      "velocity_change": -0.28,
+      "price_change": 0.0
+    },
+    {
+      "query": "dior homme hedi slimane",
+      "brand": "Dior",
+      "score": 0.44,
+      "direction": "rising",
+      "sources": [
+        "grailed_velocity"
+      ],
+      "velocity_change": -0.28,
+      "price_change": 0.15
+    },
+    {
+      "query": "raf simons",
+      "brand": "Raf Simons",
+      "score": 0.425,
+      "direction": "stable",
+      "sources": [
+        "google_trends"
+      ],
+      "velocity_change": 0.0,
+      "price_change": 0.0
+    },
+    {
+      "query": "helmut lang",
+      "brand": "Helmut Lang",
+      "score": 0.425,
+      "direction": "stable",
+      "sources": [
+        "google_trends"
+      ],
+      "velocity_change": 0.0,
+      "price_change": 0.0
+    },
+    {
+      "query": "vivienne westwood",
+      "brand": "Vivienne Westwood",
+      "score": 0.39,
+      "direction": "rising",
+      "sources": [
+        "google_trends"
+      ],
+      "velocity_change": -0.07,
+      "price_change": 0.0
+    },
+    {
+      "query": "maison margiela",
+      "brand": "Maison Margiela",
+      "score": 0.372,
+      "direction": "stable",
+      "sources": [
+        "editorial"
+      ],
+      "velocity_change": 0.0,
+      "price_change": 0.0
+    },
+    {
+      "query": "Number (N)ine",
+      "brand": "Number (N)ine",
+      "score": 0.235,
+      "direction": "stable",
+      "sources": [
+        "reddit",
+        "google_trends"
+      ],
+      "velocity_change": 0.18,
+      "price_change": 0.0
+    },
+    {
+      "query": "bottega veneta orbit sneakers",
+      "brand": "Bottega Veneta",
+      "score": 0.223,
+      "direction": "rising",
+      "sources": [
+        "grailed_velocity"
+      ],
+      "velocity_change": 0.33,
+      "price_change": -0.02
+    },
+    {
+      "query": "Comme Des Garcons pants",
+      "brand": "Comme Des Garcons",
+      "score": 0.22,
+      "direction": "rising",
+      "sources": [
+        "reddit"
+      ],
+      "velocity_change": 1.0,
+      "price_change": 0.0
+    },
+    {
+      "query": "grailed yeat zine",
+      "brand": "Grailed",
+      "score": 0.2,
+      "direction": "stable",
+      "sources": [
+        "grailed_velocity"
+      ],
+      "velocity_change": 0.0,
+      "price_change": 0.0
+    },
+    {
+      "query": "Saint Laurent jacket",
+      "brand": "Saint Laurent",
+      "score": 0.13,
+      "direction": "stable",
+      "sources": [
+        "reddit"
+      ],
+      "velocity_change": 0.5,
+      "price_change": 0.0
+    },
+    {
+      "query": "yohji yamamoto",
+      "brand": "Yohji Yamamoto",
+      "score": 0.13,
+      "direction": "rising",
+      "sources": [
+        "editorial",
+        "google_trends"
+      ],
+      "velocity_change": 0.11,
+      "price_change": 0.0
+    },
+    {
+      "query": "chrome hearts ring",
+      "brand": "Chrome Hearts",
+      "score": 0.129,
+      "direction": "stable",
+      "sources": [
+        "google_trends"
+      ],
+      "velocity_change": 0.17,
+      "price_change": 0.0
+    },
+    {
+      "query": "issey miyake",
+      "brand": "Issey Miyake",
+      "score": 0.117,
+      "direction": "stable",
+      "sources": [
+        "google_trends"
+      ],
+      "velocity_change": 0.05,
+      "price_change": 0.0
+    },
+    {
+      "query": "prada",
+      "brand": "Prada",
+      "score": 0.105,
+      "direction": "stable",
+      "sources": [
+        "google_trends"
+      ],
+      "velocity_change": -0.05,
+      "price_change": 0.0
+    },
+    {
+      "query": "Kapital jacket",
+      "brand": "Kapital",
+      "score": 0.075,
+      "direction": "stable",
+      "sources": [
+        "reddit"
+      ],
+      "velocity_change": 0.25,
+      "price_change": 0.0
+    }
+  ]
+}

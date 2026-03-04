@@ -59,6 +59,26 @@ class GrailedScraper(BaseScraper):
             
         return items
     
+    # Designer names for Algolia facet filtering (must match Grailed's designer index values)
+    ALGOLIA_DESIGNERS = {
+        "rick owens": "Rick Owens", "raf simons": "Raf Simons",
+        "maison margiela": "Maison Margiela", "maison martin margiela": "Maison Margiela",
+        "helmut lang": "Helmut Lang", "chrome hearts": "Chrome Hearts",
+        "dior homme": "Dior", "dior men": "Dior", "christian dior": "Dior",
+        "jean paul gaultier": "Jean Paul Gaultier", "gaultier": "Jean Paul Gaultier",
+        "comme des garcons": "Comme des Garcons", "cdg": "Comme des Garcons",
+        "junya watanabe": "Junya Watanabe", "yohji yamamoto": "Yohji Yamamoto",
+        "vivienne westwood": "Vivienne Westwood", "issey miyake": "Issey Miyake",
+        "undercover": "Undercover", "number (n)ine": "Number (N)ine",
+        "enfants riches deprimes": "Enfants Riches Déprimés",
+        "ann demeulemeester": "Ann Demeulemeester",
+        "boris bidjan saberi": "Boris Bidjan Saberi", "julius": "Julius",
+        "carol christian poell": "Carol Christian Poell",
+        "haider ackermann": "Haider Ackermann",
+        "hysteric glamour": "Hysteric Glamour", "kapital": "Kapital",
+        "alexander mcqueen": "Alexander McQueen", "thierry mugler": "Thierry Mugler",
+    }
+
     async def _search_algolia(self, query: str, max_results: int, sold: bool = False) -> list[ScrapedItem]:
         """Search using Grailed's Algolia backend."""
         items = []
@@ -72,6 +92,13 @@ class GrailedScraper(BaseScraper):
             "hitsPerPage": max_results,
             "page": 0,
         }
+
+        # Try to extract designer for facet filtering (tighter results)
+        query_lower = query.lower()
+        for key, designer_name in self.ALGOLIA_DESIGNERS.items():
+            if key in query_lower:
+                payload["facetFilters"] = [f"designers.name:{designer_name}"]
+                break
         
         headers = {
             "X-Algolia-Application-Id": self.ALGOLIA_APP_ID,
@@ -79,10 +106,20 @@ class GrailedScraper(BaseScraper):
             "Content-Type": "application/json",
         }
         
-        response = await self.client.post(algolia_url, json=payload, headers=headers)
-        
-        if response.status_code != 200:
+        # Retry Algolia with backoff on rate limits (429) or server errors (5xx)
+        response = None
+        for _attempt in range(3):
+            response = await self.client.post(algolia_url, json=payload, headers=headers)
+            if response.status_code == 200:
+                break
+            if response.status_code in (429, 500, 502, 503):
+                import asyncio as _aio
+                await _aio.sleep(1.5 * (_attempt + 1))
+                continue
             raise Exception(f"Algolia returned {response.status_code}")
+        
+        if response is None or response.status_code != 200:
+            raise Exception(f"Algolia failed after retries (last status: {response.status_code if response else 'none'})")
         
         data = response.json()
         
@@ -137,6 +174,19 @@ class GrailedScraper(BaseScraper):
                 elif isinstance(photo, str):
                     images.append(photo)
         
+        # Parse listing date
+        listed_at = None
+        created_str = hit.get("created_at")
+        if created_str:
+            try:
+                from datetime import datetime
+                listed_at = datetime.fromisoformat(created_str.replace("Z", "+00:00"))
+            except (ValueError, TypeError):
+                pass
+
+        # Preserve full raw_data including liquidity signals
+        raw = dict(hit)
+
         return ScrapedItem(
             source=self.SOURCE_NAME,
             source_id=item_id,
@@ -146,8 +196,10 @@ class GrailedScraper(BaseScraper):
             currency="USD",
             brand=designer,
             size=size,
+            condition=hit.get("condition"),
             images=images,
-            raw_data=hit,
+            listed_at=listed_at,
+            raw_data=raw,
         )
     
     async def _search_http(self, query: str, max_results: int, sold: bool = False) -> list[ScrapedItem]:

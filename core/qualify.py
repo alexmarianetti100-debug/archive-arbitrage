@@ -51,7 +51,7 @@ from scrapers.comp_matcher import find_best_comps, parse_title, CompResult
 from scrapers.demand_scorer import score_demand, DemandResult
 from scrapers.volume_tracker import get_volume_tracker, VolumeMetrics
 from scrapers.seasons import detect_season
-from alerts import AlertService, AlertItem
+from core.alerts import AlertService, AlertItem
 
 
 # --- Deal Grade Thresholds ---

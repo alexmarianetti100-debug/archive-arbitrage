@@ -1,0 +1,550 @@
+{
+  "timestamp": "2026-02-27T19:37:27.430704",
+  "hot_brands": [
+    [
+      "Post Archive Faction (Paf)",
+      27
+    ],
+    [
+      "Comme Des Garcons Shirt",
+      19
+    ],
+    [
+      "Supreme",
+      9
+    ],
+    [
+      "Maison Margiela",
+      8
+    ],
+    [
+      "Japanese Brand",
+      8
+    ],
+    [
+      "Nike",
+      8
+    ],
+    [
+      "Brut Archive",
+      7
+    ],
+    [
+      "Samurai Jeans",
+      7
+    ],
+    [
+      "Prada",
+      6
+    ],
+    [
+      "Band Tees",
+      6
+    ],
+    [
+      "On",
+      6
+    ],
+    [
+      "Bape",
+      6
+    ],
+    [
+      "Nudie Jeans",
+      5
+    ],
+    [
+      "Nicks Boots",
+      5
+    ],
+    [
+      "Justin Boots",
+      5
+    ],
+    [
+      "Chrome Hearts",
+      4
+    ],
+    [
+      "Adidas",
+      4
+    ],
+    [
+      "Saint Laurent Paris",
+      4
+    ],
+    [
+      "Levi'S",
+      4
+    ],
+    [
+      "Stussy",
+      4
+    ],
+    [
+      "Polo Ralph Lauren",
+      4
+    ],
+    [
+      "Aime Leon Dore",
+      4
+    ],
+    [
+      "Grailz",
+      4
+    ],
+    [
+      "Sancho Boots",
+      4
+    ],
+    [
+      "Our Legacy",
+      3
+    ],
+    [
+      "Jordan Brand",
+      3
+    ],
+    [
+      "Kapital",
+      3
+    ],
+    [
+      "Carhartt",
+      3
+    ],
+    [
+      "Levi'S Vintage Clothing",
+      3
+    ],
+    [
+      "Vivienne Westwood",
+      3
+    ]
+  ],
+  "hot_categories": [
+    [
+      "jacket",
+      51
+    ],
+    [
+      "t-shirt",
+      38
+    ],
+    [
+      "pants",
+      32
+    ],
+    [
+      "jeans",
+      31
+    ],
+    [
+      "hoodie",
+      26
+    ],
+    [
+      "sweater",
+      25
+    ],
+    [
+      "boots",
+      22
+    ],
+    [
+      "shirt",
+      21
+    ],
+    [
+      "coat",
+      19
+    ],
+    [
+      "shorts",
+      18
+    ],
+    [
+      "sneakers",
+      17
+    ],
+    [
+      "bag",
+      12
+    ]
+  ],
+  "hot_items": [
+    {
+      "query": "Post Archive Faction (Paf) jacket",
+      "brand": "Post Archive Faction (Paf)",
+      "category": "jacket",
+      "sold_count": 27,
+      "avg_price": 197.1851851851852,
+      "price_range": [
+        12.0,
+        525.0
+      ],
+      "sample_titles": [
+        "POST ARCHIVE FACTION (PAF) 5.0+ Technical Jacket Center Blac",
+        "POST ARCHIVE FACTION (PAF) Post Archive Faction (PAF) 4.0+ T",
+        "POST ARCHIVE FACTION (PAF) Post Archive Faction 5.0 Center H"
+      ],
+      "score": 0.9677481481481482
+    },
+    {
+      "query": "Comme Des Garcons Shirt shirt",
+      "brand": "Comme Des Garcons Shirt",
+      "category": "shirt",
+      "sold_count": 19,
+      "avg_price": 128.57894736842104,
+      "price_range": [
+        35.0,
+        525.0
+      ],
+      "sample_titles": [
+        "Comme des Garcons SHIRT Supreme x comme des gar\u00e7on shirt",
+        "Comme des Garcons SHIRT Comme des Garcons SHIRT patchwork, m",
+        "Comme des Garcons SHIRT Sick Vintage 90s Nike Big Logo Jerse"
+      ],
+      "score": 0.6728631578947368
+    },
+    {
+      "query": "Maison Margiela sneakers",
+      "brand": "Maison Margiela",
+      "category": "sneakers",
+      "sold_count": 8,
+      "avg_price": 434.375,
+      "price_range": [
+        180.0,
+        1350.0
+      ],
+      "sample_titles": [
+        "Maison Margiela Maison Margiela GAT Replica White Gray 7 40 ",
+        "Maison Margiela RARE Maison Margiela Replica Gat Artisanal B",
+        "Maison Margiela Margiela X Reebok Beige Tabi Sneakers"
+      ],
+      "score": 0.5875
+    },
+    {
+      "query": "Chrome Hearts hoodie",
+      "brand": "Chrome Hearts",
+      "category": "hoodie",
+      "sold_count": 4,
+      "avg_price": 522.5,
+      "price_range": [
+        200.0,
+        1000.0
+      ],
+      "sample_titles": [
+        "Chrome Hearts Chrome Hearts - Floral Cross Long Sleeves",
+        "Chrome Hearts rare STAFF only chrome hearts longsleeve",
+        "Chrome Hearts Hoodie"
+      ],
+      "score": 0.538
+    },
+    {
+      "query": "Saint Laurent Paris pants",
+      "brand": "Saint Laurent Paris",
+      "category": "pants",
+      "sold_count": 4,
+      "avg_price": 461.25,
+      "price_range": [
+        100.0,
+        900.0
+      ],
+      "sample_titles": [
+        "Saint Laurent Paris Skinny Pants in Stretch Grained Leather",
+        "Saint Laurent Paris LP22FW black and white mohair Playboy sw",
+        "Saint Laurent Paris Bundle saint laurent paris sneakers , ma"
+      ],
+      "score": 0.489
+    },
+    {
+      "query": "Prada sneakers",
+      "brand": "Prada",
+      "category": "sneakers",
+      "sold_count": 6,
+      "avg_price": 353.8333333333333,
+      "price_range": [
+        84.0,
+        1000.0
+      ],
+      "sample_titles": [
+        "Prada Prada Vintage Wool Button Up Designer Shirt Rare",
+        "Prada Vintage Prada Sport Red Tab Black Zip Hoodie Nylon Hoo",
+        "Prada Jacket"
+      ],
+      "score": 0.4630666666666667
+    },
+    {
+      "query": "Supreme jacket",
+      "brand": "Supreme",
+      "category": "jacket",
+      "sold_count": 9,
+      "avg_price": 160.55555555555554,
+      "price_range": [
+        60.0,
+        280.0
+      ],
+      "sample_titles": [
+        "Supreme Supreme fire & ice hockey jersey",
+        "Supreme Supreme Flag Half Zip",
+        "Supreme Supreme Zip Up Jacket SS25"
+      ],
+      "score": 0.3984444444444445
+    },
+    {
+      "query": "Nicks Boots boots",
+      "brand": "Nicks Boots",
+      "category": "boots",
+      "sold_count": 5,
+      "avg_price": 292.0,
+      "price_range": [
+        170.0,
+        500.0
+      ],
+      "sample_titles": [
+        "Nicks Boots Falcon - Black Waxed Flesh",
+        "Nicks Boots Nicks Boots Suede Chelsea",
+        "Nicks Boots Audubon"
+      ],
+      "score": 0.3836
+    },
+    {
+      "query": "Samurai Jeans jeans",
+      "brand": "Samurai Jeans",
+      "category": "jeans",
+      "sold_count": 7,
+      "avg_price": 202.0,
+      "price_range": [
+        115.0,
+        290.0
+      ],
+      "sample_titles": [
+        "Samurai Jeans BOS211XX-SU \"Shizen\" 18oz Sumi Ink Selvedge De",
+        "Samurai Jeans Samurai Jeans S0551XX Type 1 Denim Jacket Size",
+        "Samurai Jeans Samurai Denim Work Shirt Dark Indigo Size Larg"
+      ],
+      "score": 0.37160000000000004
+    },
+    {
+      "query": "Brut Archive t-shirt",
+      "brand": "Brut Archive",
+      "category": "t-shirt",
+      "sold_count": 7,
+      "avg_price": 199.57142857142858,
+      "price_range": [
+        90.0,
+        425.0
+      ],
+      "sample_titles": [
+        "BRUT Archive The Research Tee",
+        "BRUT Archive THE BEIRING JACKET",
+        "BRUT Archive Brut Archives Beiring Jacket faded Black Size L"
+      ],
+      "score": 0.3696571428571429
+    },
+    {
+      "query": "On",
+      "brand": "On",
+      "category": null,
+      "sold_count": 6,
+      "avg_price": 204.16666666666666,
+      "price_range": [
+        150.0,
+        325.0
+      ],
+      "sample_titles": [
+        "On PAF Post Archive Faction x On Cloudventure Black",
+        "On Post Archive Faction ON Cloudmonster 2 PAF in Black Magne",
+        "On Cloudventure Peak PAF"
+      ],
+      "score": 0.3433333333333333
+    },
+    {
+      "query": "Japanese Brand pants",
+      "brand": "Japanese Brand",
+      "category": "pants",
+      "sold_count": 8,
+      "avg_price": 79.125,
+      "price_range": [
+        28.0,
+        180.0
+      ],
+      "sample_titles": [
+        "Japanese Brand (Lot of 5) 2019 Filthy Project Art & Design S",
+        "Japanese Brand Parachute Bandage Baggy Pants Multi Pocket Ra",
+        "Japanese Brand RARE VTG 90s PUMP GOLD\u2019S GYM SILVER SURFER PU"
+      ],
+      "score": 0.3033
+    },
+    {
+      "query": "Bape shorts",
+      "brand": "Bape",
+      "category": "shorts",
+      "sold_count": 6,
+      "avg_price": 143.83333333333334,
+      "price_range": [
+        30.0,
+        280.0
+      ],
+      "sample_titles": [
+        "Bape Rare Vintage Y2K Bape Baby Milo \u2018Rolls Royce\u2019 Tees",
+        "Bape $739 FLIGHT JACKET PILOT SHERPA MILITARY PARKA CAMO ABC",
+        "Bape BAPE liquid camo shark full zip hoodie"
+      ],
+      "score": 0.2950666666666667
+    },
+    {
+      "query": "Nike pants",
+      "brand": "Nike",
+      "category": "pants",
+      "sold_count": 8,
+      "avg_price": 58.875,
+      "price_range": [
+        28.0,
+        150.0
+      ],
+      "sample_titles": [
+        "Nike Vintage Nike Alabama Baseball Cap",
+        "Nike Nike Sportswear Sweatpants Medium Swoosh Fleece Gym Jog",
+        "Nike \ud83c\uddfa\ud83c\uddf8 Vintage 90s Nike sweatshirt travis Y2K hype rare ret"
+      ],
+      "score": 0.2871
+    },
+    {
+      "query": "Band Tees t-shirt",
+      "brand": "Band Tees",
+      "category": "t-shirt",
+      "sold_count": 6,
+      "avg_price": 98.66666666666667,
+      "price_range": [
+        16.0,
+        200.0
+      ],
+      "sample_titles": [
+        "Band Tees Vintage 1992 Eric Clapton Shirt",
+        "Band Tees Vintage 90s Insane clown posse twisted tour t-shir",
+        "Band Tees Vintage 1999 Britney Spears Baby One More Time Pro"
+      ],
+      "score": 0.25893333333333335
+    },
+    {
+      "query": "Nudie Jeans jeans",
+      "brand": "Nudie Jeans",
+      "category": "jeans",
+      "sold_count": 5,
+      "avg_price": 62.4,
+      "price_range": [
+        45.0,
+        90.0
+      ],
+      "sample_titles": [
+        "Nudie Jeans 1010043 Nudie Lean Dean Jeans in Dry 16 dips Nav",
+        "Nudie Jeans Nudie jeans Grim Tim Dry Ever Black denim. Jeans",
+        "Nudie Jeans Nudie Jeans Co. Raw Denim Japan Jumpsuit Overall"
+      ],
+      "score": 0.19992
+    },
+    {
+      "query": "Justin Boots boots",
+      "brand": "Justin Boots",
+      "category": "boots",
+      "sold_count": 5,
+      "avg_price": 52.4,
+      "price_range": [
+        30.0,
+        88.0
+      ],
+      "sample_titles": [
+        "Justin Boots Justin Vintage White Label Cowboy Boots Mens 8 ",
+        "Justin Boots Justin Boots Western Cowboy Handmade Boots SZ 1",
+        "Justin Boots Vintage Black Leather Cowboy Boots"
+      ],
+      "score": 0.19191999999999998
+    },
+    {
+      "query": "Adidas t-shirt",
+      "brand": "Adidas",
+      "category": "t-shirt",
+      "sold_count": 4,
+      "avg_price": 72.5,
+      "price_range": [
+        50.0,
+        115.0
+      ],
+      "sample_titles": [
+        "Adidas Authentic Adidas Crazy IIInfinity preloved ink blue s",
+        "Adidas Vintage Adidas World Cup France Tshirt 90\u2019s FIFA Grai",
+        "Adidas Vintage Adidas Firebird Baggy Sweatpants Y2K Track Pa"
+      ],
+      "score": 0.178
+    },
+    {
+      "query": "Stussy shirt",
+      "brand": "Stussy",
+      "category": "shirt",
+      "sold_count": 4,
+      "avg_price": 70.5,
+      "price_range": [
+        60.0,
+        80.0
+      ],
+      "sample_titles": [
+        "Stussy Stussy Pearl Snap Canvas Shirt",
+        "Stussy Vintage Stussy 90\u2019s tee",
+        "Stussy Stussy Sweater + Nike Pants Bundle"
+      ],
+      "score": 0.1764
+    },
+    {
+      "query": "Levi'S jeans",
+      "brand": "Levi'S",
+      "category": "jeans",
+      "sold_count": 4,
+      "avg_price": 51.5,
+      "price_range": [
+        15.0,
+        85.0
+      ],
+      "sample_titles": [
+        "Levi's Levi\u2019s 569 Relaxed Straight Jeans - 36x34",
+        "Levi's Vintage Levi\u2019s engineer jeans denim",
+        "Levi's \ud83d\udd25Vintage Levis Corduroy Silver Tab Boot cut Pants"
+      ],
+      "score": 0.1612
+    }
+  ],
+  "recommended_queries": [
+    "Post Archive Faction (Paf)",
+    "Post Archive Faction (Paf) jacket",
+    "Comme Des Garcons Shirt",
+    "Comme Des Garcons Shirt shirt",
+    "Maison Margiela",
+    "Maison Margiela sneakers",
+    "Chrome Hearts",
+    "Chrome Hearts hoodie",
+    "Saint Laurent Paris",
+    "Saint Laurent Paris pants",
+    "Prada",
+    "Prada sneakers",
+    "Supreme",
+    "Supreme jacket",
+    "Nicks Boots",
+    "Nicks Boots boots",
+    "Samurai Jeans",
+    "Samurai Jeans jeans",
+    "Brut Archive",
+    "Brut Archive t-shirt",
+    "On",
+    "Japanese Brand",
+    "Japanese Brand pants",
+    "Bape",
+    "Bape shorts",
+    "Nike",
+    "Nike pants",
+    "Band Tees",
+    "Band Tees t-shirt",
+    "jacket"
+  ],
+  "total_items_analyzed": 410
+}

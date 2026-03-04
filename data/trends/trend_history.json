@@ -1,0 +1,995 @@
+{
+  "snapshots": [
+    {
+      "timestamp": "2026-02-25T18:27:27.343755",
+      "items": {
+        "rick owens:low top sneakers": {
+          "count": 2,
+          "avg_price": 547.5,
+          "sample_title": "Rick Owens Rick Owens Low Top Sneakers"
+        },
+        "adidas:raf simons ozweego": {
+          "count": 4,
+          "avg_price": 216.5,
+          "sample_title": "Adidas RAF SIMONS OZWEEGO III BLACK/BLACK/CORYEL"
+        },
+        "chrome hearts:matty boy chomper": {
+          "count": 2,
+          "avg_price": 350.0,
+          "sample_title": "Chrome Hearts Chrome Hearts Matty boy Chomper hoodie"
+        },
+        "maison margiela:replica": {
+          "count": 2,
+          "avg_price": 350.0,
+          "sample_title": "Maison Margiela Maison Margiela Replica"
+        },
+        "comme des garcons:supreme cdg shirt": {
+          "count": 2,
+          "avg_price": 145.0,
+          "sample_title": "Comme des Garcons Supreme cdg shirt box logo hooded sweatershirt"
+        },
+        "comme des garcons:junya watanabe cdg": {
+          "count": 2,
+          "avg_price": 165.0,
+          "sample_title": "Comme des Garcons Junya Watanabe CDG MAN Jacket"
+        },
+        "number (n)ine:nine jeans ss08": {
+          "count": 2,
+          "avg_price": 152.5,
+          "sample_title": "Number (N)ine Number Nine Jeans SS08 Hickory Carpenter Denim"
+        },
+        "balenciaga:strike boots": {
+          "count": 2,
+          "avg_price": 710.0,
+          "sample_title": "Balenciaga BALENCIAGA STRIKE BOOTS GREEN"
+        },
+        "saint laurent paris:waxed jeans": {
+          "count": 2,
+          "avg_price": 260.0,
+          "sample_title": "Saint Laurent Paris Saint Laurent Paris waxed jeans"
+        },
+        "yves saint laurent:ysl long sleeve": {
+          "count": 2,
+          "avg_price": 42.5,
+          "sample_title": "Yves Saint Laurent Yves Saint Laurent YSL Mens Long Sleeve Shirt"
+        },
+        "dior:homme hedi slimane": {
+          "count": 12,
+          "avg_price": 565.75,
+          "sample_title": "Dior Dior Homme Hedi Slimane SS05 Runway Leather Biker Jacket"
+        },
+        "dior:homme jeans": {
+          "count": 2,
+          "avg_price": 232.5,
+          "sample_title": "Dior Dior Homme Black Jeans"
+        },
+        "vivienne westwood:\ud83d\udd25vintage\ud83d\udd25 leather wallet": {
+          "count": 2,
+          "avg_price": 82.5,
+          "sample_title": "Vivienne Westwood \ud83d\udd25Vintage\ud83d\udd25 Vivienne Westwood Leather Wallet"
+        },
+        "vivienne westwood:wallet": {
+          "count": 2,
+          "avg_price": 66.0,
+          "sample_title": "Vivienne Westwood Vivienne Westwood Wallet"
+        },
+        "bottega veneta:puddle boots": {
+          "count": 3,
+          "avg_price": 250.0,
+          "sample_title": "Bottega Veneta Bottega Veneta Puddle Boots"
+        },
+        "bottega veneta:orbit sneakers": {
+          "count": 3,
+          "avg_price": 458.0,
+          "sample_title": "Bottega Veneta Bottega Veneta Orbit Sneakers"
+        },
+        "celine:21ss dancing kid": {
+          "count": 2,
+          "avg_price": 1493.5,
+          "sample_title": "Celine Celine 21SS Dancing Kid studded sweat pants sz.M"
+        },
+        "junya watanabe:comme des garcons": {
+          "count": 4,
+          "avg_price": 193.25,
+          "sample_title": "Junya Watanabe JUNYA WATANABE COMME des GARCONS GORETEX WINDSTOPPER JACKET"
+        },
+        "junya watanabe:supreme cdg man": {
+          "count": 2,
+          "avg_price": 790.0,
+          "sample_title": "Junya Watanabe Supreme x Junya Watanabe CDG Man Nature Tee"
+        },
+        "on:post archive facti": {
+          "count": 5,
+          "avg_price": 197.0,
+          "sample_title": "On Post Archive Faction ON Cloudmonster 2 PAF in Black Magnet"
+        },
+        "post archive faction (paf):5.0+ technical pants": {
+          "count": 2,
+          "avg_price": 180.0,
+          "sample_title": "POST ARCHIVE FACTION (PAF) POST ARCHIVE FACTION (PAF) 5.0+ Technical Pants Right"
+        },
+        "post archive faction (paf):5.0 hoodie right": {
+          "count": 2,
+          "avg_price": 139.0,
+          "sample_title": "POST ARCHIVE FACTION (PAF) POST ARCHIVE FACTION 5.0 HOODIE RIGHT"
+        },
+        "grailed:\u26a1\ufe0f half evil": {
+          "count": 3,
+          "avg_price": 41.0,
+          "sample_title": "Grailed \u26a1\ufe0f Half Evil 333 Embroidered Forever Logo Tee Black XL \u26a1\ufe0f"
+        },
+        "grailed:item my brother": {
+          "count": 2,
+          "avg_price": 75.0,
+          "sample_title": "Grailed 5 item for my brother"
+        },
+        "grailed:yeat zine": {
+          "count": 21,
+          "avg_price": 2.857142857142857,
+          "sample_title": "Grailed Yeat for Grailed Zine"
+        },
+        "carhartt:cargo pants": {
+          "count": 3,
+          "avg_price": 58.0,
+          "sample_title": "Carhartt Carhartt Cargo Pants"
+        },
+        "rick owens:bauhaus cargo pants": {
+          "count": 2,
+          "avg_price": 412.5,
+          "sample_title": "Rick Owens Rick Owens Bauhaus Cargo Pants"
+        },
+        "sancho boots:rodeo cowboy western": {
+          "count": 2,
+          "avg_price": 85.0,
+          "sample_title": "Sancho Boots Vintage Sancho Rodeo Cowboy Western Leather Boots"
+        },
+        "chrome hearts:hoodie": {
+          "count": 2,
+          "avg_price": 775.0,
+          "sample_title": "Chrome Hearts Hoodie"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-02-26T14:34:49.533258",
+      "items": {
+        "adidas:raf simons ozweego": {
+          "count": 4,
+          "avg_price": 216.5,
+          "sample_title": "Adidas RAF SIMONS OZWEEGO III BLACK/BLACK/CORYEL"
+        },
+        "chrome hearts:hoodie": {
+          "count": 2,
+          "avg_price": 675.0,
+          "sample_title": "Chrome Hearts CHROME HEARTS HOODIE"
+        },
+        "maison margiela:tabi sneakers": {
+          "count": 2,
+          "avg_price": 362.0,
+          "sample_title": "Maison Margiela Maison Margiela Tabi sneakers"
+        },
+        "comme des garcons:supreme cdg shirt": {
+          "count": 2,
+          "avg_price": 145.0,
+          "sample_title": "Comme des Garcons Supreme cdg shirt box logo hooded sweatershirt"
+        },
+        "comme des garcons:junya watanabe cdg": {
+          "count": 2,
+          "avg_price": 165.0,
+          "sample_title": "Comme des Garcons Junya Watanabe CDG MAN Jacket"
+        },
+        "number (n)ine:nine aw03 \u201ctouch": {
+          "count": 2,
+          "avg_price": 172.5,
+          "sample_title": "Number (N)ine Number Nine AW03 \u201cTouch Me I\u2019m Sick\u201d Kurt Cobain Jeans"
+        },
+        "number (n)ine:nine pain denim": {
+          "count": 2,
+          "avg_price": 160.0,
+          "sample_title": "Number (N)ine Number Nine Pain Denim"
+        },
+        "number (n)ine:school of visual": {
+          "count": 2,
+          "avg_price": 145.0,
+          "sample_title": "Number (N)ine School Of Visual Comedy Tee Shirt"
+        },
+        "yohji yamamoto:knit sweater": {
+          "count": 2,
+          "avg_price": 125.0,
+          "sample_title": "Yohji Yamamoto Yohji Yamamoto Knit Sweater"
+        },
+        "balenciaga:arena high top": {
+          "count": 2,
+          "avg_price": 250.0,
+          "sample_title": "Balenciaga Balenciaga Arena High Top"
+        },
+        "balenciaga:yeezy gap dove": {
+          "count": 3,
+          "avg_price": 64.0,
+          "sample_title": "Balenciaga Yeezy gap Balenciaga dove no seam t shirt grey size medium"
+        },
+        "saint laurent paris:waxed jeans": {
+          "count": 2,
+          "avg_price": 260.0,
+          "sample_title": "Saint Laurent Paris Saint Laurent Paris waxed jeans"
+        },
+        "yves saint laurent:ysl long sleeve": {
+          "count": 2,
+          "avg_price": 42.5,
+          "sample_title": "Yves Saint Laurent Yves Saint Laurent YSL Mens Long Sleeve Shirt"
+        },
+        "dior:homme hedi slimane": {
+          "count": 13,
+          "avg_price": 528.3846153846154,
+          "sample_title": "Dior Dior Homme hedi slimane Blacktie 249S Sunglasses"
+        },
+        "vivienne westwood:wallet": {
+          "count": 3,
+          "avg_price": 76.33333333333333,
+          "sample_title": "Vivienne Westwood Vivienne Westwood Wallet"
+        },
+        "bottega veneta:puddle boots": {
+          "count": 2,
+          "avg_price": 240.0,
+          "sample_title": "Bottega Veneta Bottega Veneta Puddle Boots"
+        },
+        "bottega veneta:orbit sneakers": {
+          "count": 3,
+          "avg_price": 458.0,
+          "sample_title": "Bottega Veneta Bottega Veneta Orbit Sneakers"
+        },
+        "celine:loose hoodie cotton": {
+          "count": 2,
+          "avg_price": 350.0,
+          "sample_title": "Celine CELINE LOOSE HOODIE IN COTTON FLEECE"
+        },
+        "celine:paris ribbed long": {
+          "count": 2,
+          "avg_price": 225.0,
+          "sample_title": "Celine CELINE Paris ribbed long sleeve Henley logo t-shirt"
+        },
+        "celine:21ss dancing kid": {
+          "count": 2,
+          "avg_price": 1493.5,
+          "sample_title": "Celine Celine 21SS Dancing Kid studded sweat pants sz.M"
+        },
+        "junya watanabe:comme des garcons": {
+          "count": 5,
+          "avg_price": 167.2,
+          "sample_title": "Junya Watanabe Comme des Garcons x Junya Watanabe Two Buttons Coat Jacket"
+        },
+        "on:post archive facti": {
+          "count": 5,
+          "avg_price": 197.0,
+          "sample_title": "On Post Archive Faction ON Cloudmonster 2 PAF in Black Magnet"
+        },
+        "post archive faction (paf):5.0+ technical pants": {
+          "count": 2,
+          "avg_price": 180.0,
+          "sample_title": "POST ARCHIVE FACTION (PAF) POST ARCHIVE FACTION (PAF) 5.0+ Technical Pants Right"
+        },
+        "post archive faction (paf):5.0 hoodie right": {
+          "count": 2,
+          "avg_price": 139.0,
+          "sample_title": "POST ARCHIVE FACTION (PAF) POST ARCHIVE FACTION 5.0 HOODIE RIGHT"
+        },
+        "grailed:\u26a1\ufe0f half evil": {
+          "count": 3,
+          "avg_price": 41.0,
+          "sample_title": "Grailed \u26a1\ufe0f Half Evil 333 Embroidered Forever Logo Tee Black XL \u26a1\ufe0f"
+        },
+        "grailed:item my brother": {
+          "count": 2,
+          "avg_price": 75.0,
+          "sample_title": "Grailed 5 item for my brother"
+        },
+        "grailed:yeat zine": {
+          "count": 21,
+          "avg_price": 2.857142857142857,
+          "sample_title": "Grailed Yeat for Grailed Zine"
+        },
+        "carhartt:cargo pants": {
+          "count": 2,
+          "avg_price": 69.5,
+          "sample_title": "Carhartt Carhartt Cargo Pants"
+        },
+        "sancho boots:rodeo cowboy western": {
+          "count": 2,
+          "avg_price": 85.0,
+          "sample_title": "Sancho Boots Vintage Sancho Rodeo Cowboy Western Leather Boots"
+        },
+        "lanvin:curb sneakers": {
+          "count": 2,
+          "avg_price": 332.5,
+          "sample_title": "Lanvin Black Curb Sneakers"
+        },
+        "other:tatto hoodie": {
+          "count": 2,
+          "avg_price": 287.0,
+          "sample_title": "Other Tatto Hoodie"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-02-27T15:22:10.098662",
+      "items": {
+        "adidas:raf simons ozweego": {
+          "count": 5,
+          "avg_price": 234.2,
+          "sample_title": "Adidas Raf Simons x Adidas Ozweego"
+        },
+        "chrome hearts:tee": {
+          "count": 2,
+          "avg_price": 253.5,
+          "sample_title": "Chrome Hearts Chrome Hearts Tee"
+        },
+        "chrome hearts:general": {
+          "count": 2,
+          "avg_price": 94.0,
+          "sample_title": "Chrome Hearts CHROME HEARTS"
+        },
+        "comme des garcons:supreme cdg shirt": {
+          "count": 2,
+          "avg_price": 145.0,
+          "sample_title": "Comme des Garcons Supreme cdg shirt box logo hooded sweatershirt"
+        },
+        "undercover:uniqlo jeans": {
+          "count": 2,
+          "avg_price": 88.0,
+          "sample_title": "Undercover Undercover uniqlo Jeans"
+        },
+        "number (n)ine:ss05 nine nightcrawler": {
+          "count": 2,
+          "avg_price": 215.0,
+          "sample_title": "Number (N)ine SS05 Number Nine NightCrawler Bondage Ring Jeans"
+        },
+        "number (n)ine:nine school of": {
+          "count": 3,
+          "avg_price": 168.0,
+          "sample_title": "Number (N)ine Number Nine School of Visual Hoodie"
+        },
+        "yohji yamamoto:knit sweater": {
+          "count": 2,
+          "avg_price": 125.0,
+          "sample_title": "Yohji Yamamoto Yohji Yamamoto Knit Sweater"
+        },
+        "balenciaga:arena high top": {
+          "count": 2,
+          "avg_price": 245.0,
+          "sample_title": "Balenciaga Balenciaga Arena High Top"
+        },
+        "vintage:yves saint laurent": {
+          "count": 4,
+          "avg_price": 18.25,
+          "sample_title": "Vintage Vintage Yves Saint Laurent YSL Shir Size 2XL"
+        },
+        "dior:homme hedi slimane": {
+          "count": 9,
+          "avg_price": 631.5555555555555,
+          "sample_title": "Dior Dior Homme hedi slimane Blacktie 249S Sunglasses"
+        },
+        "vivienne westwood:orb logo basic": {
+          "count": 2,
+          "avg_price": 23.0,
+          "sample_title": "Vivienne Westwood \ud83d\udd25 Vivienne Westwood Orb Logo Basic Slim T Shirt Black Tee"
+        },
+        "vivienne westwood:luxury small logo": {
+          "count": 4,
+          "avg_price": 27.75,
+          "sample_title": "Vivienne Westwood Mens Vivienne Westwood Luxury Small Logo White T-Shirt"
+        },
+        "vivienne westwood:mini bas relief": {
+          "count": 2,
+          "avg_price": 165.0,
+          "sample_title": "Vivienne Westwood Mini Bas Relief Pearl Necklace Iconic Flat Orb Silver Globe"
+        },
+        "bottega veneta:orbit sneaker": {
+          "count": 2,
+          "avg_price": 660.0,
+          "sample_title": "Bottega Veneta Bottega Veneta Orbit Sneaker"
+        },
+        "bottega veneta:orbit sneakers": {
+          "count": 4,
+          "avg_price": 448.5,
+          "sample_title": "Bottega Veneta Bottega Veneta Orbit Sneakers"
+        },
+        "bottega veneta:puddle boots": {
+          "count": 2,
+          "avg_price": 240.0,
+          "sample_title": "Bottega Veneta Bottega Veneta Puddle Boots"
+        },
+        "celine:paris ribbed long": {
+          "count": 2,
+          "avg_price": 225.0,
+          "sample_title": "Celine CELINE Paris ribbed long sleeve Henley logo t-shirt"
+        },
+        "celine:21ss dancing kid": {
+          "count": 2,
+          "avg_price": 1493.5,
+          "sample_title": "Celine Celine 21SS Dancing Kid studded sweat pants sz.M"
+        },
+        "junya watanabe:comme des garcons": {
+          "count": 4,
+          "avg_price": 175.25,
+          "sample_title": "Junya Watanabe Junya Watanabe COMME des GARCONS Classic White Shirt 2008"
+        },
+        "comme des garcons:junya watanabe cdg": {
+          "count": 2,
+          "avg_price": 165.0,
+          "sample_title": "Comme des Garcons Junya Watanabe CDG MAN Jacket"
+        },
+        "on:post archive facti": {
+          "count": 5,
+          "avg_price": 197.0,
+          "sample_title": "On Post Archive Faction ON Cloudmonster 2 PAF in Black Magnet"
+        },
+        "post archive faction (paf):5.0+ technical pants": {
+          "count": 2,
+          "avg_price": 180.0,
+          "sample_title": "POST ARCHIVE FACTION (PAF) POST ARCHIVE FACTION (PAF) 5.0+ Technical Pants Right"
+        },
+        "post archive faction (paf):5.0 hoodie right": {
+          "count": 2,
+          "avg_price": 139.0,
+          "sample_title": "POST ARCHIVE FACTION (PAF) POST ARCHIVE FACTION 5.0 HOODIE RIGHT"
+        },
+        "grailed:\u26a1\ufe0f half evil": {
+          "count": 3,
+          "avg_price": 41.0,
+          "sample_title": "Grailed \u26a1\ufe0f Half Evil 333 Embroidered Forever Logo Tee Black XL \u26a1\ufe0f"
+        },
+        "grailed:item my brother": {
+          "count": 2,
+          "avg_price": 75.0,
+          "sample_title": "Grailed 5 item for my brother"
+        },
+        "grailed:yeat zine": {
+          "count": 21,
+          "avg_price": 2.857142857142857,
+          "sample_title": "Grailed Yeat for Grailed Zine"
+        },
+        "stone island:cargo pants": {
+          "count": 2,
+          "avg_price": 87.5,
+          "sample_title": "Stone Island Stone Island Cargo Pants"
+        },
+        "carhartt:cargo pants": {
+          "count": 2,
+          "avg_price": 69.5,
+          "sample_title": "Carhartt Carhartt Cargo Pants"
+        },
+        "sancho boots:rodeo cowboy western": {
+          "count": 2,
+          "avg_price": 85.0,
+          "sample_title": "Sancho Boots Vintage Sancho Rodeo Cowboy Western Leather Boots"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-02-28T14:25:43.661850",
+      "items": {
+        "adidas:raf simons ozweego": {
+          "count": 5,
+          "avg_price": 234.2,
+          "sample_title": "Adidas Raf Simons x Adidas Ozweego"
+        },
+        "comme des garcons:supreme cdg shirt": {
+          "count": 2,
+          "avg_price": 145.0,
+          "sample_title": "Comme des Garcons Supreme cdg shirt box logo hooded sweatershirt"
+        },
+        "undercover:uniqlo jeans": {
+          "count": 2,
+          "avg_price": 88.0,
+          "sample_title": "Undercover Undercover uniqlo Jeans"
+        },
+        "number (n)ine:00\u2019s nine style": {
+          "count": 2,
+          "avg_price": 32.5,
+          "sample_title": "Number (N)ine 00\u2019s NUMBER NINE STYLE WESTERN LEATHER RARE Y2K BELT VINTAGE"
+        },
+        "number (n)ine:ss05 nine nightcrawler": {
+          "count": 2,
+          "avg_price": 215.0,
+          "sample_title": "Number (N)ine SS05 Number Nine NightCrawler Bondage Ring Jeans"
+        },
+        "yohji yamamoto:pour homme cotton": {
+          "count": 2,
+          "avg_price": 229.5,
+          "sample_title": "Yohji Yamamoto Yohji Yamamoto Pour Homme Cotton Black Chore Shirt Jacket"
+        },
+        "yohji yamamoto:knit sweater": {
+          "count": 2,
+          "avg_price": 125.0,
+          "sample_title": "Yohji Yamamoto Yohji Yamamoto Knit Sweater"
+        },
+        "balenciaga:yeezy gap dove": {
+          "count": 2,
+          "avg_price": 87.5,
+          "sample_title": "Balenciaga Yeezy gap Balenciaga dove no seam t shirt black size large"
+        },
+        "balenciaga:arena low top": {
+          "count": 2,
+          "avg_price": 212.5,
+          "sample_title": "Balenciaga Balenciaga Arena Low Top"
+        },
+        "yves saint laurent:ysl jacket": {
+          "count": 3,
+          "avg_price": 93.33333333333333,
+          "sample_title": "Yves Saint Laurent Vintage Yves Saint Laurent YSL Jacket"
+        },
+        "saint laurent paris:d02 crash denim": {
+          "count": 2,
+          "avg_price": 210.0,
+          "sample_title": "Saint Laurent Paris Saint Laurent D02 Crash Denim Jeans Sz 32 Hedi Slimane"
+        },
+        "vintage:yves saint laurent": {
+          "count": 4,
+          "avg_price": 34.5,
+          "sample_title": "Vintage Vintage Yves Saint Laurent Paris Ysl Trench Coat Long Jacket"
+        },
+        "prada:sneakers": {
+          "count": 2,
+          "avg_price": 633.0,
+          "sample_title": "Prada Prada sneakers"
+        },
+        "dior:homme hedi slimane": {
+          "count": 11,
+          "avg_price": 572.1818181818181,
+          "sample_title": "Dior Dior Homme by Hedi Slimane / KVA Japan Exclusive Pants Jeans"
+        },
+        "dior:homme jeans": {
+          "count": 2,
+          "avg_price": 320.0,
+          "sample_title": "Dior Dior Homme jeans"
+        },
+        "vivienne westwood:\ud83d\udd25vintage\ud83d\udd25 leather wallet": {
+          "count": 2,
+          "avg_price": 62.5,
+          "sample_title": "Vivienne Westwood \ud83d\udd25Vintage\ud83d\udd25 Vivienne Westwood Leather Wallet"
+        },
+        "vivienne westwood:orb logo basic": {
+          "count": 2,
+          "avg_price": 23.0,
+          "sample_title": "Vivienne Westwood \ud83d\udd25 Vivienne Westwood Orb Logo Basic Slim T Shirt Black Tee"
+        },
+        "vivienne westwood:luxury small logo": {
+          "count": 4,
+          "avg_price": 27.75,
+          "sample_title": "Vivienne Westwood Mens Vivienne Westwood Luxury Small Logo White T-Shirt"
+        },
+        "bottega veneta:orbit sneaker": {
+          "count": 2,
+          "avg_price": 660.0,
+          "sample_title": "Bottega Veneta Bottega Veneta Orbit Sneaker"
+        },
+        "bottega veneta:orbit sneakers": {
+          "count": 3,
+          "avg_price": 439.6666666666667,
+          "sample_title": "Bottega Veneta Bottega Veneta Orbit Sneakers"
+        },
+        "bottega veneta:puddle boots": {
+          "count": 2,
+          "avg_price": 240.0,
+          "sample_title": "Bottega Veneta Bottega Veneta Puddle Boots"
+        },
+        "celine:paris ribbed long": {
+          "count": 3,
+          "avg_price": 217.0,
+          "sample_title": "Celine CELINE Paris ribbed long sleeve Henley logo t-shirt"
+        },
+        "junya watanabe:comme des gar\u00e7ons": {
+          "count": 2,
+          "avg_price": 162.5,
+          "sample_title": "Junya Watanabe Junya Watanabe Comme Des Gar\u00e7ons SS04 Velour Anarchy Poem"
+        },
+        "junya watanabe:comme des garcons": {
+          "count": 4,
+          "avg_price": 175.25,
+          "sample_title": "Junya Watanabe Junya Watanabe COMME des GARCONS Classic White Shirt 2008"
+        },
+        "jungles:wool stripe boucle": {
+          "count": 2,
+          "avg_price": 80.0,
+          "sample_title": "Jungles WOOL STRIPE BOUCLE MINIMAL WORKWEAR JACKET"
+        },
+        "on:post archive facti": {
+          "count": 5,
+          "avg_price": 197.0,
+          "sample_title": "On Post Archive Faction ON Cloudmonster 2 PAF in Black Magnet"
+        },
+        "post archive faction (paf):5.0+ technical pants": {
+          "count": 2,
+          "avg_price": 180.0,
+          "sample_title": "POST ARCHIVE FACTION (PAF) POST ARCHIVE FACTION (PAF) 5.0+ Technical Pants Right"
+        },
+        "post archive faction (paf):5.0 hoodie right": {
+          "count": 2,
+          "avg_price": 139.0,
+          "sample_title": "POST ARCHIVE FACTION (PAF) POST ARCHIVE FACTION 5.0 HOODIE RIGHT"
+        },
+        "grailed:\u26a1\ufe0f half evil": {
+          "count": 3,
+          "avg_price": 41.0,
+          "sample_title": "Grailed \u26a1\ufe0f Half Evil 333 Embroidered Forever Logo Tee Black XL \u26a1\ufe0f"
+        },
+        "grailed:item my brother": {
+          "count": 2,
+          "avg_price": 75.0,
+          "sample_title": "Grailed 5 item for my brother"
+        },
+        "grailed:yeat zine": {
+          "count": 21,
+          "avg_price": 2.857142857142857,
+          "sample_title": "Grailed Yeat for Grailed Zine"
+        },
+        "stone island:cargo pants": {
+          "count": 3,
+          "avg_price": 91.66666666666667,
+          "sample_title": "Stone Island Stone island cargo pants"
+        },
+        "sancho boots:rodeo cowboy western": {
+          "count": 2,
+          "avg_price": 85.0,
+          "sample_title": "Sancho Boots Vintage Sancho Rodeo Cowboy Western Leather Boots"
+        },
+        "vale:valley dreams nyc": {
+          "count": 2,
+          "avg_price": 152.5,
+          "sample_title": "Vale Valley Dreams Black Blue NYC Return of Vale Pullover Hoodie"
+        },
+        "polo ralph lauren:cable knit sweater": {
+          "count": 2,
+          "avg_price": 35.0,
+          "sample_title": "Polo Ralph Lauren Polo Ralph Lauren Cable Knit Sweater \u2013 Light Blue"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-03-02T19:22:46.599820",
+      "items": {
+        "adidas:raf simons ozweego": {
+          "count": 6,
+          "avg_price": 221.83333333333334,
+          "sample_title": "Adidas Raf simons ozweego"
+        },
+        "chrome hearts:dagger pendant silver": {
+          "count": 3,
+          "avg_price": 416.6666666666667,
+          "sample_title": "Chrome Hearts Chrome Hearts Dagger Pendant Silver Rope Chain Necklace 925"
+        },
+        "chrome hearts:trucker hat": {
+          "count": 2,
+          "avg_price": 357.5,
+          "sample_title": "Chrome Hearts Chrome Hearts Trucker hat"
+        },
+        "supreme:undercover dolls tee": {
+          "count": 2,
+          "avg_price": 157.5,
+          "sample_title": "Supreme Supreme x Undercover Dolls Tee FW16"
+        },
+        "undercover:aw05 arts crafts": {
+          "count": 2,
+          "avg_price": 700.0,
+          "sample_title": "Undercover AW05 undercover arts and crafts heart denim"
+        },
+        "undercover:uniqlo jeans": {
+          "count": 2,
+          "avg_price": 88.0,
+          "sample_title": "Undercover Undercover uniqlo Jeans"
+        },
+        "number (n)ine:nine school of": {
+          "count": 4,
+          "avg_price": 181.75,
+          "sample_title": "Number (N)ine Number Nine School of Visual track pants"
+        },
+        "number (n)ine:ss05 nine nightcrawler": {
+          "count": 2,
+          "avg_price": 180.0,
+          "sample_title": "Number (N)ine SS05 Number Nine NightCrawler Bondage Ring Jeans"
+        },
+        "yohji yamamoto:pour homme double": {
+          "count": 2,
+          "avg_price": 355.0,
+          "sample_title": "Yohji Yamamoto Yohji Yamamoto Pour Homme - Double Collar Short Sleeves"
+        },
+        "prada:america\u2019s cup sneakers": {
+          "count": 2,
+          "avg_price": 380.0,
+          "sample_title": "Prada Prada America\u2019s Cup Red Sneakers | Size 12UK"
+        },
+        "dior:homme hedi slimane": {
+          "count": 12,
+          "avg_price": 550.3333333333334,
+          "sample_title": "Dior Dior Homme Hedi Slimane ss07 bee polo"
+        },
+        "dior:homme aw07 navigate": {
+          "count": 2,
+          "avg_price": 415.0,
+          "sample_title": "Dior Vintage Dior Homme AW07 Navigate Hedi Slimane Coat Parka"
+        },
+        "dior:homme jeans": {
+          "count": 2,
+          "avg_price": 320.0,
+          "sample_title": "Dior Dior Homme jeans"
+        },
+        "vivienne westwood:\ud83d\udd25vintage\ud83d\udd25 leather wallet": {
+          "count": 2,
+          "avg_price": 57.5,
+          "sample_title": "Vivienne Westwood \ud83d\udd25Vintage\ud83d\udd25 Vivienne Westwood Leather Wallet"
+        },
+        "vivienne westwood:mini bas relief": {
+          "count": 2,
+          "avg_price": 150.0,
+          "sample_title": "Vivienne Westwood Vivienne Westwood Mini Bas Relief Pendant Necklace Silver"
+        },
+        "vivienne westwood:orb logo basic": {
+          "count": 2,
+          "avg_price": 23.0,
+          "sample_title": "Vivienne Westwood \ud83d\udd25 Vivienne Westwood Orb Logo Basic Slim T Shirt Black Tee"
+        },
+        "vivienne westwood:luxury small logo": {
+          "count": 3,
+          "avg_price": 25.333333333333332,
+          "sample_title": "Vivienne Westwood Mens Vivienne Westwood Luxury Small Logo White T-Shirt"
+        },
+        "bottega veneta:orbit sneakers": {
+          "count": 2,
+          "avg_price": 437.0,
+          "sample_title": "Bottega Veneta Bottega Veneta Orbit Sneakers"
+        },
+        "bottega veneta:puddle boots": {
+          "count": 2,
+          "avg_price": 240.0,
+          "sample_title": "Bottega Veneta Bottega Veneta Puddle Boots"
+        },
+        "celine:loose hoodie cotton": {
+          "count": 2,
+          "avg_price": 250.0,
+          "sample_title": "Celine CELINE LOOSE HOODIE IN COTTON FLEECE"
+        },
+        "celine:paris ribbed long": {
+          "count": 4,
+          "avg_price": 193.25,
+          "sample_title": "Celine CELINE Paris ribbed long sleeve Henley logo t-shirt"
+        },
+        "junya watanabe:comme des gar\u00e7ons": {
+          "count": 2,
+          "avg_price": 162.5,
+          "sample_title": "Junya Watanabe Junya Watanabe Comme Des Gar\u00e7ons SS04 Velour Anarchy Poem"
+        },
+        "junya watanabe:comme des garcons": {
+          "count": 3,
+          "avg_price": 140.33333333333334,
+          "sample_title": "Junya Watanabe Junya Watanabe COMME des GARCONS Classic White Shirt 2008"
+        },
+        "the gv gallery:raspberry hills camo": {
+          "count": 2,
+          "avg_price": 235.5,
+          "sample_title": "The GV Gallery Raspberry Hills Camo Shorts Large"
+        },
+        "on:post archive facti": {
+          "count": 4,
+          "avg_price": 218.75,
+          "sample_title": "On Post Archive Faction ON Cloudmonster 2 PAF in Black Magnet"
+        },
+        "post archive faction (paf):5.0+ technical pants": {
+          "count": 2,
+          "avg_price": 180.0,
+          "sample_title": "POST ARCHIVE FACTION (PAF) POST ARCHIVE FACTION (PAF) 5.0+ Technical Pants Right"
+        },
+        "post archive faction (paf):5.0 hoodie right": {
+          "count": 2,
+          "avg_price": 139.0,
+          "sample_title": "POST ARCHIVE FACTION (PAF) POST ARCHIVE FACTION 5.0 HOODIE RIGHT"
+        },
+        "levi's vintage clothing:70\u2019s retro orange": {
+          "count": 2,
+          "avg_price": 90.0,
+          "sample_title": "Levi's Vintage Clothing 70\u2019s retro Orange Tab 517 Levis- dated 02/1993-NWT!!!"
+        },
+        "g59 records:day army high": {
+          "count": 2,
+          "avg_price": 150.0,
+          "sample_title": "G59 Records Grey Day Grey Army High Vis - G59 Suicideboys RARE"
+        },
+        "grailed:\u26a1\ufe0f half evil": {
+          "count": 3,
+          "avg_price": 41.0,
+          "sample_title": "Grailed \u26a1\ufe0f Half Evil 333 Embroidered Forever Logo Tee Black XL \u26a1\ufe0f"
+        },
+        "grailed:item my brother": {
+          "count": 2,
+          "avg_price": 75.0,
+          "sample_title": "Grailed 5 item for my brother"
+        },
+        "grailed:yeat zine": {
+          "count": 21,
+          "avg_price": 2.857142857142857,
+          "sample_title": "Grailed Yeat for Grailed Zine"
+        },
+        "carhartt:cargo pants": {
+          "count": 2,
+          "avg_price": 38.0,
+          "sample_title": "Carhartt CARHARTT CARGO PANTS"
+        },
+        "stone island:cargo pants": {
+          "count": 2,
+          "avg_price": 95.0,
+          "sample_title": "Stone Island Stone island cargo pants"
+        },
+        "justin boots:leather cowboy": {
+          "count": 2,
+          "avg_price": 45.0,
+          "sample_title": "Justin Boots Vintage Black Leather Cowboy Boots"
+        },
+        "sancho boots:rodeo cowboy western": {
+          "count": 2,
+          "avg_price": 85.0,
+          "sample_title": "Sancho Boots Vintage Sancho Rodeo Cowboy Western Leather Boots"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-03-03T19:40:35.061849",
+      "items": {
+        "adidas:raf simons ozweego": {
+          "count": 5,
+          "avg_price": 239.6,
+          "sample_title": "Adidas adidas Raf Simons Ozweego Core Black Silver Metallic"
+        },
+        "chrome hearts:silicone cross necklace": {
+          "count": 2,
+          "avg_price": 352.5,
+          "sample_title": "Chrome Hearts Chrome Hearts silicone cross necklace"
+        },
+        "chrome hearts:yellow ch logo": {
+          "count": 2,
+          "avg_price": 800.0,
+          "sample_title": "Chrome Hearts Chrome Hearts Black & Yellow CH Logo Hat"
+        },
+        "helmut lang:archive denim jacket": {
+          "count": 2,
+          "avg_price": 189.5,
+          "sample_title": "Helmut Lang Archive Denim Jacket Type l"
+        },
+        "comme des garcons:junya watanabe patchwork": {
+          "count": 2,
+          "avg_price": 118.5,
+          "sample_title": "Comme des Garcons Comme des Garcons x Junya Watanabe Patchwork Button Up Shirt"
+        },
+        "supreme:undercover dolls tee": {
+          "count": 2,
+          "avg_price": 157.5,
+          "sample_title": "Supreme Supreme x Undercover Dolls Tee FW16"
+        },
+        "undercover:uniqlo jeans": {
+          "count": 2,
+          "avg_price": 88.0,
+          "sample_title": "Undercover Undercover uniqlo Jeans"
+        },
+        "number (n)ine:nine school of": {
+          "count": 3,
+          "avg_price": 160.66666666666666,
+          "sample_title": "Number (N)ine Number Nine School of Visual track pants"
+        },
+        "yohji yamamoto:pour homme double": {
+          "count": 2,
+          "avg_price": 355.0,
+          "sample_title": "Yohji Yamamoto Yohji Yamamoto Pour Homme - Double Collar Short Sleeves"
+        },
+        "balenciaga:track sneakers": {
+          "count": 2,
+          "avg_price": 310.0,
+          "sample_title": "Balenciaga Balenciaga track sneakers white"
+        },
+        "dior:homme aw04 votc": {
+          "count": 2,
+          "avg_price": 662.5,
+          "sample_title": "Dior Dior Homme AW04 VOTC Runway Corduroy Blazer"
+        },
+        "dior:homme hedi slimane": {
+          "count": 9,
+          "avg_price": 572.4444444444445,
+          "sample_title": "Dior Dior Homme Hedi Slimane V Neck"
+        },
+        "dior:homme aw07 navigate": {
+          "count": 2,
+          "avg_price": 415.0,
+          "sample_title": "Dior Vintage Dior Homme AW07 Navigate Hedi Slimane Coat Parka"
+        },
+        "vivienne westwood:\ud83d\udd25vintage\ud83d\udd25 leather wallet": {
+          "count": 2,
+          "avg_price": 57.5,
+          "sample_title": "Vivienne Westwood \ud83d\udd25Vintage\ud83d\udd25 Vivienne Westwood Leather Wallet"
+        },
+        "vivienne westwood:orb logo basic": {
+          "count": 2,
+          "avg_price": 23.0,
+          "sample_title": "Vivienne Westwood \ud83d\udd25 Vivienne Westwood Orb Logo Basic Slim T Shirt Black Tee"
+        },
+        "vivienne westwood:luxury small logo": {
+          "count": 3,
+          "avg_price": 25.333333333333332,
+          "sample_title": "Vivienne Westwood Mens Vivienne Westwood Luxury Small Logo White T-Shirt"
+        },
+        "bottega veneta:orbit sneakers": {
+          "count": 2,
+          "avg_price": 437.0,
+          "sample_title": "Bottega Veneta Bottega Veneta Orbit Sneakers"
+        },
+        "bottega veneta:puddle boots": {
+          "count": 2,
+          "avg_price": 240.0,
+          "sample_title": "Bottega Veneta Bottega Veneta Puddle Boots"
+        },
+        "celine:loose hoodie cotton": {
+          "count": 2,
+          "avg_price": 250.0,
+          "sample_title": "Celine CELINE LOOSE HOODIE IN COTTON FLEECE"
+        },
+        "celine:paris ribbed long": {
+          "count": 4,
+          "avg_price": 193.25,
+          "sample_title": "Celine CELINE Paris ribbed long sleeve Henley logo t-shirt"
+        },
+        "junya watanabe:comme des gar\u00e7ons": {
+          "count": 2,
+          "avg_price": 162.5,
+          "sample_title": "Junya Watanabe Junya Watanabe Comme Des Gar\u00e7ons SS04 Velour Anarchy Poem"
+        },
+        "junya watanabe:comme des garcons": {
+          "count": 3,
+          "avg_price": 140.33333333333334,
+          "sample_title": "Junya Watanabe Junya Watanabe COMME des GARCONS Classic White Shirt 2008"
+        },
+        "on:post archive facti": {
+          "count": 4,
+          "avg_price": 218.75,
+          "sample_title": "On Post Archive Faction ON Cloudmonster 2 PAF in Black Magnet"
+        },
+        "post archive faction (paf):5.0+ technical pants": {
+          "count": 2,
+          "avg_price": 180.0,
+          "sample_title": "POST ARCHIVE FACTION (PAF) POST ARCHIVE FACTION (PAF) 5.0+ Technical Pants Right"
+        },
+        "post archive faction (paf):5.0 hoodie right": {
+          "count": 2,
+          "avg_price": 139.0,
+          "sample_title": "POST ARCHIVE FACTION (PAF) POST ARCHIVE FACTION 5.0 HOODIE RIGHT"
+        },
+        "grailed:\u26a1\ufe0f half evil": {
+          "count": 3,
+          "avg_price": 41.0,
+          "sample_title": "Grailed \u26a1\ufe0f Half Evil 333 Embroidered Forever Logo Tee Black XL \u26a1\ufe0f"
+        },
+        "grailed:item my brother": {
+          "count": 2,
+          "avg_price": 75.0,
+          "sample_title": "Grailed 5 item for my brother"
+        },
+        "grailed:yeat zine": {
+          "count": 21,
+          "avg_price": 2.857142857142857,
+          "sample_title": "Grailed Yeat for Grailed Zine"
+        },
+        "carhartt:cargo pants": {
+          "count": 2,
+          "avg_price": 38.0,
+          "sample_title": "Carhartt CARHARTT CARGO PANTS"
+        },
+        "justin boots:leather cowboy": {
+          "count": 2,
+          "avg_price": 45.0,
+          "sample_title": "Justin Boots Vintage Black Leather Cowboy Boots"
+        },
+        "sancho boots:rodeo cowboy western": {
+          "count": 2,
+          "avg_price": 85.0,
+          "sample_title": "Sancho Boots Vintage Sancho Rodeo Cowboy Western Leather Boots"
+        }
+      }
+    }
+  ],
+  "last_updated": "2026-03-03T19:40:48.598697"
+}

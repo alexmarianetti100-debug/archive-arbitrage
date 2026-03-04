@@ -1,0 +1,32 @@
+{
+  "last_run": "2026-02-26T19:40:02.248813",
+  "stats": {
+    "queries": 20,
+    "total_found": 686,
+    "saved": 37,
+    "skipped_margin": 218,
+    "skipped_auth": 0,
+    "skipped_pricing": 431,
+    "skipped_demand": 0,
+    "image_id_hits": 10,
+    "demand_checks": 0,
+    "alerts_discord": 4,
+    "alerts_telegram": 37,
+    "by_source": {
+      "vinted": 19,
+      "grailed": 3,
+      "poshmark": 15
+    },
+    "by_brand": {
+      "gucci": 1,
+      "prada": 7,
+      "rick owens": 4,
+      "Rick": 3,
+      "dior homme": 1,
+      "ie": 10,
+      "dior": 9,
+      "Dior": 1,
+      "supreme": 1
+    }
+  }
+}

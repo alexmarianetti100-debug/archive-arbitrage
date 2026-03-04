@@ -7,7 +7,7 @@ import sys
 sys.path.insert(0, ".")
 
 from db.sqlite_models import init_db, get_items
-from authenticity_checker import AuthenticityChecker, AuthStatus
+from core.authenticity_checker import AuthenticityChecker, AuthStatus
 
 
 def scan_existing_items():

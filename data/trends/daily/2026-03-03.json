@@ -1,0 +1,285 @@
+{
+  "date": "2026-03-03",
+  "generated_at": "2026-03-03T19:40:48.615916",
+  "queries": [
+    "Rick Owens boots",
+    "balenciaga",
+    "helmut lang jacket",
+    "saint laurent",
+    "Raf Simons jacket",
+    "chrome hearts ring",
+    "yohji yamamoto",
+    "celine paris ribbed long",
+    "comme des garcons",
+    "junya watanabe",
+    "bottega veneta",
+    "adidas raf simons ozweego",
+    "maison margiela",
+    "number nine",
+    "jean paul gaultier",
+    "dior homme",
+    "undercover jun takahashi",
+    "rick owens dunks",
+    "rick owens stooges leather jacket",
+    "rick owens kiss boots",
+    "margiela tabi boots",
+    "chrome hearts cross pendant silver",
+    "chrome hearts cross ring",
+    "raf simons peter saville joy division",
+    "raf simons ozweego",
+    "helmut lang bondage jacket",
+    "balenciaga triple s",
+    "balenciaga track",
+    "saint laurent wyatt boots",
+    "prada americas cup",
+    "bottega veneta puddle boots",
+    "number nine leather jacket",
+    "issey miyake",
+    "prada",
+    "chrome hearts sneakers",
+    "balenciaga knit sweater",
+    "number nine coat",
+    "celine pendant",
+    "junya watanabe hoodie",
+    "rick owens hoodie",
+    "rick owens ring",
+    "undercover boots",
+    "junya watanabe bomber jacket",
+    "bottega veneta bag",
+    "dior homme hedi slimane",
+    "Yohji Yamamoto jacket",
+    "grailed yeat zine",
+    "vivienne westwood",
+    "Kapital jacket",
+    "Needles sneakers"
+  ],
+  "trend_count": 25,
+  "top_trends": [
+    {
+      "query": "Rick Owens boots",
+      "brand": "Rick Owens",
+      "score": 0.814,
+      "direction": "rising",
+      "sources": [
+        "google_trends",
+        "reddit"
+      ],
+      "velocity_change": 0.03,
+      "price_change": 0.0
+    },
+    {
+      "query": "balenciaga",
+      "brand": "Balenciaga",
+      "score": 0.797,
+      "direction": "rising",
+      "sources": [
+        "google_trends",
+        "editorial"
+      ],
+      "velocity_change": 1.38,
+      "price_change": 0.0
+    },
+    {
+      "query": "helmut lang jacket",
+      "brand": "Helmut Lang",
+      "score": 0.675,
+      "direction": "rising",
+      "sources": [
+        "google_trends"
+      ],
+      "velocity_change": 24.0,
+      "price_change": 0.0
+    },
+    {
+      "query": "saint laurent",
+      "brand": "Saint Laurent",
+      "score": 0.675,
+      "direction": "rising",
+      "sources": [
+        "google_trends"
+      ],
+      "velocity_change": 7.33,
+      "price_change": 0.0
+    },
+    {
+      "query": "Raf Simons jacket",
+      "brand": "Raf Simons",
+      "score": 0.65,
+      "direction": "rising",
+      "sources": [
+        "google_trends",
+        "reddit"
+      ],
+      "velocity_change": 0.75,
+      "price_change": 0.0
+    },
+    {
+      "query": "chrome hearts ring",
+      "brand": "Chrome Hearts",
+      "score": 0.621,
+      "direction": "rising",
+      "sources": [
+        "google_trends"
+      ],
+      "velocity_change": 0.79,
+      "price_change": 0.0
+    },
+    {
+      "query": "yohji yamamoto",
+      "brand": "Yohji Yamamoto",
+      "score": 0.575,
+      "direction": "rising",
+      "sources": [
+        "google_trends"
+      ],
+      "velocity_change": 2.33,
+      "price_change": 0.0
+    },
+    {
+      "query": "celine paris ribbed long",
+      "brand": "Celine",
+      "score": 0.551,
+      "direction": "rising",
+      "sources": [
+        "grailed_velocity"
+      ],
+      "velocity_change": 0.45,
+      "price_change": -0.1
+    },
+    {
+      "query": "comme des garcons",
+      "brand": "Comme Des Garcons",
+      "score": 0.512,
+      "direction": "rising",
+      "sources": [
+        "google_trends",
+        "editorial"
+      ],
+      "velocity_change": 1.63,
+      "price_change": 0.0
+    },
+    {
+      "query": "junya watanabe",
+      "brand": "Junya Watanabe",
+      "score": 0.512,
+      "direction": "rising",
+      "sources": [
+        "google_trends",
+        "editorial"
+      ],
+      "velocity_change": 15.67,
+      "price_change": 0.0
+    },
+    {
+      "query": "bottega veneta",
+      "brand": "Bottega Veneta",
+      "score": 0.508,
+      "direction": "rising",
+      "sources": [
+        "google_trends"
+      ],
+      "velocity_change": 9.0,
+      "price_change": 0.0
+    },
+    {
+      "query": "adidas raf simons ozweego",
+      "brand": "Adidas",
+      "score": 0.468,
+      "direction": "stable",
+      "sources": [
+        "grailed_velocity"
+      ],
+      "velocity_change": 0.04,
+      "price_change": 0.07
+    },
+    {
+      "query": "maison margiela",
+      "brand": "Maison Margiela",
+      "score": 0.425,
+      "direction": "stable",
+      "sources": [
+        "google_trends"
+      ],
+      "velocity_change": 0.0,
+      "price_change": 0.0
+    },
+    {
+      "query": "number nine",
+      "brand": "Number (N)ine",
+      "score": 0.425,
+      "direction": "stable",
+      "sources": [
+        "google_trends"
+      ],
+      "velocity_change": -0.11,
+      "price_change": 0.0
+    },
+    {
+      "query": "jean paul gaultier",
+      "brand": "Jean Paul Gaultier",
+      "score": 0.425,
+      "direction": "falling",
+      "sources": [
+        "google_trends"
+      ],
+      "velocity_change": -0.24,
+      "price_change": 0.0
+    },
+    {
+      "query": "dior homme",
+      "brand": "Dior Homme",
+      "score": 0.375,
+      "direction": "rising",
+      "sources": [
+        "google_trends"
+      ],
+      "velocity_change": 49.0,
+      "price_change": 0.0
+    },
+    {
+      "query": "undercover jun takahashi",
+      "brand": "Undercover",
+      "score": 0.35,
+      "direction": "rising",
+      "sources": [
+        "google_trends",
+        "editorial"
+      ],
+      "velocity_change": 0.5,
+      "price_change": 0.0
+    },
+    {
+      "query": "dior homme hedi slimane",
+      "brand": "Dior",
+      "score": 0.241,
+      "direction": "stable",
+      "sources": [
+        "grailed_velocity"
+      ],
+      "velocity_change": -0.21,
+      "price_change": 0.0
+    },
+    {
+      "query": "Yohji Yamamoto jacket",
+      "brand": "Yohji Yamamoto",
+      "score": 0.24,
+      "direction": "stable",
+      "sources": [
+        "reddit"
+      ],
+      "velocity_change": -0.27,
+      "price_change": 0.0
+    },
+    {
+      "query": "issey miyake",
+      "brand": "Issey Miyake",
+      "score": 0.232,
+      "direction": "rising",
+      "sources": [
+        "google_trends"
+      ],
+      "velocity_change": 0.43,
+      "price_change": 0.0
+    }
+  ]
+}

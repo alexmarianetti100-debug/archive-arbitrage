@@ -34,10 +34,11 @@ from scrapers import (
 )
 from api.services.pricing import PricingService
 from db.sqlite_models import init_db, save_item, get_items, get_stats, Item, update_item_image_hashes, find_duplicate_by_image_hash
-from alerts import AlertService, alert_if_profitable
+from core.alerts import AlertService, alert_if_profitable
 from telegram_bot import send_deal_to_subscribers, init_telegram_db
 from scrapers.image_fingerprinter import ImageFingerprinter, save_image_hash_to_db
-from authenticity_checker import AuthenticityChecker, AuthStatus
+from core.authenticity_checker import AuthenticityChecker, AuthStatus
+from core.authenticity_v2 import AuthenticityCheckerV2, AuthStatus as AuthStatusV2, format_auth_bar, format_auth_grade, MIN_AUTH_SCORE
 
 
 # All available sources
@@ -185,26 +186,33 @@ async def run_scrape(
                 skipped_count += 1
                 continue
             
-            # ═══ AUTHENTICITY CHECK ═══
-            # Detect replicas before they enter the pipeline
-            auth_checker = AuthenticityChecker()
-            auth_result = auth_checker.check_item(
+            # ═══ AUTHENTICITY CHECK V2 (multi-signal) ═══
+            auth_v2 = AuthenticityCheckerV2()
+            auth_result = await auth_v2.check(
                 title=scraped.title,
                 description=scraped.description or "",
                 price=scraped.price,
                 brand=detected_brand,
+                category=category or "",
                 seller_name=scraped.seller or "",
+                seller_sales=getattr(scraped, "seller_sales", 0),
+                seller_rating=getattr(scraped, "seller_rating", None),
                 images=scraped.images,
+                source=scraped.source,
             )
             
-            if auth_result.status == AuthStatus.REPLICA:
-                print(f"      🚫 REPLICA REJECTED: {', '.join(auth_result.reasons[:2])}")
+            if auth_result.action == "block":
+                print(f"      🚫 BLOCKED [{auth_result.status.value}] {format_auth_bar(auth_result.confidence)} — {'; '.join(auth_result.reasons[:2])}")
                 replica_rejected += 1
                 skipped_count += 1
                 continue
-            elif auth_result.status == AuthStatus.SUSPICIOUS:
-                print(f"      ⚠️  SUSPICIOUS: {', '.join(auth_result.reasons[:2])}")
-                # Continue but flag for review (could also skip here)
+            elif auth_result.confidence < MIN_AUTH_SCORE:
+                print(f"      ⚠️  LOW AUTH {format_auth_bar(auth_result.confidence)} — {'; '.join(auth_result.reasons[:2])}")
+                replica_rejected += 1
+                skipped_count += 1
+                continue
+            else:
+                print(f"      🔐 {format_auth_grade(auth_result.grade)} {format_auth_bar(auth_result.confidence)}")
             
             # Create database item
             db_item = Item(
@@ -263,7 +271,7 @@ async def run_scrape(
                     pass
                 # Send to Telegram subscribers
                 try:
-                    await send_deal_to_subscribers(scraped, price_rec, brand=detected_brand)
+                    await send_deal_to_subscribers(scraped, price_rec, brand=detected_brand, auth_result=auth_result, auth_v2=auth_result)
                 except Exception:
                     pass
             except Exception as e:
@@ -398,7 +406,7 @@ def main():
     if args.command == "init":
         init_db()
     elif args.command == "qualify":
-        from qualify import run_qualification
+        from core.qualify import run_qualification
         init_db()
         asyncio.run(run_qualification(
             brand_filter=args.brand,
@@ -464,7 +472,7 @@ def main():
         start_server()
     elif args.command == "run":
         # Full pipeline: scrape → qualify → alert
-        from qualify import run_qualification
+        from core.qualify import run_qualification
         
         init_db()
         

@@ -133,7 +133,7 @@ class MercariPlaywrightScraper(BaseScraper):
             return None
         item_id = item_id_match.group(1)
         
-        url = f"{self.BASE_URL}/item/m{item_id}"
+        url = f"{self.BASE_URL}/us/item/m{item_id}"
         
         # Get title
         title = ""
@@ -205,7 +205,7 @@ class MercariPlaywrightScraper(BaseScraper):
         """Check if item is still available."""
         try:
             await self._init_browser()
-            url = f"{self.BASE_URL}/item/m{item_id}"
+            url = f"{self.BASE_URL}/us/item/m{item_id}"
             await self.page.goto(url, timeout=10000)
             # Check for sold indicators
             sold_indicator = await self.page.query_selector('text=/sold/i')
