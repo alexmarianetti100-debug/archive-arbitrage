@@ -58,11 +58,17 @@ class EbayScraper(BaseScraper):
             logger.debug(f"eBay fetch error: {e}")
             return None
 
+    # Minimum credible price for archive fashion on eBay.
+    # Auction starting bids ($1, $4, $13) and international placeholder prices
+    # are almost always noise. Anything below this floor is skipped.
+    MIN_PRICE = 30.0
+
     async def search(self, query: str, max_results: int = 20) -> List[ScrapedItem]:
         params = {
             "_nkw": query,
             "_sacat": "11450",  # Clothing, Shoes & Accessories
             "LH_BIN": "1",      # Buy It Now only
+            "LH_Auction": "0",  # Explicitly exclude auction-only listings
             "_sop": "10",       # Sort: newly listed
             "_ipg": "60",
         }
@@ -78,6 +84,14 @@ class EbayScraper(BaseScraper):
                     continue
                 title = title_el.get_text(strip=True)
                 if "shop on ebay" in title.lower():
+                    continue
+
+                # Skip auction cards — they slip through LH_BIN=1 when the listing
+                # has both an auction bid AND a BIN price. Bids/time-left elements
+                # are present on auction cards but absent on pure BIN listings.
+                card_text = card.get_text(" ", strip=True).lower()
+                if any(kw in card_text for kw in ("place bid", "bid now", "bids", "time left", "se abre en")):
+                    logger.debug(f"eBay skipped auction card: {title[:50]}")
                     continue
 
                 # URL
@@ -98,8 +112,9 @@ class EbayScraper(BaseScraper):
                 )
                 price_text = price_el.get_text(strip=True) if price_el else ""
                 # Strip currency symbols and commas, grab the largest number found
-                # (guards against "Was $1,500 → $1,125" grabbing the "1" fragment)
-                price_matches = [float(n.replace(",", "")) for n in re.findall(r"[\d,]+\.?\d*", price_text) if float(n.replace(",", "")) >= 5.0]
+                # (guards against "Was $1,500 → $1,125" grabbing the "1" fragment,
+                #  and filters auction starting bids / placeholder prices below MIN_PRICE)
+                price_matches = [float(n.replace(",", "")) for n in re.findall(r"[\d,]+\.?\d*", price_text) if float(n.replace(",", "")) >= self.MIN_PRICE]
                 price = max(price_matches) if price_matches else 0.0
                 if price <= 0:
                     continue
