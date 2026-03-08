@@ -78,6 +78,34 @@ MIN_PROFIT_DOLLARS = float(os.getenv("GAP_MIN_PROFIT", "75"))   # At least $75 p
 MIN_SOLD_COMPS = int(os.getenv("GAP_MIN_COMPS", "20"))           # Need 20+ sold comps for reliable median
 POLL_INTERVAL = int(os.getenv("GAP_POLL_INTERVAL", "120"))      # 2 min between cycles
 
+# ── Collab listing filters ────────────────────────────────────────────────────
+# Queries containing a secondary brand (e.g. "rick owens dr. martens") are
+# collab pairs. Sellers on Vinted/Poshmark keyword-stuff luxury names into plain
+# listings (e.g. regular Dr. Martens titled "Rick Owens x Dr. Martens").
+# Guards: (1) price floor — listing must be ≥ 30% of market avg to be credible,
+#          (2) model word check — at least one collab-specific model word must
+#             appear in the title on non-Grailed platforms.
+COLLAB_SECONDARY_BRANDS = {
+    "dr. martens", "dr martens", "martens", "adidas", "new balance",
+    "converse", "vans", "clarks", "nike", "reebok", "birkenstock",
+}
+COLLAB_FLOOR_RATIO = 0.30  # listing must be ≥ 30% of market avg
+
+# Known model identifiers for each collab partner — at least one must appear
+# in the title on non-Grailed platforms, or the listing is rejected.
+COLLAB_MODEL_WORDS: dict[str, set[str]] = {
+    "martens": {"turbowpn", "bogun", "sawcut", "1918", "rubs", "tractor", "1460 ro"},
+    "adidas":  {"ozweego", "response trail", "stan smith", "samba", "response"},
+    "vans":    {"sk8", "authentic", "era"},
+    "new balance": {"1906", "2002", "rc_elite"},
+}
+
+# ── Implausible gap hard cap ──────────────────────────────────────────────────
+# A listing >90% below a $200+ market price is almost certainly a wrong match
+# (keyword stuffing, different item entirely) rather than a real arbitrage deal.
+IMPLAUSIBLE_GAP_CAP = 0.90          # reject if gap exceeds this
+IMPLAUSIBLE_GAP_MIN_MARKET = 200.0  # only apply when market median is meaningful
+
 STATE_FILE = os.path.join(os.path.dirname(__file__), "data", "gap_state.json")
 SOLD_CACHE_FILE = os.path.join(os.path.dirname(__file__), "data", "sold_cache.json")
 SOLD_CACHE_TTL = 1800  # 30 min — balances freshness vs Grailed rate limits
@@ -895,6 +923,46 @@ class GapHunter:
                 self.stats["rep_ceiling_skipped"] += 1
                 continue
 
+            # ── Collab listing credibility floor ─────────────────────────────
+            # For queries containing a secondary brand (e.g. "rick owens dr. martens"),
+            # require listing price ≥ 30% of market median. Keyword-stuffed plain
+            # Dr. Martens / Adidas / etc. are almost always priced far below the
+            # real collab market, so this catches them cleanly.
+            query_lower_collab = query.lower()
+            collab_secondary = next(
+                (s for s in COLLAB_SECONDARY_BRANDS if s in query_lower_collab), None
+            )
+            if collab_secondary:
+                collab_floor = sold_data.median_price * COLLAB_FLOOR_RATIO
+                if item.price < collab_floor:
+                    logger.info(
+                        f"    🚫 Collab floor: ${item.price:.0f} < ${collab_floor:.0f} "
+                        f"(30% of ${sold_data.median_price:.0f} market) — likely keyword-stuffed "
+                        f"'{collab_secondary}': {item.title[:50]}"
+                    )
+                    self.stats.setdefault("collab_floor_skipped", 0)
+                    self.stats["collab_floor_skipped"] += 1
+                    continue
+
+                # Fix 3 — model word check on non-Grailed platforms:
+                # At least one collab-specific model word must appear in the title.
+                # Grailed is exempt (purchase verification makes fakes less likely).
+                collab_key = next(
+                    (k for k in COLLAB_MODEL_WORDS if k in query_lower_collab), None
+                )
+                if collab_key and item.source != "grailed":
+                    model_words = COLLAB_MODEL_WORDS[collab_key]
+                    title_lower_collab = item.title.lower()
+                    has_model = any(mw in title_lower_collab for mw in model_words)
+                    if not has_model:
+                        logger.info(
+                            f"    🚫 Collab model word missing for '{collab_key}' "
+                            f"on {item.source} — likely generic: {item.title[:50]}"
+                        )
+                        self.stats.setdefault("collab_model_skipped", 0)
+                        self.stats["collab_model_skipped"] += 1
+                        continue
+
             # ── Image fingerprint deduplication (Day 2 Fix 1) ──
             if item.images:
                 image_hash = await self._get_image_hash(item.images[0])
@@ -1003,6 +1071,19 @@ class GapHunter:
             sell_price = sold_data.median_price * 0.88  # After Grailed fees + PayPal
             profit = sell_price - item.price - 15  # $15 estimated shipping
             real_margin = profit / item.price if item.price > 0 else 0
+
+            # ── Implausible gap sanity check ──────────────────────────────────
+            # A listing >90% below a $200+ market is virtually never a real deal —
+            # it's a wrong match (keyword stuffing, different category entirely).
+            # Both the $13 Dr. Martens and extreme Vinted outliers are caught here.
+            if gap_percent >= IMPLAUSIBLE_GAP_CAP and sold_data.median_price >= IMPLAUSIBLE_GAP_MIN_MARKET:
+                logger.info(
+                    f"    🚫 Implausible gap {gap_percent*100:.0f}% on ${sold_data.median_price:.0f} market "
+                    f"(listed ${item.price:.0f}) — likely wrong match: {item.title[:50]}"
+                )
+                self.stats.setdefault("implausible_gap_skipped", 0)
+                self.stats["implausible_gap_skipped"] += 1
+                continue
 
             # Confidence-gated thresholds: medium (20-19 comps) slightly stricter than high (20+)
             comp_confidence = getattr(sold_data, '_confidence', 'medium')
@@ -1322,6 +1403,9 @@ class GapHunter:
                 f"image_dup={self.stats['image_dup_skipped']} | "
                 f"blocklist={self.stats['blocklist_skipped']} | "
                 f"stale={self.stats.get('stale_skipped', 0)} | "
+                f"collab_floor={self.stats.get('collab_floor_skipped', 0)} | "
+                f"collab_model={self.stats.get('collab_model_skipped', 0)} | "
+                f"implausible={self.stats.get('implausible_gap_skipped', 0)} | "
                 f"seen={len(self.seen_ids)}"
             )
 
