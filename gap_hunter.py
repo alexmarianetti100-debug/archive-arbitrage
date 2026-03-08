@@ -126,6 +126,42 @@ PLATFORM_PRICE_DISCOUNT = {
 BLOCKLIST_FILE = os.path.join(os.path.dirname(__file__), "data", "seller_blocklist.json")
 IMAGE_HASHES_FILE = os.path.join(os.path.dirname(__file__), "data", "image_hashes.json")
 
+# ── Commonly-faked brands: skip Depop results for these ──
+# Depop does not verify items and is a high-risk platform for replicas of these brands.
+DEPOP_SKIP_BRANDS: set[str] = {
+    "chrome hearts",
+    "rick owens",
+    "raf simons",
+    "enfants riches deprimes",
+    "erd",
+    "dior",
+    "dior homme",
+    "vivienne westwood",
+    "number nine",
+    "undercover",
+    "helmut lang",
+    "maison margiela",
+    "gaultier",
+    "jean paul gaultier",
+    "balenciaga",
+    "saint laurent",
+    "prada",
+    "bottega veneta",
+    "supreme",
+    "bape",
+    "amiri",
+    "stone island",
+    "vetements",
+    "gallery dept",
+    "acronym",
+    "needles",
+    "alyx",
+    "gucci",
+    "versace",
+    "givenchy",
+    "burberry",
+}
+
 # ── Minimum believable authentic prices per brand+category ──
 REP_PRICE_CEILINGS = {
     "chrome hearts": {
@@ -864,6 +900,15 @@ class GapHunter:
 
             if not item.price or item.price <= 0:
                 continue
+
+            # ── Depop: skip commonly-faked brands (no authentication) ──
+            if item.source == "depop":
+                _title_lower = (item.title or "").lower()
+                _query_lower = query.lower()
+                if any(brand in _title_lower or brand in _query_lower for brand in DEPOP_SKIP_BRANDS):
+                    logger.debug(f"    🚫 Depop skip (commonly faked brand): {item.title[:60]}")
+                    self.stats["depop_fake_brand_skipped"] = self.stats.get("depop_fake_brand_skipped", 0) + 1
+                    continue
 
             # ── Currency conversion → USD (live rates, cached 1h) ──
             item_currency = getattr(item, 'currency', 'USD')
