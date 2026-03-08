@@ -17,8 +17,9 @@ class TrendSignal:
     trend_score: float                      # 0-1, composite heat score
     trend_direction: str = "stable"         # "rising", "stable", "falling"
     signal_sources: list[str] = field(default_factory=list)  # ["grailed_velocity", "reddit"]
-    est_sold_volume: int = 0                # approx sold count
-    avg_sold_price: float = 0.0
+    est_sold_volume: int = 0                # approx monthly sold count (30-day window)
+    avg_sold_price: float = 0.0             # average sold price in USD
+    opportunity_score: float = 0.0         # avg_sold_price × monthly_volume (dollar velocity)
     velocity_change: float = 0.0            # % change vs baseline (e.g. +1.8 = 180% faster)
     price_change: float = 0.0               # % change in avg price vs baseline
     detected_at: datetime = field(default_factory=datetime.utcnow)
@@ -34,7 +35,8 @@ class TrendSignal:
             trend_direction=self.trend_direction if self.trend_score >= other.trend_score else other.trend_direction,
             signal_sources=list(set(self.signal_sources + other.signal_sources)),
             est_sold_volume=max(self.est_sold_volume, other.est_sold_volume),
-            avg_sold_price=self.avg_sold_price or other.avg_sold_price,
+            avg_sold_price=max(self.avg_sold_price, other.avg_sold_price),
+            opportunity_score=max(self.opportunity_score, other.opportunity_score),
             velocity_change=self.velocity_change or other.velocity_change,
             price_change=self.price_change or other.price_change,
         )

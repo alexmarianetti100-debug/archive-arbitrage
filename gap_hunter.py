@@ -41,19 +41,24 @@ load_dotenv()
 sys.path.insert(0, os.path.dirname(__file__))
 
 from scrapers import GrailedScraper, PoshmarkScraper, ScrapedItem
-from scrapers.mercari import MercariScraper
 from scrapers.vinted import VintedScraperWrapper as VintedScraper
+from scrapers.ebay import EbayScraper
+from scrapers.depop import DepopScraper
+# Mercari removed — Cloudflare Enterprise tier blocks all proxies
+# ShopGoodwill removed — API consistently returns 500
 from core.authenticity_v2 import AuthenticityCheckerV2, format_auth_bar, format_auth_grade, MIN_AUTH_SCORE
 from core.desirability import check_desirability, REJECT_PATTERNS
 from telegram_bot import send_deal_to_subscribers, send_message, init_telegram_db, get_active_subscribers, TELEGRAM_CHANNEL_ID
 from core.discord_alerts import send_discord_alert, DISCORD_ENABLED
+from core.whop_alerts import send_whop_alert, format_whop_deal_content
 from core.deal_quality import calculate_deal_quality, format_signal_line, format_quality_header, DealSignals, THRESHOLD_FIRE_1
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(name)s] %(message)s')
+logging.getLogger("vinted").setLevel(logging.CRITICAL)         # suppress proxy 403/502 noise
+logging.getLogger("vinted.client").setLevel(logging.CRITICAL)  # suppress "Exception in context" tracebacks
 logger = logging.getLogger("gap_hunter")
 
-# ── Dynamic Trends ──
-USE_DYNAMIC_TRENDS = os.getenv("DYNAMIC_TRENDS", "1") == "1"
+# ── Trend Engine (always on) ──
 _trend_engine = None
 
 def _get_trend_engine():
@@ -63,20 +68,19 @@ def _get_trend_engine():
             from trend_engine import TrendEngine
             _trend_engine = TrendEngine()
         except ImportError:
-            logger.warning("trend_engine not available, using static targets")
+            logger.warning("trend_engine not available")
             _trend_engine = False  # sentinel: don't retry
     return _trend_engine if _trend_engine else None
 
 # Config
 MIN_GAP_PERCENT = float(os.getenv("GAP_MIN_PERCENT", "0.30"))  # 30% below sold avg
 MIN_PROFIT_DOLLARS = float(os.getenv("GAP_MIN_PROFIT", "75"))   # At least $75 profit
-MIN_SOLD_COMPS = int(os.getenv("GAP_MIN_COMPS", "5"))           # Need 5+ sold comps for reliable median
-MIN_SOLD_COMPS_NICHE = 3                                         # Fallback for rare items
+MIN_SOLD_COMPS = int(os.getenv("GAP_MIN_COMPS", "20"))           # Need 20+ sold comps for reliable median
 POLL_INTERVAL = int(os.getenv("GAP_POLL_INTERVAL", "120"))      # 2 min between cycles
 
 STATE_FILE = os.path.join(os.path.dirname(__file__), "data", "gap_state.json")
 SOLD_CACHE_FILE = os.path.join(os.path.dirname(__file__), "data", "sold_cache.json")
-SOLD_CACHE_TTL = 3600  # 1 hour
+SOLD_CACHE_TTL = 1800  # 30 min — balances freshness vs Grailed rate limits
 MAX_COMP_AGE_DAYS = 180  # Only use sold comps from the last 6 months
 
 # ── Platform price discount factors ──
@@ -89,7 +93,7 @@ PLATFORM_PRICE_DISCOUNT = {
     "mercari": 0.70,      # Mercari ~30% below
     "depop": 0.80,        # Depop ~20% below
     "vinted": 0.65,       # Vinted ~35% below (buyer pays fees)
-    "shopgoodwill": 0.55, # Goodwill = bargain bin
+    # shopgoodwill removed
 }
 BLOCKLIST_FILE = os.path.join(os.path.dirname(__file__), "data", "seller_blocklist.json")
 IMAGE_HASHES_FILE = os.path.join(os.path.dirname(__file__), "data", "image_hashes.json")
@@ -121,10 +125,7 @@ REP_PRICE_CEILINGS = {
         "kiss boots": 350,
         "intarsia": 200,
         "bauhaus": 150,
-        "vans": 130,           # RO x Vans heavily repped — authentic resale floor ~$150-180
-        "vans old skool": 130,  # Median sold: $245, range $155-$715
-        "vans sk8": 130,
-        "vans slip": 130,
+        "vans": 230,           # RO x Vans heavily repped — authentic resale floor ~$150-180
     },
     "raf simons": {
         "bomber jacket": 400,
@@ -297,402 +298,6 @@ class GapDeal:
     query: str
 
 
-# ══════════════════════════════════════════════════════════════════════
-# TARGET SEARCHES - Specific items with proven resale value
-# Each query should be specific enough to get relevant sold comps
-# ══════════════════════════════════════════════════════════════════════
-
-TARGETS = [
-    # ══════════════════════════════════════════════════════════════
-    # TIER 1: MOST LIQUID — Sell within days. Proven demand.
-    # Top brands on Grailed 2025: CH #1, Balenciaga #2, Rick #3
-    # ══════════════════════════════════════════════════════════════
-
-    # ── Rick Owens (20 targets) ──
-    "rick owens geobasket",
-    "rick owens ramones high",
-    "rick owens dunks",
-    "rick owens kiss boots",
-    "rick owens stooges leather jacket",
-    "rick owens intarsia knit",
-    "rick owens creatch cargo pants",
-    "rick owens bauhaus cargo",
-    "rick owens dustulator leather jacket",
-    "rick owens memphis leather jacket",
-    "rick owens drkshdw bomber",
-    "rick owens blistered leather",
-    "rick owens cargo shorts pods",
-    "rick owens larry boots",
-    "rick owens drkshdw detroit cut",        # huge volume, cheap finds
-    "rick owens drkshdw level tee",          # bread-and-butter flip
-    "rick owens champion",                   # collab, often underpriced off-Grailed
-    "rick owens pentagram hoodie",           # SS19 Babel, in-demand
-    "rick owens sickle boots",               # gaining value fast
-    "rick owens banana dunks",               # specific silhouette premium
-
-    # ── Chrome Hearts (18 targets) ──
-    "chrome hearts cross pendant silver",
-    "chrome hearts cemetery cross",
-    "chrome hearts dagger pendant",
-    "chrome hearts floral cross ring",
-    "chrome hearts trucker hat",
-    "chrome hearts cross ring",
-    "chrome hearts scroll bracelet",
-    "chrome hearts glasses",
-    "chrome hearts sunglasses",
-    "chrome hearts matty boy hoodie",        # Matty Boy collabs = hottest CH
-    "chrome hearts horseshoe hoodie",        # classic, enormous volume
-    "chrome hearts zip up hoodie",           # general hoodie, big volume
-    "chrome hearts denim jeans",             # Cemetery Cross denim = $17K+
-    "chrome hearts leather jacket",          # high-value pieces
-    "chrome hearts fuck you ring",           # iconic, always in demand
-    "chrome hearts paper chain necklace",    # affordable entry, big flip
-    "chrome hearts beanie",                  # accessories move fast
-    "chrome hearts long sleeve tee",         # huge volume, often mispriced
-
-    # ── Raf Simons (14 targets) ──
-    "raf simons riot bomber",
-    "raf simons virginia creeper",
-    "raf simons consumed hoodie",
-    "raf simons peter saville joy division",
-    "raf simons history of my world",
-    "raf simons parka archive",
-    "raf simons tape bomber",
-    "raf simons ozweego",
-    "raf simons response trail",
-    "raf simons knit sweater",
-    "raf simons adidas stan smith",          # accessible flip
-    "raf simons denim jacket",               # archive denim undervalued
-    "raf simons sterling ruby",              # AW14 collab, gaining
-    "raf simons cylon boots",                # cult status
-
-    # ── Helmut Lang (11 targets) ──
-    "helmut lang bondage jacket",
-    "helmut lang bondage pants",
-    "helmut lang astro biker jacket",
-    "helmut lang painter jeans",
-    "helmut lang archive leather jacket",
-    "helmut lang flak jacket",
-    "helmut lang archive strap",
-    "helmut lang archive tank top",          # huge volume, cheap finds
-    "helmut lang archive denim",             # broader than painter jeans
-    "helmut lang nylon bomber",              # iconic, often mislabeled
-    "helmut lang cargo pants archive",       # military line, gaining
-
-    # ── Maison Margiela (12 targets) ──
-    "margiela tabi boots",
-    "margiela tabi ankle boots",
-    "margiela replica GAT white",
-    "margiela replica sneakers paint",
-    "maison martin margiela artisanal",
-    "maison martin margiela archive jacket",
-    "margiela paint splatter",               # iconic treatment
-    "margiela deconstructed blazer",         # signature look
-    "margiela leather jacket archive",       # high-value
-    "margiela glam slam bag",                # huge bag volume
-    "margiela numbers tee",                  # 4-stitch tee, accessible
-    "martin margiela line 10",               # men's line specifically
-
-    # ── Dior (11 targets) ──
-    "dior homme hedi slimane jacket",
-    "dior homme hedi jeans 19cm",
-    "dior homme navigate leather",
-    "dior homme hedi leather jacket",
-    "dior homme bee embroidery",             # Kris Van Assche era, huge volume
-    "dior b23 oblique",                      # most recognizable Dior sneaker
-    "dior homme atelier tee",               # very popular, easy to find cheap
-    "dior saddle bag",                       # iconic bag
-    "dior oblique jacket",                   # monogram pieces
-    "dior homme combat boots",               # popular on eBay
-    "dior homme scoop neck tee",             # Hedi essential, often underpriced
-
-    # ══════════════════════════════════════════════════════════════
-    # TIER 1B: MEGA-VOLUME BRANDS — Huge sold pools.
-    # ══════════════════════════════════════════════════════════════
-
-    # ── Balenciaga (10 targets) ──
-    "balenciaga triple s",
-    "balenciaga track",
-    "balenciaga speed trainer",
-    "balenciaga cargo pants",
-    "balenciaga leather jacket",
-    "balenciaga defender",                   # huge shoe inventory
-    "balenciaga 3xl sneaker",                # hot right now
-    "balenciaga political campaign hoodie",  # iconic 2017
-    "balenciaga oversized denim jacket",     # Demna staple
-    "balenciaga runner",                     # sneaker, big volume
-
-    # ── Saint Laurent (10 targets) ──
-    "saint laurent wyatt boots",
-    "saint laurent leather jacket",
-    "saint laurent teddy jacket",
-    "saint laurent court classic",
-    "saint laurent chain boots",             # Hedi era, hot
-    "saint laurent l01 leather jacket",      # THE SLP leather
-    "saint laurent cropped jacket",          # signature silhouette
-    "saint laurent leather pants",           # high demand
-    "saint laurent blood luster jacket",     # FW13 grail
-    "saint laurent denim jacket",            # volume mover
-
-    # ── Prada (8 targets) ──
-    "prada americas cup",
-    "prada nylon bag",
-    "prada cloudbust",
-    "prada linea rossa",
-    "prada gabardine",
-    "prada re nylon",                        # sustainability line, huge volume
-    "prada bowling shirt vintage",           # Prada Sport vintage
-    "prada sport jacket vintage",            # Linea Rossa archive
-
-    # ── Bottega Veneta (3 targets) ──
-    "bottega veneta puddle boots",
-    "bottega veneta tire boots",
-    "bottega veneta cassette bag",
-
-    # ══════════════════════════════════════════════════════════════
-    # TIER 2: JAPANESE ARCHIVE — Grailed predicts JP growth 2026
-    # ══════════════════════════════════════════════════════════════
-
-    # ── Number (N)ine (10 targets) ──
-    "number nine skull cashmere",
-    "number nine high streets",
-    "number nine kurt cobain",
-    "number nine leather jacket",
-    "number nine heart skull sweater",       # THE grail, $2K-$5K
-    "number nine touch me i'm sick",         # iconic graphic
-    "number nine denim archive",             # jeans from any season
-    "number nine flannel",                   # grunge pieces, underpriced
-    "number nine marlboro",                  # AW02 cigarette burn collection
-    "number nine guitar strap",              # iconic accessory
-
-    # ── Undercover (11 targets) ──
-    "undercover scab",
-    "undercover 85 bomber",
-    "undercover less but better",
-    "undercover leather jacket archive",
-    "undercover arts and crafts",
-    "undercover 68 blue",
-    "undercover psycho color",
-    "undercover but beautiful",              # AW09, gaining value
-    "undercover grace jacket",               # SS11, iconic
-    "undercover x nike",                     # sneaker collabs flip well
-    "undercover graphic tee archive",        # catch-all, often found cheap
-
-    # ── Hysteric Glamour (9 targets) ──
-    "hysteric glamour leather jacket",
-    "hysteric glamour knit sweater",
-    "hysteric glamour graphic tee",
-    "hysteric glamour denim",
-    "hysteric glamour skull",
-    "hysteric glamour courtney love",
-    "hysteric glamour bear",                 # bear graphics = iconic HG
-    "hysteric glamour hoodie",               # big volume
-    "hysteric glamour pants",                # flared/printed, in demand
-
-    # ── Yohji Yamamoto (7 targets) ──
-    "yohji yamamoto pour homme jacket",
-    "yohji yamamoto pour homme blazer",
-    "yohji yamamoto wool coat",              # signature piece
-    "yohji yamamoto new era",                # collab caps, easy flip
-    "yohji yamamoto drawstring pants",       # signature wide pants
-    "y-3 qasa",                              # sneaker, massive volume
-    "yohji yamamoto skull",                  # graphic skull pieces
-
-    # ── Comme des Garcons (10 targets) ──
-    "comme des garcons homme plus jacket",
-    "comme des garcons homme plus blazer",
-    "comme des garcons wallet",
-    "junya watanabe leather jacket",
-    "junya watanabe patchwork",
-    "comme des garcons play heart",          # THE most traded CDG item
-    "cdg shirt striped",                     # CDG SHIRT line, popular
-    "comme des garcons x nike",              # collab sneakers
-    "comme des garcons robe de chambre",     # archive line
-    "junya watanabe x carhartt",             # collab, underpriced often
-
-    # ── Issey Miyake (7 targets) ──
-    "issey miyake homme plisse pants",
-    "issey miyake homme plisse jacket",
-    "issey miyake homme plisse tee",         # huge volume
-    "issey miyake bao bao bag",              # accessories, enormous volume
-    "issey miyake pleats please",            # women's line, massive demand
-    "issey miyake 132 5",                    # folding line
-    "issey miyake bomber jacket",            # archive outerwear
-
-    # ── Kapital (6 targets) ──
-    "kapital century denim",
-    "kapital boro jacket",
-    "kapital skeleton",
-    "kapital smiley",
-    "kapital fleece",                        # fleece jackets are hot
-    "kapital bandana patchwork",             # bandana items
-
-    # ── NEIGHBORHOOD (5 targets) ──
-    "neighborhood leather jacket",
-    "neighborhood skull",
-    "neighborhood savage",
-    "neighborhood x wtaps",
-    "neighborhood x bape",                   # collab pieces, high value
-
-    # ── WTAPS (4 targets) ──
-    "wtaps modular jacket",
-    "wtaps cargo pants",
-    "wtaps jungle stock",
-    "wtaps tactical vest",                   # military aesthetic
-
-    # ── Wacko Maria (5 targets) — NEW ──
-    "wacko maria hawaiian shirt",            # bread and butter
-    "wacko maria leopard shirt",             # signature print
-    "wacko maria guilty parties jacket",     # outerwear
-    "wacko maria mohair cardigan",           # knitwear, trendy
-    "wacko maria tim lehi",                  # collab pieces
-
-    # ── Roen (2 targets) ──
-    "roen leather jacket",
-    "roen skull",
-
-    # ══════════════════════════════════════════════════════════════
-    # TIER 2B: WESTERN ARCHIVE — High demand, proven flips.
-    # ══════════════════════════════════════════════════════════════
-
-    # ── Jean Paul Gaultier (11 targets) ──
-    "gaultier mesh top",
-    "gaultier mesh long sleeve",
-    "gaultier cyberbaba",
-    "gaultier tattoo top",
-    "gaultier corset",
-    "gaultier jacket archive",
-    "gaultier homme blazer",                 # Gaultier Homme, undervalued
-    "gaultier printed shirt",                # all-over prints, in demand
-    "gaultier dress vintage",                # women's archive, massive demand
-    "gaultier maille",                       # knitwear, listed cheap
-    "gaultier femme vintage",                # women's tailoring, huge markup
-
-    # ── Celine (11 targets) ──
-    "celine leather jacket",
-    "celine triomphe bag",
-    "celine triomphe belt",
-    "celine boots",
-    "celine sneakers",
-    "celine hoodie",
-    "celine teddy jacket",
-    "celine hedi slimane",
-    "celine luggage bag",                    # Phoebe Philo era, massive volume
-    "celine box bag",                        # huge Philo piece
-    "celine western boots",                  # Hedi signature
-
-    # ── Vivienne Westwood (5 targets) ──
-    "vivienne westwood orb necklace",
-    "vivienne westwood pearl choker",
-    "vivienne westwood armor ring",
-    "vivienne westwood archive corset",      # huge demand post-SATC
-    "vivienne westwood man jacket",          # menswear undervalued
-
-    # ── ERD (2 targets) ──
-    "enfants riches deprimes hoodie",
-    "enfants riches deprimes leather jacket",
-
-    # ── Needles (3 targets) ──
-    "needles track pants",
-    "needles rebuild",
-    "needles butterfly",
-
-    # ── Vetements (3 targets) ──
-    "vetements hoodie",
-    "vetements bomber",
-    "vetements total darkness",
-
-    # ── Amiri (3 targets) ──
-    "amiri mx1 jeans",
-    "amiri leather jacket",
-    "amiri bones",
-
-    # ── Stone Island (3 targets) ──
-    "stone island shadow project",
-    "stone island ghost piece",
-    "stone island ice jacket",
-
-    # ── Gallery Dept (2 targets) ──
-    "gallery dept flared",
-    "gallery dept painted",
-
-    # ── Acronym (2 targets) ──
-    "acronym j1a",
-    "acronym p10",
-
-    # ── Visvim (2 targets) ──
-    "visvim virgil boots",
-    "visvim christo",
-
-    # ── Alyx (2 targets) ──
-    "alyx chest rig",
-    "alyx rollercoaster belt",
-
-    # ── Supreme (3 targets) ──
-    "supreme box logo hoodie",
-    "supreme north face",
-    "supreme leather jacket",
-
-    # ── Bape (2 targets) ──
-    "bape shark hoodie",
-    "bape sta",
-
-    # ══════════════════════════════════════════════════════════════
-    # TIER 3: NEW ADDITIONS — Archive brands with proven demand
-    # ══════════════════════════════════════════════════════════════
-
-    # ── Givenchy Tisci era (5 targets) — NEW ──
-    "givenchy rottweiler tee",               # iconic Tisci print
-    "givenchy bambi tee",                    # another iconic print
-    "givenchy shark hoodie",                 # shark jaw = recognizable
-    "givenchy star embroidery",              # star patches, popular
-    "givenchy leather jacket tisci",         # Tisci outerwear
-
-    # ── Gucci Tom Ford era (4 targets) — NEW ──
-    "gucci tom ford leather jacket",         # TF era leather = grail
-    "gucci tom ford velvet blazer",          # signature TF
-    "gucci horsebit loafers vintage",        # classic, always sells
-    "gucci tom ford silk shirt",             # TF print shirts
-
-    # ── Versace Vintage (4 targets) — NEW ──
-    "versace silk shirt vintage",            # 90s silk shirts, massive demand
-    "versace medusa ring",                   # iconic hardware
-    "versace leather jacket vintage",        # 90s leather
-    "versace jeans couture vintage",         # accessible entry point
-
-    # ── Dries Van Noten (3 targets) — NEW ──
-    "dries van noten floral jacket",         # signature florals
-    "dries van noten printed shirt",         # print shirts
-    "dries van noten velvet blazer",         # luxe tailoring
-
-    # ── Mihara Yasuhiro (3 targets) — NEW ──
-    "mihara yasuhiro blakey",                # melted sneaker, huge demand
-    "mihara yasuhiro peterson",              # hot silhouette
-    "mihara yasuhiro wayne",                 # boots
-
-    # ── Burberry Archive (3 targets) — NEW ──
-    "burberry nova check vintage",           # classic pattern
-    "burberry prorsum leather jacket",       # runway line
-    "burberry trench coat vintage",          # iconic piece
-
-    # ── Other High-Value Grails ──
-    "carol christian poell leather",
-    "carol christian poell drip sneaker",
-    "boris bidjan saberi leather jacket",
-    "boris bidjan saberi boot",
-    "takahiromiyashita soloist leather",
-    "soloist leather jacket",
-    "julius gas mask cargo",
-    "ann demeulemeester boots",
-    "haider ackermann velvet blazer",
-    "human made varsity jacket",
-    "human made knit sweater",
-    "human made nigo",
-    "sacai jacket",
-    "sacai knit",
-    "sacai nike",
-]
-
 class GapHunter:
     """Find items listed significantly below proven sold prices."""
 
@@ -706,6 +311,7 @@ class GapHunter:
         self.seller_blocklist: set = set()
         self.seller_block_counts: Dict[str, int] = {}  # seller -> auth_block count
         self.image_hashes: Dict[str, List[Dict]] = {}  # hash -> list of {seller, url, title}
+        self._fx_cache: Dict[str, tuple] = {}  # currency -> (rate, timestamp)
         self._load_state()
         self._load_sold_cache()
         self._load_blocklist()
@@ -717,14 +323,7 @@ class GapHunter:
     def _shutdown(self, signum, frame):
         logger.info("Shutting down...")
         self.running = False
-        # Clean up Playwright browsers
-        import asyncio
-        loop = asyncio.get_event_loop()
-        if hasattr(self, '_mercari'):
-            try:
-                loop.create_task(self._mercari.close())
-            except Exception:
-                pass
+        # Playwright cleanup happens in run() after the loop exits
 
     def _load_state(self):
         try:
@@ -744,6 +343,36 @@ class GapHunter:
                 json.dump({"seen_ids": ids, "cycle_count": self.cycle_count}, f)
         except Exception:
             pass
+
+    def _get_fx_rate(self, currency: str) -> Optional[float]:
+        """Return live USD conversion rate for the given currency. Cached 1h."""
+        import urllib.request
+        FX_TTL = 3600
+        cached = self._fx_cache.get(currency)
+        if cached and time.time() - cached[1] < FX_TTL:
+            return cached[0]
+        # Hardcoded fallbacks in case the API is unreachable
+        fallbacks = {"EUR": 1.08, "GBP": 1.27, "JPY": 0.0067, "CAD": 0.74,
+                     "AUD": 0.63, "CHF": 1.11, "SEK": 0.094, "DKK": 0.144,
+                     "NOK": 0.091, "PLN": 0.25, "CZK": 0.044, "HUF": 0.0027,
+                     "RON": 0.22, "BGN": 0.55, "TWD": 0.031, "HKD": 0.13}
+        try:
+            url = f"https://open.er-api.com/v6/latest/USD"
+            with urllib.request.urlopen(url, timeout=5) as resp:
+                data = __import__("json").loads(resp.read())
+            rates = data.get("rates", {})
+            # rates are X per 1 USD — invert to get USD per X
+            if currency in rates and rates[currency]:
+                rate = 1.0 / rates[currency]
+                self._fx_cache[currency] = (rate, time.time())
+                logger.debug(f"FX rate {currency}→USD: {rate:.4f}")
+                return rate
+        except Exception as e:
+            logger.debug(f"FX rate fetch failed ({currency}): {e} — using fallback")
+        rate = fallbacks.get(currency)
+        if rate:
+            self._fx_cache[currency] = (rate, time.time())
+        return rate
 
     def _load_sold_cache(self):
         try:
@@ -766,6 +395,7 @@ class GapHunter:
                     "median_price": v.median_price, "min_price": v.min_price,
                     "max_price": v.max_price, "count": v.count,
                     "timestamp": v.timestamp,
+                    "avg_days_to_sell": v.avg_days_to_sell,
                 }
             with open(SOLD_CACHE_FILE, "w") as f:
                 json.dump(raw, f)
@@ -948,6 +578,46 @@ class GapHunter:
 
         return False
 
+    # Items we never alert on regardless of brand or gap
+    EXCLUDED_CATEGORY_KEYWORDS = [
+        # Fragrances
+        "fragrance", "cologne", "perfume", "eau de toilette", "eau de parfum",
+        "edt", "edp", "aftershave", "deodorant", "body spray", "mist",
+        # Ties & neckwear
+        "bow tie", "bowtie", "bow-tie", "necktie", "tie clip", "bolo tie",
+        # Ties (word boundary check handled separately to avoid "tie-dye", "katie", etc.)
+        # Bags — common, low-margin
+        "drawstring backpack", "drawstring bag",
+        "tote bag",
+    ]
+
+    # These contain "tie" but are NOT neckwear — don't exclude them
+    TIE_EXCEPTIONS = [
+        "tie-dye", "tie dye", "tiedye", "bootie", "hoodie", "beanie",
+        "tee", "katie", "tie waist",  # tie-waist trousers are clothing
+        "ankle tie", "lace tie", "string tie",  # drawstrings on clothing
+    ]
+
+    def _is_excluded_category(self, item) -> bool:
+        """Return True if item is a fragrance, tie, or other excluded category."""
+        title = (item.title or "").lower()
+        desc = (getattr(item, "description", "") or "").lower()
+        text = f"{title} {desc}"
+
+        # Check hard-excluded keywords
+        for kw in self.EXCLUDED_CATEGORY_KEYWORDS:
+            if kw in text:
+                return True
+
+        # "tie" check with exceptions — standalone tie/ties = neckwear
+        import re
+        if re.search(r'\btie[s]?\b', text):
+            # Allow if any exception phrase is present
+            if not any(exc in text for exc in self.TIE_EXCEPTIONS):
+                return True
+
+        return False
+
     def _check_rep_price_ceiling(self, query: str, price: float, title: str = "") -> bool:
         """Return True if price is below rep ceiling (likely fake).
         Brand must appear in the item TITLE (not just query) to avoid false positives
@@ -1006,19 +676,18 @@ class GapHunter:
             if stale_count > 0:
                 logger.debug(f"  Filtered out {stale_count} stale comps (>{MAX_COMP_AGE_DAYS}d) for '{query}'")
 
-            # Fall back to all comps if too few fresh ones
+            # Require minimum fresh comps; stale fallback removed — no niche exceptions
             if len(fresh_sold) >= MIN_SOLD_COMPS:
                 sold = fresh_sold
-            elif len(fresh_sold) >= MIN_SOLD_COMPS_NICHE:
-                sold = fresh_sold
-                logger.debug(f"  Using {len(fresh_sold)} fresh comps (niche fallback) for '{query}'")
-            # else: keep all sold items (stale data better than no data)
+            else:
+                # Not enough fresh comps — skip this query entirely
+                return None
 
-            if len(sold) < MIN_SOLD_COMPS_NICHE:
+            if len(sold) < MIN_SOLD_COMPS:
                 return None
 
             prices = sorted([i.price for i in sold if i.price and i.price > 0])
-            if len(prices) < MIN_SOLD_COMPS_NICHE:
+            if len(prices) < MIN_SOLD_COMPS:
                 return None
 
             # ── Filter out suspiciously low sold comps (likely reps) ──
@@ -1026,7 +695,7 @@ class GapHunter:
                 initial_median = prices[len(prices) // 2]
                 threshold = initial_median * 0.20
                 filtered_prices = [p for p in prices if p >= threshold]
-                if len(filtered_prices) >= MIN_SOLD_COMPS_NICHE:
+                if len(filtered_prices) >= MIN_SOLD_COMPS:
                     if len(prices) != len(filtered_prices):
                         logger.debug(f"  Filtered out {len(prices) - len(filtered_prices)} suspiciously low sold comps for '{query}'")
                     prices = filtered_prices
@@ -1053,8 +722,8 @@ class GapHunter:
                         pass
             avg_days = sum(days_to_sell_list) / len(days_to_sell_list) if days_to_sell_list else 0.0
 
-            # ── Comp confidence based on count ──
-            comp_confidence = "high" if len(prices) >= 8 else "medium" if len(prices) >= 5 else "low"
+            # ── Comp confidence based on count (minimum is now 20, so low tier is gone) ──
+            comp_confidence = "high" if len(prices) >= 20 else "medium"
 
             data = SoldData(
                 query=query,
@@ -1080,40 +749,84 @@ class GapHunter:
         """Find active listings priced below sold average."""
         deals = []
 
-        # Search all platforms
-        all_items = []
+        # ── Parallel scraping across all platforms ──
+        async def _grailed():
+            try:
+                async with GrailedScraper() as scraper:
+                    return await scraper.search(query, max_results=15)
+            except Exception:
+                return []
 
-        try:
-            async with GrailedScraper() as scraper:
-                items = await scraper.search(query, max_results=15)
-                all_items.extend(items)
-        except Exception:
-            pass
+        async def _poshmark():
+            try:
+                async with PoshmarkScraper() as scraper:
+                    return await scraper.search(query, max_results=15)
+            except Exception:
+                return []
 
-        try:
-            async with PoshmarkScraper() as scraper:
-                items = await scraper.search(query, max_results=15)
-                all_items.extend(items)
-        except Exception:
-            pass
+        async def _depop():
+            try:
+                if not hasattr(self, '_depop_scraper'):
+                    self._depop_scraper = DepopScraper()
+                return await asyncio.wait_for(self._depop_scraper.search(query, max_results=15), timeout=30.0)
+            except asyncio.TimeoutError:
+                logger.debug(f"    Depop timed out for '{query}'")
+                return []
+            except Exception as e:
+                logger.debug(f"    Depop search failed: {e}")
+                return []
 
-        # Mercari (Playwright-based, may be slower)
-        try:
-            if not hasattr(self, '_mercari'):
-                self._mercari = MercariScraper()
-            items = await self._mercari.search(query, max_results=10)
-            all_items.extend(items)
-        except Exception as e:
-            logger.debug(f"    Mercari search failed: {e}")
+        async def _vinted():
+            try:
+                if not hasattr(self, '_vinted'):
+                    self._vinted = VintedScraper()
+                return await self._vinted.search(query, max_results=10)
+            except Exception as e:
+                logger.debug(f"    Vinted search failed: {e}")
+                return []
 
-        # Vinted (US + FR domains)
-        try:
-            if not hasattr(self, '_vinted'):
-                self._vinted = VintedScraper()
-            items = await self._vinted.search(query, max_results=10)
-            all_items.extend(items)
-        except Exception as e:
-            logger.debug(f"    Vinted search failed: {e}")
+        async def _ebay():
+            try:
+                if not hasattr(self, '_ebay'):
+                    self._ebay = EbayScraper()
+                return await asyncio.wait_for(self._ebay.search(query, max_results=15), timeout=15.0)
+            except asyncio.TimeoutError:
+                logger.debug(f"    eBay timed out for '{query}'")
+                return []
+            except Exception as e:
+                logger.debug(f"    eBay search failed: {e}")
+                return []
+
+        # ── Chrome Hearts: Grailed-only, new listings only ──
+        # CH fakes flood Poshmark/Mercari/Vinted; Grailed has purchase verification.
+        # Only surface listings posted in the last 30 minutes to catch fresh drops.
+        is_chrome_hearts = "chrome hearts" in query.lower()
+
+        if is_chrome_hearts:
+            grailed_items = await _grailed()
+            results_list = [grailed_items, [], [], [], []]
+            logger.info(f"  [CH] Grailed-only mode: {len(grailed_items)} raw results")
+        else:
+            results_list = await asyncio.gather(_grailed(), _poshmark(), _depop(), _vinted(), _ebay())
+
+        all_items = [item for sublist in results_list for item in sublist]
+
+        # Chrome Hearts recency gate: skip anything listed > 30 minutes ago
+        if is_chrome_hearts:
+            from datetime import datetime as _dt, timezone
+            now_utc = _dt.now(timezone.utc)
+            fresh = []
+            for item in all_items:
+                if item.listed_at is None:
+                    logger.debug(f"  [CH] No listing timestamp, skipping: {item.title[:50]}")
+                    continue
+                age_mins = (now_utc - item.listed_at).total_seconds() / 60
+                if age_mins <= 30:
+                    fresh.append(item)
+                else:
+                    logger.debug(f"  [CH] Too old ({age_mins:.0f}m), skipping: {item.title[:50]}")
+            logger.info(f"  [CH] {len(fresh)}/{len(all_items)} listings within 30 minutes")
+            all_items = fresh
 
         for item in all_items:
             item_key = f"{item.source}:{item.source_id or item.url}"
@@ -1124,18 +837,25 @@ class GapHunter:
             if not item.price or item.price <= 0:
                 continue
 
-            # ── Currency conversion (Vinted EUR/GBP → USD) ──
-            if getattr(item, 'currency', 'USD') == 'EUR':
-                item.price = item.price * 1.08  # Approximate EUR→USD
+            # ── Currency conversion → USD (live rates, cached 1h) ──
+            item_currency = getattr(item, 'currency', 'USD')
+            if item_currency != 'USD':
+                rate = self._get_fx_rate(item_currency)
+                if rate:
+                    item.price = round(item.price * rate, 2)
                 item.currency = 'USD'
-            elif getattr(item, 'currency', 'USD') == 'GBP':
-                item.price = item.price * 1.27  # Approximate GBP→USD
-                item.currency = 'USD'
+
 
             # ── Women's / non-menswear filter ──
             if self._is_womens_item(item):
                 logger.debug(f"    Skipped women's item: {item.title[:50]}")
                 self.stats["womens_skipped"] += 1
+                continue
+
+            if self._is_excluded_category(item):
+                logger.debug(f"    Skipped excluded category (fragrance/tie): {item.title[:50]}")
+                self.stats.setdefault("category_filtered", 0)
+                self.stats["category_filtered"] += 1
                 continue
 
             # ── Seller blocklist check ──
@@ -1241,7 +961,7 @@ class GapHunter:
             if item.listed_at:
                 from datetime import datetime, timezone
                 listing_age_days = (datetime.now(timezone.utc) - item.listed_at).days
-                if listing_age_days > 30:
+                if listing_age_days > 10:
                     logger.debug(f"    Skipped stale listing ({listing_age_days}d old): {item.title[:50]}")
                     self.stats.setdefault("stale_skipped", 0)
                     self.stats["stale_skipped"] += 1
@@ -1249,7 +969,7 @@ class GapHunter:
 
             # ── Price drop check (Grailed only) ──
             # Multiple price drops = seller struggling to sell = not liquid
-            price_drops = item.raw_data.get("price_drops", [])
+            price_drops = (item.raw_data or {}).get("price_drops", [])
             if len(price_drops) >= 3:
                 logger.debug(f"    Skipped {len(price_drops)} price drops (struggling to sell): {item.title[:50]}")
                 self.stats.setdefault("price_drop_skipped", 0)
@@ -1258,7 +978,7 @@ class GapHunter:
 
             # ── Low photo count check ──
             # Legitimate sellers of real archive pieces take detailed photos
-            photo_count = item.raw_data.get("photo_count", 0)
+            photo_count = (item.raw_data or {}).get("photo_count", 0)
             if photo_count > 0 and photo_count < 4:
                 logger.debug(f"    Skipped low photos ({photo_count}): {item.title[:50]}")
                 continue
@@ -1284,13 +1004,12 @@ class GapHunter:
             profit = sell_price - item.price - 15  # $15 estimated shipping
             real_margin = profit / item.price if item.price > 0 else 0
 
-            # Confidence-gated thresholds: require bigger gaps for low-comp-count queries
+            # Confidence-gated thresholds: medium (20-19 comps) slightly stricter than high (20+)
             comp_confidence = getattr(sold_data, '_confidence', 'medium')
             effective_min_gap = MIN_GAP_PERCENT
             effective_min_profit = MIN_PROFIT_DOLLARS
-            if comp_confidence == "low":
-                effective_min_gap = MIN_GAP_PERCENT * 1.5  # 45% instead of 30%
-                effective_min_profit = MIN_PROFIT_DOLLARS * 2  # $150 instead of $75
+            if comp_confidence == "medium":
+                effective_min_gap = MIN_GAP_PERCENT * 1.17  # ~35% instead of 30%
 
             if gap_percent >= effective_min_gap and profit >= effective_min_profit:
                 deals.append(GapDeal(
@@ -1328,6 +1047,7 @@ class GapHunter:
         """Auth check, quality score, and send a gap deal."""
         item = deal.item
         brand = self._detect_brand(item.title)
+        category = self._detect_category(item.title)
 
         # Auth check
         try:
@@ -1337,6 +1057,7 @@ class GapHunter:
                     description=item.description or "",
                     price=item.price,
                     brand=brand,
+                    category=category,
                     seller_name=item.seller or "",
                     seller_sales=getattr(item, "seller_sales", 0),
                     seller_rating=getattr(item, "seller_rating", None),
@@ -1364,10 +1085,11 @@ class GapHunter:
             auth_confidence=auth_conf,
         )
 
-        # Quality gate: don't send deals below threshold
-        if signals.fire_level == 0:
+        # Quality gate: only send 🔥🔥+ deals (score >= 50)
+        min_fire = int(os.getenv("GAP_MIN_FIRE_LEVEL", "2"))
+        if signals.fire_level < min_fire:
             logger.info(
-                f"    ⏭ Below quality threshold ({quality_score:.0f}/100): {item.title[:50]}"
+                f"    ⏭ Below quality threshold ({quality_score:.0f}/100, fire={signals.fire_level} < {min_fire}): {item.title[:50]}"
             )
             self.stats["quality_filtered"] += 1
             return False
@@ -1403,7 +1125,8 @@ class GapHunter:
 
         msg_lines.extend([
             "",
-            f"💵 Listed: <b>${item.price:.0f}</b> on {item.source.title()}",
+            f"💵 Listed: <b>${item.price:.0f}</b> on {item.source.title()}"
+            + (f" ⏰ auction ends in {getattr(item, '_auction_hours_left', 0):.0f}h" if getattr(item, '_auction_hours_left', None) is not None else ""),
             f"📊 Market: <b>${deal.sold_avg:.0f}</b> ({deal.sold_count} comps, Grailed sold)",
             f"💰 Est. Profit: <b>${deal.profit_estimate:.0f}</b> (after fees + shipping)",
             f"📈 <b>{deal.gap_percent*100:.0f}% below market</b>",
@@ -1463,6 +1186,36 @@ class GapHunter:
                 except Exception as e:
                     logger.warning(f"Discord alert failed: {e}")
 
+            # Post to Whop
+            try:
+                whop_title = f"🔥 Gap Deal: {item.title[:60]} | {deal.gap_percent*100:.0f}% below market"
+                signal_lines = [
+                    f"- Auth confidence: {auth_result.confidence*100:.0f}%" if auth_result else "- Auth confidence: N/A",
+                    f"- Fire level: {'🔥' * signals.fire_level}" if signals.fire_level else "- Fire level: —",
+                ]
+                if signals.season_name:
+                    signal_lines.append(f"- Season: {signals.season_name}")
+                if signals.line_name and signals.line_name not in ("Unknown",):
+                    signal_lines.append(f"- Line: {signals.line_name}")
+
+                whop_content = "\n".join([
+                    f"## {item.title}",
+                    "",
+                    "**💰 The Opportunity**",
+                    f"- Listed: **${item.price:.0f}** on {item.source.title()}",
+                    f"- Proven sold: **${deal.sold_avg:.0f}** ({deal.sold_count} Grailed comps)",
+                    f"- Gap: **{deal.gap_percent*100:.0f}% below market**",
+                    f"- Est. profit: **${deal.profit_estimate:.0f}** (after fees + shipping)",
+                    "",
+                    "**📊 Signals**",
+                    *signal_lines,
+                    "",
+                    f"[View Listing]({item.url})",
+                ])
+                await asyncio.wait_for(send_whop_alert(whop_title, whop_content), timeout=10.0)
+            except Exception as e:
+                logger.error(f"Whop alert failed: {e}")
+
             self.stats["deals_sent"] += 1
             return True
         except Exception as e:
@@ -1474,17 +1227,23 @@ class GapHunter:
         self.cycle_count += 1
         cycle_start = time.time()
 
-        # Dynamic trend targets or static fallback
-        targets = TARGETS  # default fallback
-        trend_engine = _get_trend_engine() if USE_DYNAMIC_TRENDS else None
+        # ── Dynamic targets: per-cycle varied subset from TrendEngine ──
+        # get_cycle_targets() returns a fresh randomised mix each call:
+        #   - ALWAYS_RUN anchors (top broad performers, every cycle)
+        #   - Random draw from velocity pool + EXTENDED_TARGETS
+        #   - Dead queries (50+ runs, 0 deals) are auto-excluded
+        # Falls back to CORE_TARGETS if TrendEngine fails entirely.
+        from trend_engine import CORE_TARGETS
+        targets = CORE_TARGETS  # safety fallback
+        trend_engine = _get_trend_engine()
         if trend_engine:
             try:
-                dynamic = await trend_engine.get_today_targets()
+                dynamic = await trend_engine.get_cycle_targets(n=60)
                 if dynamic:
                     targets = dynamic
-                    logger.info(f"🔥 Using {len(targets)} dynamic trend targets")
+                    logger.info(f"🔥 {len(targets)} targets this cycle (varied rotation)")
             except Exception as e:
-                logger.warning(f"⚠️ Dynamic trends failed, using static: {e}")
+                logger.warning(f"⚠️ TrendEngine failed, running on {len(targets)} core targets: {e}")
 
         # Apply custom queries override
         if custom_queries:
@@ -1531,7 +1290,7 @@ class GapHunter:
                     total_deals += 1
 
             # Log query performance for trend feedback loop
-            if trend_engine and USE_DYNAMIC_TRENDS:
+            if trend_engine:
                 best_gap = max((d.gap_percent for d in gaps), default=0) if gaps else 0
                 try:
                     trend_engine.log_query_performance(query, len(gaps), best_gap)
@@ -1577,7 +1336,7 @@ class GapHunter:
         if custom_queries:
             logger.info(f"   Custom queries: {len(custom_queries)}")
         else:
-            logger.info(f"   Static targets: {len(TARGETS)} | Dynamic trends: {'ON' if USE_DYNAMIC_TRENDS else 'OFF'}")
+            logger.info(f"   Targets: dynamic (Grailed velocity + rotation, varied per cycle)")
         if max_targets:
             logger.info(f"   Max targets: {max_targets}")
         logger.info(f"   Min gap: {MIN_GAP_PERCENT*100:.0f}% below sold avg")
@@ -1605,7 +1364,89 @@ class GapHunter:
         self._save_sold_cache()
         self._save_blocklist()
         self._save_image_hashes()
+
+        # Clean up Playwright browsers
+        if hasattr(self, '_ebay'):
+            try:
+                await self._ebay.close()
+            except Exception:
+                pass
+        if hasattr(self, '_depop_scraper'):
+            try:
+                await self._depop_scraper.close()
+            except Exception:
+                pass
+        if hasattr(self, '_vinted'):
+            try:
+                await self._vinted.close()
+            except Exception:
+                pass
+
         logger.info("Gap Hunter stopped.")
+
+    @staticmethod
+    def _detect_category(title: str) -> str:
+        """Detect item category from title for auth scoring."""
+        title_lower = title.lower()
+        categories = {
+            "shoes": [
+                "geobasket", "ramones", "dunks", "kiss boots", "larry boots",
+                "sickle boots", "banana dunks", "blakey", "peterson", "wayne",
+                "shoes", "sneakers", "runners", "trainers", "loafers",
+                "court classic", "triple s", "track", "speed trainer",
+                "ozweego", "response trail", "stan smith", "virgilboot",
+                "virgil boots", "tabi boots", "tabi ankle", "puddle boots",
+                "tire boots", "wyatt boots", "chain boots",
+            ],
+            "boots": [
+                "boots", "boot", "combat boot", "cylon",
+            ],
+            "jacket": [
+                "jacket", "blazer", "coat", "bomber", "parka", "varsity",
+                "stooges", "dustulator", "memphis", "flak jacket", "astro biker",
+                "riot bomber", "tape bomber",
+            ],
+            "pants": [
+                "pants", "trousers", "jeans", "denim", "cargos", "cargo",
+                "bauhaus cargo", "creatch cargo", "painter jeans", "bondage pants",
+                "track pants", "leather pants",
+            ],
+            "hoodie": [
+                "hoodie", "hooded sweatshirt", "zip up hoodie", "pullover",
+                "horseshoe hoodie", "pentagram hoodie", "matty boy hoodie",
+            ],
+            "tee": [
+                "t-shirt", "tshirt", "tee ", " tee", "level tee", "long sleeve tee",
+                "scoop neck tee", "atelier tee",
+            ],
+            "sweater": [
+                "sweater", "knit", "cardigan", "jumper", "intarsia", "mohair",
+            ],
+            "shirt": [
+                "shirt", "button up", "button down", "flannel", "hawaiian shirt",
+                "leopard shirt", "printed shirt", "silk shirt", "bowling shirt",
+            ],
+            "bag": [
+                "bag", "messenger", "duffle", "handbag", "purse",
+                "glam slam", "cassette bag", "saddle bag", "luggage",
+                "box bag", "bao bao", "chest rig",
+            ],
+            "hat": [
+                "hat", "cap", "beanie", "trucker hat", "new era",
+            ],
+            "accessories": [
+                "necklace", "ring", "bracelet", "pendant", "jewelry",
+                "chain", "glasses", "sunglasses", "eyewear",
+                "cross pendant", "dagger pendant", "floral cross",
+                "scroll bracelet", "paper chain", "orb necklace",
+                "pearl choker", "armor ring", "pearl necklace",
+                "rollercoaster belt", "belt", "wallet",
+            ],
+        }
+        for cat, keywords in categories.items():
+            if any(kw in title_lower for kw in keywords):
+                return cat
+        return ""
 
     @staticmethod
     def _detect_brand(title: str) -> str:

@@ -1,140 +1,152 @@
 """
-Grailed Velocity Source — The primary trend signal.
+GrailedVelocitySource — Top-selling items on Grailed by sold volume.
 
-Analyzes Grailed sold data to detect:
-1. Items selling faster than their 30-day average (velocity spikes)
-2. Items whose sold price is rising (price momentum)
-3. New items that just started selling (emerging trends)
+Strategy:
+  Fetch the Grailed sold index with an empty query (returns most recently sold
+  items across all categories). Group by (brand + product model). The items
+  that appear most frequently in sold results = highest sell-through volume.
+  Those become today's search targets.
 
-Stores historical data in data/trends/trend_history.json for comparisons.
+One API call. No brand list. No baseline. Grailed tells us what's selling.
 """
 
 import asyncio
-import json
 import logging
-import os
-import time
-from collections import Counter, defaultdict
-from dataclasses import asdict
-from datetime import datetime, timedelta
+import re
+from collections import defaultdict
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from .base import TrendSignal, TrendSource
 
 logger = logging.getLogger("trend.grailed_velocity")
 
-# How many items to sample per query
-ITEMS_PER_QUERY = 60
+# ── Tuning ───────────────────────────────────────────────────────────────────
+# Algolia caps at 1000 results regardless of pages × per_page, so we search
+# per-brand instead of a single empty query. Each brand gets its own 1000-item
+# window, giving dense product-level clustering.
+SOLD_PER_BRAND = 1000   # Items to fetch per brand (Algolia max)
+SOLD_DAYS = 30          # Only count sales from the last 30 days (monthly volume)
+MIN_SALES = 2           # Min sales per brand window to be considered
+MIN_AVG_PRICE = 150.0   # Minimum average sold price — filters cheap volume items
+MAX_TARGETS = 150       # Cap on total targets returned (more candidates for tiering)
 
-# Broad queries to sample general market movement
-SAMPLE_QUERIES = [
-    "",           # recent sold across everything
-    "archive",
-    "vintage",
-    "rare",
-    "grail",
+# Priority brands fetched every run (high archive value, consistent deal flow)
+PRIORITY_BRANDS = [
+    "rick owens", "chrome hearts", "maison margiela", "helmut lang",
+    "jean paul gaultier", "raf simons", "dior homme", "number (n)ine",
+    "saint laurent", "bottega veneta", "yohji yamamoto", "comme des garcons",
+    "undercover", "balenciaga", "vivienne westwood", "issey miyake",
+    "ann demeulemeester", "julius", "junya watanabe", "prada",
 ]
 
-# Category queries for breadth
-CATEGORY_QUERIES = [
-    "leather jacket", "cargo pants", "boots", "sneakers",
-    "hoodie", "knit sweater", "denim jacket", "coat",
-    "bag", "t-shirt", "shirt", "shorts",
+# ── Archive brands we care about (client-side filter) ────────────────────────
+ARCHIVE_BRANDS = {
+    "rick owens", "chrome hearts", "raf simons", "helmut lang",
+    "maison margiela", "comme des garcons", "undercover", "number (n)ine",
+    "yohji yamamoto", "balenciaga", "saint laurent", "prada", "dior homme",
+    "vivienne westwood", "jean paul gaultier", "issey miyake", "julius",
+    "bottega veneta", "celine", "junya watanabe", "kapital", "visvim",
+    "hysteric glamour", "needles", "sacai", "bape", "wtaps", "givenchy",
+    "gucci", "versace", "dries van noten", "mihara yasuhiro", "burberry",
+    "enfants riches deprimes", "wacko maria", "human made", "number nine",
+    "ann demeulemeester", "carol christian poell", "boris bidjan saberi",
+    "haider ackermann", "alexander mcqueen", "thierry mugler", "stone island",
+    "amiri", "gallery dept", "vetements", "acronym", "alyx", "supreme",
+    "off-white", "neighborhood",
+}
+
+# ── Filler words stripped before product key extraction ──────────────────────
+STRIP_WORDS = {
+    "xs", "sm", "md", "lg", "xl", "xxl", "xxxl", "os",
+    "black", "white", "grey", "gray", "red", "blue", "brown", "green", "nude",
+    "beige", "tan", "cream", "ivory", "silver", "gold", "purple", "yellow",
+    "orange", "pink", "olive", "navy", "ecru", "khaki", "camel", "dark", "light",
+    "nwt", "bnwt", "vnds", "deadstock", "new", "used", "worn", "ds",
+    "the", "a", "an", "in", "for", "with", "and", "or", "from", "by", "of",
+    "authentic", "genuine", "original", "vintage", "archive", "rare", "grail",
+    "mens", "womens", "unisex", "men", "women", "ss", "fw", "aw",
+}
+
+# ── Known product model keywords (longest/most specific first) ───────────────
+PRODUCT_MODELS = [
+    # Rick Owens
+    "banana dunks", "geobasket", "ramones high", "ramones low", "ramones",
+    "kiss boots", "larry boots", "sickle boots",
+    "stooges leather jacket", "stooges",
+    "dustulator leather jacket", "dustulator",
+    "memphis leather jacket", "memphis",
+    "intarsia knit", "intarsia",
+    "bauhaus cargo", "bauhaus",
+    "creatch cargo", "creatch",
+    "drkshdw detroit cut", "detroit cut",
+    "level tee", "pentagram hoodie", "champion hoodie", "blistered leather",
+    # Chrome Hearts
+    "cemetery cross pendant", "cemetery cross",
+    "dagger pendant", "floral cross ring", "floral cross",
+    "cross pendant", "cross ring",
+    "scroll bracelet", "matty boy hoodie", "matty boy",
+    "horseshoe hoodie", "paper chain necklace", "paper chain",
+    "fuck you ring",
+    # Raf Simons
+    "riot bomber", "consumed hoodie", "consumed",
+    "peter saville joy division", "peter saville",
+    "virginia creeper", "history of my world",
+    "tape bomber", "ozweego", "response trail",
+    "cylon boots", "sterling ruby",
+    # Helmut Lang
+    "bondage jacket", "bondage pants",
+    "astro biker jacket", "astro biker",
+    "painter jeans", "flak jacket",
+    "archive strap", "archive tank top", "nylon bomber",
+    # Maison Margiela
+    "tabi ankle boots", "tabi boots", "tabi",
+    "replica gat", "glam slam bag", "glam slam",
+    "numbers tee", "paint splatter", "deconstructed blazer",
+    # Dior Homme
+    "navigate leather", "bee embroidery", "b23 oblique",
+    "hedi leather jacket", "atelier tee", "saddle bag",
+    "oblique jacket", "scoop neck tee",
+    # Balenciaga
+    "triple s", "speed trainer", "defender",
+    "3xl sneaker", "balenciaga runner",
+    "political campaign hoodie", "oversized denim jacket",
+    # Saint Laurent
+    "wyatt boots", "chain boots", "l01 leather jacket",
+    "blood luster jacket", "court classic",
+    # Jean Paul Gaultier
+    "mesh top", "mesh long sleeve", "cyberbaba", "tattoo top", "corset",
+    # Celine
+    "triomphe bag", "triomphe belt", "luggage bag", "box bag", "western boots",
+    # Vivienne Westwood
+    "orb necklace", "pearl choker", "armor ring", "pearl necklace",
+    # Number (N)ine
+    "skull cashmere", "high streets", "kurt cobain",
+    "heart skull sweater", "heart skull",
+    "touch me im sick", "marlboro", "guitar strap",
+    # Undercover
+    "scab", "85 bomber", "less but better", "arts and crafts",
+    "68 blue", "psycho color", "but beautiful", "grace jacket",
+    # Issey Miyake
+    "homme plisse pants", "homme plisse jacket", "homme plisse tee", "homme plisse",
+    "pleats please", "bao bao bag", "bao bao",
+    # Kapital
+    "century denim", "boro jacket", "bandana patchwork",
+    # Bottega Veneta
+    "puddle boots", "tire boots", "cassette bag",
+    # Prada
+    "americas cup", "cloudbust", "linea rossa", "re nylon", "gabardine",
+    # Generic high-value
+    "leather jacket", "cargo pants", "knit sweater", "denim jacket", "bomber jacket",
 ]
 
-# Archive brand queries — focused on the big movers
-BRAND_QUERIES = [
-    "rick owens", "raf simons", "chrome hearts", "helmut lang",
-    "maison margiela", "comme des garcons", "undercover",
-    "number nine", "yohji yamamoto", "balenciaga",
-    "saint laurent", "prada", "dior homme", "vivienne westwood",
-    "jean paul gaultier", "issey miyake", "julius",
-    "bottega veneta", "celine", "junya watanabe",
-]
-
-HISTORY_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "trends", "trend_history.json")
-HISTORY_MAX_DAYS = 30
-
-
-def _load_history() -> dict:
-    """Load trend history from disk."""
-    if os.path.exists(HISTORY_FILE):
-        try:
-            with open(HISTORY_FILE) as f:
-                return json.load(f)
-        except (json.JSONDecodeError, IOError):
-            logger.warning("Corrupt trend_history.json, starting fresh")
-    return {"snapshots": [], "last_updated": None}
-
-
-def _save_history(history: dict):
-    """Save trend history to disk."""
-    os.makedirs(os.path.dirname(HISTORY_FILE), exist_ok=True)
-    # Prune old snapshots
-    cutoff = (datetime.utcnow() - timedelta(days=HISTORY_MAX_DAYS)).isoformat()
-    history["snapshots"] = [s for s in history["snapshots"] if s.get("timestamp", "") > cutoff]
-    history["last_updated"] = datetime.utcnow().isoformat()
-    with open(HISTORY_FILE, "w") as f:
-        json.dump(history, f, indent=2)
-
-
-def _extract_item_key(title: str, brand: str) -> str:
-    """Normalize an item into a groupable key like 'rick owens:geobasket'."""
-    title_lower = title.lower()
-    brand_lower = brand.lower()
-
-    # Remove brand name from title to get the item descriptor
-    descriptor = title_lower
-    for token in brand_lower.split():
-        descriptor = descriptor.replace(token, "")
-    descriptor = " ".join(descriptor.split())  # collapse whitespace
-
-    # Extract the most meaningful 2-3 words as the item key
-    # Skip filler words
-    filler = {"size", "sz", "us", "eu", "uk", "mens", "womens", "vintage",
-              "authentic", "nwt", "bnwt", "pre-owned", "used", "new", "the",
-              "a", "an", "in", "for", "with", "and", "or", "from", "by",
-              "ss", "fw", "aw", "ss24", "fw24", "ss23", "fw23", "ss25", "fw25",
-              "black", "white", "grey", "gray", "red", "blue", "brown", "green"}
-    words = [w for w in descriptor.split() if w not in filler and len(w) > 1]
-
-    # Take first 3 meaningful words
-    key_words = words[:3]
-    if not key_words:
-        key_words = ["general"]
-
-    return f"{brand_lower}:{' '.join(key_words)}"
-
-
-def _detect_category(title: str) -> str:
-    """Detect item category from title."""
-    title_lower = title.lower()
-    categories = {
-        "leather jacket": ["leather jacket", "stooges", "intarsia", "riders jacket"],
-        "jacket": ["jacket", "blazer", "bomber", "varsity", "trucker"],
-        "coat": ["coat", "overcoat", "trench", "parka", "puffer"],
-        "pants": ["pants", "trousers", "cargos", "cargo"],
-        "jeans": ["jeans", "denim"],
-        "boots": ["boots", "boot", "geobasket", "dunks", "ramones", "kiss boot", "tabi"],
-        "sneakers": ["sneakers", "shoes", "runners", "trainers", "triple s", "track", "speed"],
-        "hoodie": ["hoodie", "hooded"],
-        "sweater": ["sweater", "knit", "cardigan"],
-        "t-shirt": ["t-shirt", "tee", "tshirt"],
-        "shirt": ["shirt", "button"],
-        "bag": ["bag", "backpack", "tote"],
-        "accessories": ["pendant", "ring", "bracelet", "necklace", "chain", "glasses", "hat", "cap"],
-    }
-    for cat, keywords in categories.items():
-        if any(kw in title_lower for kw in keywords):
-            return cat
-    return "other"
+_SEASON_RE = re.compile(r'\b(?:fw|ss|aw)\s*\d{2,4}\b', re.IGNORECASE)
+_SIZE_NUMBER_RE = re.compile(r'\b\d{1,3}(?:\.\d)?\b')
 
 
 class GrailedVelocitySource(TrendSource):
     """
-    Analyzes Grailed sold data velocity to find what's trending.
-    
-    Primary signal source — weight 1.0.
+    Pulls the top-selling items from Grailed's sold index by raw volume.
     """
 
     @property
@@ -146,169 +158,159 @@ class GrailedVelocitySource(TrendSource):
         return 1.0
 
     async def fetch_signals(self) -> list[TrendSignal]:
-        """
-        Fetch Grailed sold data, compare to historical baselines,
-        and return trend signals for items with unusual velocity or price movement.
-        """
-        # Import here to avoid circular imports
         from scrapers.grailed import GrailedScraper
 
-        history = _load_history()
-        today_snapshot = {"timestamp": datetime.utcnow().isoformat(), "items": {}}
-        signals: list[TrendSignal] = []
+        cutoff = datetime.now(timezone.utc) - timedelta(days=SOLD_DAYS)
 
-        # Build historical baselines from past snapshots
-        baselines = self._build_baselines(history)
-
-        logger.info("🔍 Fetching Grailed sold data for velocity analysis...")
+        # Fetch sold items per brand concurrently (Algolia caps at 1000 per query,
+        # so searching brand-by-brand gives us 1000 items per brand = dense clustering)
+        logger.info(
+            f"  Fetching sold data for {len(PRIORITY_BRANDS)} brands "
+            f"({SOLD_PER_BRAND} items each, last {SOLD_DAYS} days)..."
+        )
 
         async with GrailedScraper() as scraper:
-            # Sample sold items across brands
-            all_items = []
-            queries = BRAND_QUERIES + SAMPLE_QUERIES + CATEGORY_QUERIES[:6]
+            sem = asyncio.Semaphore(4)  # max 4 concurrent brand fetches
 
-            for query in queries:
-                try:
-                    items = await scraper.search_sold(query, max_results=ITEMS_PER_QUERY)
-                    all_items.extend(items)
-                    logger.debug(f"  '{query}': {len(items)} sold items")
-                    await asyncio.sleep(0.3)
-                except Exception as e:
-                    logger.warning(f"  Failed to fetch '{query}': {e}")
+            async def fetch_brand(brand: str) -> list:
+                async with sem:
+                    try:
+                        items = await scraper.search_sold_bulk(brand, pages=1, per_page=SOLD_PER_BRAND)
+                        logger.info(f"    {brand}: {len(items)} items")
+                        return items
+                    except Exception as e:
+                        logger.warning(f"    {brand}: fetch failed ({e})")
+                        return []
+
+            brand_results = await asyncio.gather(*[fetch_brand(b) for b in PRIORITY_BRANDS])
+
+        total_items = sum(len(r) for r in brand_results)
+        logger.info(f"  Got {total_items} sold items across {len(PRIORITY_BRANDS)} brands — clustering by product...")
+
+        # Group by (brand, product_key), count sales within the time window
+        groups: dict[tuple[str, str], list] = defaultdict(list)
+
+        for brand, items in zip(PRIORITY_BRANDS, brand_results):
+            for item in items:
+                sale_date = self._get_sale_date(item)
+                if sale_date and sale_date < cutoff:
                     continue
 
-        # Deduplicate
-        seen_ids = set()
-        unique = []
-        for item in all_items:
-            if item.source_id not in seen_ids:
-                seen_ids.add(item.source_id)
-                unique.append(item)
+                detected_brand = self._detect_brand(item.title, item.raw_data or {})
+                # Accept the fetched brand or the detected brand (Grailed sometimes
+                # returns items from related brands in a brand search)
+                effective_brand = detected_brand if detected_brand else brand
 
-        logger.info(f"  Fetched {len(unique)} unique sold items")
-
-        # Group by item key
-        item_groups: dict[str, list] = defaultdict(list)
-        for item in unique:
-            brand = (item.brand or "").strip()
-            if not brand or len(brand) < 2:
-                # Try extracting from raw_data
-                raw = item.raw_data or {}
-                designers = raw.get("designers", [])
-                if designers:
-                    d = designers[0]
-                    brand = d.get("name", "") if isinstance(d, dict) else str(d)
-                if not brand:
+                product_key = self._extract_product_key(item.title, effective_brand)
+                if not product_key or product_key == "general":
                     continue
 
-            key = _extract_item_key(item.title, brand)
-            item_groups[key].append(item)
+                groups[(effective_brand, product_key)].append(item)
 
-        # Analyze each group
-        for key, items in item_groups.items():
-            if len(items) < 2:
+        # Build signals from groups meeting MIN_SALES + MIN_AVG_PRICE
+        candidates: list[TrendSignal] = []
+
+        for (brand, product_key), sold_items in groups.items():
+            count = len(sold_items)
+            if count < MIN_SALES:
                 continue
 
-            brand = key.split(":")[0]
-            item_desc = key.split(":", 1)[1] if ":" in key else "general"
-            category = _detect_category(items[0].title)
+            prices = [i.price for i in sold_items if i.price and i.price > 0]
+            if not prices:
+                continue
+            avg_price = sum(prices) / len(prices)
 
-            # Current metrics
-            current_count = len(items)
-            prices = [i.price for i in items if i.price > 0]
-            avg_price = sum(prices) / len(prices) if prices else 0
-
-            # Save to today's snapshot
-            today_snapshot["items"][key] = {
-                "count": current_count,
-                "avg_price": avg_price,
-                "sample_title": items[0].title[:80],
-            }
-
-            # Compare to baseline
-            baseline = baselines.get(key, {})
-            baseline_count = baseline.get("avg_count", 0)
-            baseline_price = baseline.get("avg_price", 0)
-
-            # Calculate velocity change
-            velocity_change = 0.0
-            if baseline_count > 0:
-                velocity_change = (current_count - baseline_count) / baseline_count
-            
-            # Calculate price change
-            price_change = 0.0
-            if baseline_price > 0 and avg_price > 0:
-                price_change = (avg_price - baseline_price) / baseline_price
-
-            # Determine trend direction
-            if velocity_change > 0.3 or price_change > 0.15:
-                direction = "rising"
-            elif velocity_change < -0.3 or price_change < -0.15:
-                direction = "falling"
-            else:
-                direction = "stable"
-
-            # Score: combine volume, velocity spike, and price momentum
-            volume_score = min(1.0, current_count / 15)  # 15+ items = max volume score
-            velocity_score = max(0, min(1.0, velocity_change))  # Positive velocity = good
-            price_score = max(0, min(1.0, price_change * 2))  # Price rising = good
-            # Emerging bonus: if no baseline exists, this is new/emerging
-            emerging_bonus = 0.2 if not baseline else 0.0
-
-            trend_score = (
-                volume_score * 0.4
-                + velocity_score * 0.35
-                + price_score * 0.15
-                + emerging_bonus * 0.1
-            )
-
-            # Only emit signal if it's worth searching
-            if trend_score < 0.15 and direction != "rising":
+            # Hard floor: skip cheap items regardless of volume
+            if avg_price < MIN_AVG_PRICE:
                 continue
 
-            # Build a good search query from the key
-            search_query = f"{brand} {item_desc}".strip()
+            # Opportunity score = dollar velocity (avg price × monthly sold count)
+            # This ranks a $600 jacket selling 10×/month above a $200 tee selling 20×/month
+            opportunity_score = avg_price * count
 
-            signals.append(TrendSignal(
+            candidates.append(TrendSignal(
                 brand=brand.title(),
-                item_type=category,
-                specific_query=search_query,
-                trend_score=min(1.0, trend_score),
-                trend_direction=direction,
+                item_type=product_key,
+                specific_query=f"{brand} {product_key}",
+                trend_score=0.0,            # filled in below after normalisation
+                trend_direction="rising" if count >= 8 else "stable",
                 signal_sources=[self.name],
-                est_sold_volume=current_count,
+                est_sold_volume=count,
                 avg_sold_price=avg_price,
-                velocity_change=velocity_change,
-                price_change=price_change,
+                opportunity_score=opportunity_score,
             ))
 
-        # Save today's snapshot to history
-        history["snapshots"].append(today_snapshot)
-        _save_history(history)
+        # Normalise trend_score against the max opportunity_score in this batch
+        if candidates:
+            max_opp = max(s.opportunity_score for s in candidates)
+            for sig in candidates:
+                sig.trend_score = min(1.0, sig.opportunity_score / max_opp)
 
-        # Sort by score
-        signals.sort(key=lambda s: s.trend_score, reverse=True)
-        logger.info(f"  Generated {len(signals)} trend signals (top: {signals[0].specific_query if signals else 'none'})")
-        return signals
+        # Sort by opportunity score (dollar velocity), not raw count
+        candidates.sort(key=lambda s: s.opportunity_score, reverse=True)
 
-    def _build_baselines(self, history: dict) -> dict:
-        """
-        Build baseline metrics from historical snapshots.
-        Returns {item_key: {"avg_count": float, "avg_price": float}}
-        """
-        baselines: dict[str, dict] = defaultdict(lambda: {"counts": [], "prices": []})
+        logger.info(f"  {len(candidates)} targets identified (avg_price ≥ ${MIN_AVG_PRICE:.0f}, sales ≥ {MIN_SALES}/mo). Top by opportunity:")
+        for sig in candidates[:20]:
+            logger.info(
+                f"    [${sig.avg_sold_price:.0f} avg × {sig.est_sold_volume} sold "
+                f"= ${sig.opportunity_score:.0f} opp] {sig.specific_query}"
+            )
 
-        for snapshot in history.get("snapshots", []):
-            for key, data in snapshot.get("items", {}).items():
-                baselines[key]["counts"].append(data.get("count", 0))
-                baselines[key]["prices"].append(data.get("avg_price", 0))
+        return candidates[:MAX_TARGETS]
 
-        result = {}
-        for key, data in baselines.items():
-            counts = data["counts"]
-            prices = [p for p in data["prices"] if p > 0]
-            result[key] = {
-                "avg_count": sum(counts) / len(counts) if counts else 0,
-                "avg_price": sum(prices) / len(prices) if prices else 0,
-            }
-        return result
+    def _get_sale_date(self, item) -> Optional[datetime]:
+        raw = item.raw_data or {}
+        for field in ("sold_at", "created_at"):
+            val = raw.get(field)
+            if val:
+                try:
+                    dt = datetime.fromisoformat(val.replace("Z", "+00:00"))
+                    if dt.tzinfo is None:
+                        dt = dt.replace(tzinfo=timezone.utc)
+                    return dt
+                except (ValueError, TypeError):
+                    continue
+        if item.listed_at:
+            dt = item.listed_at
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt
+        return None
+
+    def _detect_brand(self, title: str, raw_data: dict) -> str:
+        """Detect archive brand from Algolia designer field, then title fallback."""
+        designers = raw_data.get("designers", [])
+        if designers and isinstance(designers, list):
+            d = designers[0]
+            name = (d.get("name", "") if isinstance(d, dict) else str(d)).lower().strip()
+            if name in ARCHIVE_BRANDS:
+                return name
+
+        title_lower = title.lower()
+        for brand in sorted(ARCHIVE_BRANDS, key=len, reverse=True):
+            if brand in title_lower:
+                return brand
+        return ""
+
+    def _extract_product_key(self, title: str, brand: str) -> str:
+        title_lower = title.lower().strip()
+
+        # Pass 1: known model keywords
+        for model in PRODUCT_MODELS:
+            if model in title_lower:
+                return model
+
+        # Pass 2: strip brand + filler, take first 3 meaningful tokens
+        cleaned = title_lower
+        for word in brand.lower().split():
+            cleaned = re.sub(r'\b' + re.escape(word) + r'\b', '', cleaned)
+        cleaned = _SEASON_RE.sub('', cleaned)
+        cleaned = _SIZE_NUMBER_RE.sub('', cleaned)
+
+        tokens = cleaned.split()
+        meaningful = [
+            t for t in tokens
+            if t and t not in STRIP_WORDS and len(t) > 1 and not t.isdigit()
+        ]
+
+        return " ".join(meaningful[:3]) if meaningful else "general"
