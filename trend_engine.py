@@ -451,6 +451,31 @@ class TrendEngine:
     def _get_dead_queries(self) -> set[str]:
         return {d["query"].lower() for d in self.get_dead_query_report()}
 
+    def reset_dead_queries(self, queries: list[str] = None) -> int:
+        """
+        Remove dead-query exclusions so they get another chance.
+        Call after adding new sold-data sources (e.g. eBay fallback) that may
+        now provide comps for queries that previously had no sold data.
+
+        Args:
+            queries: specific queries to reset. If None, resets ALL dead queries.
+        Returns:
+            number of queries reset.
+        """
+        perf = self._load_performance()
+        dead_set = {d["query"] for d in self.get_dead_query_report()}
+        targets = [q for q in (queries or dead_set) if q in perf]
+        count = 0
+        for q in targets:
+            if q in perf:
+                # Reset run/deal counters so the query is no longer excluded.
+                # Preserve best_gap so we don't lose historical signal entirely.
+                perf[q]["total_runs"] = 0
+                perf[q]["total_deals"] = 0
+                count += 1
+        self._save_performance(perf)
+        return count
+
     def _apply_feedback(self, trends: list[TrendSignal]) -> list[TrendSignal]:
         """
         Boost/penalize signals based on historical deal performance.

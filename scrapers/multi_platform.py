@@ -138,7 +138,8 @@ class EbaySoldScraper(BaseScraper):
                         currency="USD",
                         images=images,
                         is_auction=False,
-                        sold_at=date_sold,
+                        # Store date in raw_data so temporal filtering in get_sold_data works
+                        raw_data={"created_at": date_sold} if date_sold else {},
                     ))
                     
                 except Exception as e:

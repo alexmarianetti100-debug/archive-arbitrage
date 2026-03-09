@@ -41,6 +41,7 @@ load_dotenv()
 sys.path.insert(0, os.path.dirname(__file__))
 
 from scrapers import GrailedScraper, PoshmarkScraper, ScrapedItem
+from scrapers.multi_platform import EbaySoldScraper
 from scrapers.vinted import VintedScraperWrapper as VintedScraper
 from scrapers.ebay import EbayScraper
 from scrapers.depop import DepopScraper
@@ -105,6 +106,35 @@ COLLAB_MODEL_WORDS: dict[str, set[str]] = {
 # (keyword stuffing, different item entirely) rather than a real arbitrage deal.
 IMPLAUSIBLE_GAP_CAP = 0.90          # reject if gap exceeds this
 IMPLAUSIBLE_GAP_MIN_MARKET = 200.0  # only apply when market median is meaningful
+
+def estimate_shipping(item: "ScrapedItem") -> float:
+    """
+    Category-aware shipping estimate for profit calculations.
+    Replaces the old flat $15 estimate.
+    """
+    title_lower = (item.title or "").lower()
+    category_lower = (item.category or "").lower()
+    combined = title_lower + " " + category_lower
+
+    # Heavy outerwear
+    if any(k in combined for k in ("jacket", "coat", "parka", "anorak", "bomber", "leather", "hoodie")):
+        return 28.0
+    # Footwear
+    if any(k in combined for k in ("boot", "shoe", "sneaker", "geobasket", "ramone", "creeper", "tabi",
+                                    "loafer", "sandal", "heel", "pump", "mule", "clog")):
+        return 20.0
+    # Bags, heavy accessories
+    if any(k in combined for k in ("bag", "backpack", "tote", "suitcase", "luggage")):
+        return 18.0
+    # Small accessories / jewelry
+    if any(k in combined for k in ("ring", "pendant", "necklace", "bracelet", "earring", "chain",
+                                    "charm", "pin", "brooch", "wallet", "card holder")):
+        return 7.0
+    # Bottoms / pants / denim
+    if any(k in combined for k in ("pant", "jean", "denim", "cargo", "trouser", "short")):
+        return 13.0
+    # Default (tops, shirts, tees, knitwear)
+    return 15.0
 
 STATE_FILE = os.path.join(os.path.dirname(__file__), "data", "gap_state.json")
 SOLD_CACHE_FILE = os.path.join(os.path.dirname(__file__), "data", "sold_cache.json")
@@ -716,36 +746,53 @@ class GapHunter:
             async with GrailedScraper() as scraper:
                 sold = await scraper.search_sold(query, max_results=30)  # Fetch more to account for filtering
 
-            if not sold:
-                return None
-
             # ── Temporal filtering: only use comps from last MAX_COMP_AGE_DAYS ──
             from datetime import datetime as _dt, timedelta, timezone
             now = _dt.now(timezone.utc)
             cutoff = now - timedelta(days=MAX_COMP_AGE_DAYS)
-            fresh_sold = []
-            stale_count = 0
-            for s in sold:
-                created_str = (s.raw_data or {}).get("created_at") or (s.raw_data or {}).get("sold_at")
-                if created_str:
-                    try:
-                        comp_date = _dt.fromisoformat(created_str.replace("Z", "+00:00"))
-                        if comp_date < cutoff:
-                            stale_count += 1
-                            continue
-                    except (ValueError, TypeError):
-                        pass  # Keep items with unparseable dates
-                fresh_sold.append(s)
 
+            def _filter_fresh(items):
+                fresh, stale = [], 0
+                for s in items:
+                    created_str = (s.raw_data or {}).get("created_at") or (s.raw_data or {}).get("sold_at")
+                    if created_str:
+                        try:
+                            comp_date = _dt.fromisoformat(created_str.replace("Z", "+00:00"))
+                            if comp_date < cutoff:
+                                stale += 1
+                                continue
+                        except (ValueError, TypeError):
+                            pass
+                    fresh.append(s)
+                return fresh, stale
+
+            fresh_sold, stale_count = _filter_fresh(sold or [])
             if stale_count > 0:
                 logger.debug(f"  Filtered out {stale_count} stale comps (>{MAX_COMP_AGE_DAYS}d) for '{query}'")
 
-            # Require minimum fresh comps; stale fallback removed — no niche exceptions
-            if len(fresh_sold) >= MIN_SOLD_COMPS:
-                sold = fresh_sold
-            else:
-                # Not enough fresh comps — skip this query entirely
+            # ── eBay sold fallback: kick in when Grailed doesn't have enough comps ──
+            ebay_fallback_used = False
+            if len(fresh_sold) < MIN_SOLD_COMPS:
+                try:
+                    async with EbaySoldScraper() as ebay_scraper:
+                        ebay_sold = await ebay_scraper.search_sold(query, max_results=50)
+                    ebay_fresh, _ = _filter_fresh(ebay_sold or [])
+                    combined = fresh_sold + ebay_fresh
+                    if len(combined) >= MIN_SOLD_COMPS:
+                        logger.info(f"  📦 eBay sold fallback: {len(ebay_fresh)} comps for '{query}' "
+                                    f"(Grailed had {len(fresh_sold)})")
+                        fresh_sold = combined
+                        ebay_fallback_used = True
+                    else:
+                        logger.debug(f"  eBay fallback insufficient for '{query}' "
+                                     f"({len(combined)} combined, need {MIN_SOLD_COMPS})")
+                except Exception as e:
+                    logger.debug(f"  eBay sold fallback failed for '{query}': {e}")
+
+            if len(fresh_sold) < MIN_SOLD_COMPS:
                 return None
+
+            sold = fresh_sold
 
             if len(sold) < MIN_SOLD_COMPS:
                 return None
@@ -799,8 +846,13 @@ class GapHunter:
                 timestamp=time.time(),
                 avg_days_to_sell=avg_days,
             )
-            # Store confidence on the SoldData (not in dataclass but accessible)
+            # Store confidence and source metadata on SoldData
             data._confidence = comp_confidence
+            data._ebay_fallback = ebay_fallback_used
+
+            # Track eBay fallback activations in stats
+            if ebay_fallback_used:
+                self.stats["ebay_sold_fallback_used"] = self.stats.get("ebay_sold_fallback_used", 0) + 1
 
             self.sold_cache[query] = data
             return data
@@ -1114,7 +1166,8 @@ class GapHunter:
 
             # Profit estimate: assume selling on Grailed (~12% total fees) + shipping
             sell_price = sold_data.median_price * 0.88  # After Grailed fees + PayPal
-            profit = sell_price - item.price - 15  # $15 estimated shipping
+            shipping_est = estimate_shipping(item)
+            profit = sell_price - item.price - shipping_est  # category-aware shipping estimate
             real_margin = profit / item.price if item.price > 0 else 0
 
             # ── Implausible gap sanity check ──────────────────────────────────
