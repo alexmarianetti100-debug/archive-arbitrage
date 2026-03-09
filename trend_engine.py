@@ -8,10 +8,19 @@ Scoring:
     opportunity_score = avg_sold_price × monthly_sold_volume
     e.g. $600 jacket × 10 sales/mo = 6000  (better than $50 tee × 100 sales/mo = 5000)
 
-Tier thresholds (applied to Grailed-derived opportunity scores):
-    Tier 1 — always run every cycle:  avg ≥ $400 AND monthly_vol ≥ 6
-    Tier 2 — most cycles (~70%):      avg ≥ $250 AND monthly_vol ≥ 4
-    Tier 3 — rotation (~30%):         avg ≥ $150 AND monthly_vol ≥ 2
+Rotation model (replaces rigid tier system):
+    ALL catalog queries are sorted globally by opportunity score.
+    Top ANCHOR_POOL_SIZE → anchor pool: run once every ANCHOR_CYCLE_INTERVAL cycles.
+    Rest → rotation pool: weighted-random draw each cycle.
+    Per-query cooldown (QUERY_COOLDOWN_MINUTES) prevents re-running before
+    sold cache (30 min TTL) would refresh anyway.
+    Queries with zero runs always get priority slots.
+    Dead queries (DEAD_QUERY_MIN_RUNS runs, 0 deals) stay excluded.
+
+Long-tail pool:
+    A static ~80-query set of curated archive brands that may not hit Grailed
+    velocity thresholds at any given moment but are consistently liquid.
+    Always circulates in the rotation pool at low weight.
 
 Golden Catalog:
     Persisted to data/trends/golden_catalog.json, refreshed weekly.
@@ -19,7 +28,7 @@ Golden Catalog:
 
 Usage:
     engine = TrendEngine()
-    targets = await engine.get_cycle_targets(n=60)   # varied per-cycle subset
+    targets = await engine.get_cycle_targets(n=20)   # varied per-cycle subset
     targets = await engine.get_today_targets()        # full daily pool (legacy)
 """
 
@@ -45,16 +54,25 @@ GOLDEN_CATALOG_FILE = os.path.join(DATA_DIR, "golden_catalog.json")
 # ── Catalog refresh schedule ──────────────────────────────────────────────────
 CATALOG_REFRESH_DAYS = 7    # Rebuild golden catalog once a week
 
-# ── Tier thresholds ───────────────────────────────────────────────────────────
-# Items must clear BOTH price AND volume floors to enter a tier.
-TIER1_MIN_PRICE  = 400.0    # High-value: leather jackets, rare boots, bags
-TIER1_MIN_VOLUME = 6        # Sells 6+ times per month (liquid)
+# ── Tier thresholds (used only during catalog BUILD, not rotation) ────────────
+# Items must clear BOTH price AND volume floors to enter the catalog.
+TIER1_MIN_PRICE  = 400.0
+TIER1_MIN_VOLUME = 6
 
-TIER2_MIN_PRICE  = 250.0    # Mid-high: knitwear, accessories, common boots
-TIER2_MIN_VOLUME = 4        # Sells 4+ times per month
+TIER2_MIN_PRICE  = 250.0
+TIER2_MIN_VOLUME = 4
 
-TIER3_MIN_PRICE  = 150.0    # Entry: lower-priced but consistent items
-TIER3_MIN_VOLUME = 2        # Sells 2+ times per month
+TIER3_MIN_PRICE  = 150.0
+TIER3_MIN_VOLUME = 2
+
+# ── Rotation model ────────────────────────────────────────────────────────────
+# Replaces the old "tier1 always runs" logic.
+ANCHOR_POOL_SIZE       = 10   # Top N by opp-score → anchor pool
+ANCHOR_CYCLE_INTERVAL  = 3    # Anchors run once every N cycles
+ROTATION_CYCLE_SIZE    = 15   # Queries drawn from rotation pool per cycle
+QUERY_COOLDOWN_MINUTES = 25   # Skip query if ran less than this many minutes ago
+                               # (matches sold_cache TTL of 30 min)
+LONGTAIL_PER_CYCLE     = 3    # Long-tail queries included per cycle
 
 # ── Dead query exclusion ──────────────────────────────────────────────────────
 DEAD_QUERY_MIN_RUNS  = 50   # After this many runs…
@@ -146,6 +164,71 @@ EXTENDED_TARGETS = [
     "issey miyake bao bao bag", "issey miyake pleats please",
 ]
 
+# ── Long-tail pool ─────────────────────────────────────────────────────────────
+# Curated archive queries that may not hit Grailed velocity thresholds at any
+# given moment but are consistently liquid and often underscanned.
+# These always circulate in the rotation at LONGTAIL_PER_CYCLE slots/cycle.
+LONGTAIL_TARGETS = [
+    # Helmut Lang deep cuts
+    "helmut lang archive jacket", "helmut lang nylon jacket", "helmut lang bondage pants",
+    "helmut lang flak jacket", "helmut lang astro biker", "helmut lang painter jeans",
+    "helmut lang mesh top", "helmut lang leather shirt",
+    # Junya Watanabe
+    "junya watanabe man jacket", "junya watanabe denim jacket", "junya watanabe patchwork",
+    "junya watanabe comme des garcons jacket", "junya watanabe reconstruction",
+    # Yohji Yamamoto
+    "yohji yamamoto pour homme jacket", "yohji yamamoto coat black", "yohji yamamoto asymmetric",
+    "yohji yamamoto blazer", "y's yohji yamamoto jacket",
+    # Kapital
+    "kapital boro jacket", "kapital kountry denim", "kapital knit hoodie",
+    "kapital century denim", "kapital boro pants",
+    # Needles
+    "needles track pants", "needles butterfly jacket", "needles rebuild by needles",
+    "needles papillon jacket",
+    # Walter Van Beirendonck
+    "walter van beirendonck jacket", "walter van beirendonck shirt",
+    # Raf Simons deep cuts
+    "raf simons consumed hoodie", "raf simons tape bomber", "raf simons denim jacket",
+    "raf simons knit sweater", "raf simons antwerp jacket", "raf simons riot bomber",
+    "raf simons 2001", "raf simons 2002", "raf simons virginia creepers",
+    # Number (N)ine
+    "number nine leather jacket", "number nine skull cashmere", "number nine kurt cobain",
+    "number nine quilted", "number nine heart skull",
+    # Undercover deep cuts
+    "undercover but beautiful", "undercover arts and crafts", "undercover scab tour",
+    "undercover witch cell division", "undercover leather jacket",
+    # Ann Demeulemeester
+    "ann demeulemeester coat", "ann demeulemeester blazer", "ann demeulemeester shirt",
+    "ann demeulemeester leather boots",
+    # Carol Christian Poell
+    "carol christian poell leather jacket", "carol christian poell coat",
+    "carol christian poell boots", "carol christian poell drip rubber",
+    # Haider Ackermann
+    "haider ackermann leather jacket", "haider ackermann blazer", "haider ackermann silk shirt",
+    # Julius
+    "julius leather jacket", "julius boots", "julius cargo pants", "julius gas mask hoodie",
+    # Issey Miyake
+    "issey miyake homme plisse jacket", "issey miyake pleats please coat",
+    # Boris Bidjan Saberi
+    "boris bidjan saberi jacket", "boris bidjan saberi leather",
+    # Dries Van Noten
+    "dries van noten embroidered jacket", "dries van noten velvet jacket",
+    "dries van noten printed jacket",
+    # Jean Colonna
+    "jean colonna jacket", "jean colonna leather",
+    # Maison Martin Margiela artisanal
+    "margiela artisanal jacket", "margiela deconstructed blazer", "margiela numbers label",
+    # Thierry Mugler
+    "thierry mugler jacket", "thierry mugler leather jacket", "thierry mugler coat",
+    # Alexander McQueen archive
+    "alexander mcqueen bumster", "alexander mcqueen skull scarf", "alexander mcqueen leather jacket",
+    # Comme des Garçons deep cuts
+    "comme des garcons homme plus jacket", "comme des garcons noir jacket",
+    "comme des garcons shirt jacket",
+    # Mihara Yasuhiro
+    "mihara yasuhiro boots", "mihara yasuhiro sneakers platform",
+]
+
 
 class TrendEngine:
     """
@@ -154,6 +237,7 @@ class TrendEngine:
 
     def __init__(self, max_queries: int = 120):
         self.max_queries = max_queries
+        self.cycle_counter = 0   # Tracks cycles for anchor rotation interval
         self.sources: list[TrendSource] = [
             GrailedVelocitySource(),
         ]
@@ -164,25 +248,57 @@ class TrendEngine:
     # PUBLIC API
     # ═══════════════════════════════════════════════════════════════════
 
-    async def get_cycle_targets(self, n: int = 60) -> list[str]:
+    async def get_cycle_targets(self, n: int = 20) -> list[str]:
         """
-        Returns a varied subset of targets for a single hunt cycle.
+        Returns a varied, cooldown-aware subset of targets for one hunt cycle.
 
-        Pulls from the golden catalog (built from real Grailed sold data):
-          - Tier 1 items always included (high-price + high-volume)
-          - Tier 2: ~70% randomly selected each cycle
-          - Tier 3: ~30% randomly selected each cycle
-          - Dead queries (50+ runs, 0 deals) excluded throughout
+        Rotation model (replaces old tier1-always logic):
+          1. Build a global pool sorted by opportunity score (catalog + long-tail).
+          2. Split into anchor pool (top ANCHOR_POOL_SIZE) and rotation pool (rest).
+          3. Anchors included only if due (every ANCHOR_CYCLE_INTERVAL cycles)
+             AND not in cooldown.
+          4. Rotation pool: weighted-random draw (opp-score as weight), skipping
+             cooldown queries. Prioritises never-run queries with a strong boost.
+          5. Always include LONGTAIL_PER_CYCLE queries from the long-tail pool
+             (never-run long-tail queries get priority).
+          6. Dead queries excluded throughout.
 
-        Falls back to CORE_TARGETS + EXTENDED_TARGETS if catalog unavailable.
+        Result: full catalog coverage over time, no single query dominates,
+        expensive Grailed scrapes not wasted inside sold-cache window.
         """
         catalog = await self._get_golden_catalog()
         dead = self._get_dead_queries()
+        perf = self._load_performance()
+        now = datetime.utcnow()
+        cooldown_delta = timedelta(minutes=QUERY_COOLDOWN_MINUTES)
 
-        def _clean(queries: list[str]) -> list[str]:
-            """Dedupe and remove dead queries from a list."""
-            seen = set()
-            out = []
+        def _in_cooldown(query: str) -> bool:
+            """True if query ran less than QUERY_COOLDOWN_MINUTES ago."""
+            entry = perf.get(query) or perf.get(query.lower())
+            if not entry:
+                return False
+            last = entry.get("last_run")
+            if not last:
+                return False
+            try:
+                last_dt = datetime.fromisoformat(last)
+                return (now - last_dt) < cooldown_delta
+            except (ValueError, TypeError):
+                return False
+
+        def _never_run(query: str) -> bool:
+            """True only for queries with NO last_run timestamp — completely new queries.
+            Queries that were reset (total_runs=0 but last_run exists) are treated
+            as cooled-down regulars, not as brand-new, to prevent them dominating
+            every cycle after a reset."""
+            entry = perf.get(query) or perf.get(query.lower())
+            if not entry:
+                return True  # Never seen at all
+            return entry.get("last_run") is None  # Seen but never actually executed
+
+        def _clean_pool(queries: list[str]) -> list[str]:
+            """Dedupe and strip dead queries."""
+            seen, out = set(), []
             for q in queries:
                 ql = q.lower().strip()
                 if ql not in seen and ql not in dead:
@@ -190,46 +306,125 @@ class TrendEngine:
                     out.append(q)
             return out
 
+        # ── Build global catalog pool sorted by opp score ──────────────────
         if catalog:
-            t1 = _clean([e["query"] for e in catalog.get("tier1", [])])
-            t2 = _clean([e["query"] for e in catalog.get("tier2", [])])
-            t3 = _clean([e["query"] for e in catalog.get("tier3", [])])
-
-            # Tier 1: always all of them
-            selected = list(t1)
-            used = {q.lower() for q in selected}
-            slots_left = n - len(selected)
-
-            # Tier 2: take ~70% randomly
-            random.shuffle(t2)
-            t2_pick = max(1, int(len(t2) * 0.70))
-            for q in t2[:t2_pick]:
-                if len(selected) >= n:
-                    break
-                if q.lower() not in used:
-                    selected.append(q)
-                    used.add(q.lower())
-
-            # Tier 3: take ~30% randomly
-            random.shuffle(t3)
-            t3_pick = max(1, int(len(t3) * 0.30))
-            for q in t3[:t3_pick]:
-                if len(selected) >= n:
-                    break
-                if q.lower() not in used:
-                    selected.append(q)
-                    used.add(q.lower())
-
-            logger.info(
-                f"🎯 Cycle targets: {len(selected)} total from golden catalog "
-                f"(T1={len(t1)}, T2 sample={min(t2_pick, len(t2))}, T3 sample={min(t3_pick, len(t3))}) "
-                f"| {len(dead)} dead excluded"
+            all_entries = (
+                catalog.get("tier1", [])
+                + catalog.get("tier2", [])
+                + catalog.get("tier3", [])
             )
-            return selected
+            # Sort globally by opportunity score, best first
+            all_entries.sort(key=lambda e: e.get("opportunity_score", 0), reverse=True)
+            catalog_queries = _clean_pool([e["query"] for e in all_entries])
+            opp_scores = {
+                e["query"].lower(): e.get("opportunity_score", 1)
+                for e in all_entries
+            }
+        else:
+            catalog_queries = []
+            opp_scores = {}
 
-        # Fallback: catalog unavailable, use static lists with rotation
-        logger.warning("⚠️  Golden catalog unavailable — falling back to static targets")
-        return self._fallback_targets(n, dead)
+        # Fall back to static lists if catalog empty
+        if not catalog_queries:
+            logger.warning("⚠️  Golden catalog unavailable — falling back to static targets")
+            return self._fallback_targets(n, dead)
+
+        # ── Split into anchor and rotation pools ───────────────────────────
+        anchor_pool   = catalog_queries[:ANCHOR_POOL_SIZE]
+        rotation_pool = catalog_queries[ANCHOR_POOL_SIZE:]
+
+        selected: list[str] = []
+        used: set[str] = set()
+
+        # ── 1. Anchor queries (every ANCHOR_CYCLE_INTERVAL cycles) ─────────
+        anchor_due = (self.cycle_counter % ANCHOR_CYCLE_INTERVAL == 0)
+        anchors_added = 0
+        for q in anchor_pool:
+            if q.lower() in used:
+                continue
+            if anchor_due and not _in_cooldown(q):
+                selected.append(q)
+                used.add(q.lower())
+                anchors_added += 1
+
+        # ── 2. Never-run queries get priority slots ─────────────────────────
+        never_run = [q for q in catalog_queries if _never_run(q) and q.lower() not in used]
+        for q in never_run[:5]:   # up to 5 priority never-run slots
+            if q.lower() not in used and not _in_cooldown(q):
+                selected.append(q)
+                used.add(q.lower())
+
+        # ── 3. Rotation pool: weighted-random draw ─────────────────────────
+        candidates = [q for q in rotation_pool if q.lower() not in used and not _in_cooldown(q)]
+        # Weight by opportunity score; never-run queries get a 2× boost
+        weights = []
+        for q in candidates:
+            w = opp_scores.get(q.lower(), 1.0)
+            if _never_run(q):
+                w *= 2.0
+            weights.append(w)
+
+        slots = max(0, ROTATION_CYCLE_SIZE - (len(selected) - anchors_added))
+        if candidates and slots > 0:
+            k = min(slots, len(candidates))
+            total_w = sum(weights)
+            norm = [w / total_w for w in weights]
+            rotation_picks = []
+            # Weighted sample without replacement
+            pool_copy = list(zip(candidates, norm))
+            for _ in range(k):
+                if not pool_copy:
+                    break
+                r = random.random()
+                cumulative = 0.0
+                chosen_idx = len(pool_copy) - 1
+                for idx, (_, p) in enumerate(pool_copy):
+                    cumulative += p
+                    if r <= cumulative:
+                        chosen_idx = idx
+                        break
+                chosen_q = pool_copy[chosen_idx][0]
+                rotation_picks.append(chosen_q)
+                pool_copy.pop(chosen_idx)
+                # Re-normalise remaining weights
+                remaining_w = sum(p for _, p in pool_copy)
+                if remaining_w > 0:
+                    pool_copy = [(q, p / remaining_w) for q, p in pool_copy]
+            for q in rotation_picks:
+                if q.lower() not in used:
+                    selected.append(q)
+                    used.add(q.lower())
+
+        # ── 4. Long-tail pool ──────────────────────────────────────────────
+        lt_never_run = [q for q in LONGTAIL_TARGETS
+                        if q.lower() not in dead and q.lower() not in used and _never_run(q)]
+        lt_cooled = [q for q in LONGTAIL_TARGETS
+                     if q.lower() not in dead and q.lower() not in used
+                     and not _never_run(q) and not _in_cooldown(q)]
+
+        # Prioritise never-run long-tail, then cooled-down long-tail
+        lt_candidates = lt_never_run + lt_cooled
+        random.shuffle(lt_candidates)
+        for q in lt_candidates[:LONGTAIL_PER_CYCLE]:
+            if q.lower() not in used:
+                selected.append(q)
+                used.add(q.lower())
+
+        # ── Increment internal cycle counter ──────────────────────────────
+        self.cycle_counter += 1
+
+        # ── Log summary ───────────────────────────────────────────────────
+        never_run_count = sum(1 for q in selected if _never_run(q))
+        logger.info(
+            f"🎯 Cycle targets: {len(selected)} queries | "
+            f"anchors={anchors_added} (due={anchor_due}) | "
+            f"rotation={len(selected) - anchors_added - LONGTAIL_PER_CYCLE} | "
+            f"long-tail={min(LONGTAIL_PER_CYCLE, len(lt_candidates))} | "
+            f"never-run={never_run_count} | "
+            f"{len(dead)} dead excluded | "
+            f"catalog size={len(catalog_queries)}"
+        )
+        return selected
 
     async def get_today_targets(self) -> list[str]:
         """
@@ -437,15 +632,34 @@ class TrendEngine:
     # ═══════════════════════════════════════════════════════════════════
 
     def _fallback_targets(self, n: int, dead: set) -> list[str]:
-        """Static fallback when golden catalog is unavailable."""
-        candidates = []
-        seen = set()
-        for q in CORE_TARGETS + EXTENDED_TARGETS:
-            ql = q.lower().strip()
-            if ql not in seen and ql not in dead:
-                candidates.append(q)
-                seen.add(ql)
-        random.shuffle(candidates)
+        """Static fallback when golden catalog is unavailable. Respects cooldown."""
+        perf = self._load_performance()
+        now = datetime.utcnow()
+        cooldown_delta = timedelta(minutes=QUERY_COOLDOWN_MINUTES)
+
+        def _cooled(q: str) -> bool:
+            entry = perf.get(q) or perf.get(q.lower())
+            if not entry or not entry.get("last_run"):
+                return True
+            try:
+                return (now - datetime.fromisoformat(entry["last_run"])) >= cooldown_delta
+            except (ValueError, TypeError):
+                return True
+
+        # Never-run first, then cooled-down, both from combined static pool
+        all_static = list(dict.fromkeys(
+            q for q in CORE_TARGETS + EXTENDED_TARGETS + LONGTAIL_TARGETS
+            if q.lower().strip() not in dead
+        ))
+        never_run = [q for q in all_static if not perf.get(q) and not perf.get(q.lower())]
+        cooled = [q for q in all_static if q not in never_run and _cooled(q)]
+        rest = [q for q in all_static if q not in never_run and q not in cooled]
+
+        random.shuffle(never_run)
+        random.shuffle(cooled)
+        random.shuffle(rest)
+
+        candidates = never_run + cooled + rest
         return candidates[:n]
 
     def _get_dead_queries(self) -> set[str]:
