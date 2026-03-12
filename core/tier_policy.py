@@ -19,6 +19,7 @@ BEGINNER_BRANDS = {
 PRO_BRANDS = BEGINNER_BRANDS | {
     "rolex", "omega", "tudor", "cartier", "van cleef & arpels", "vca",
     "chanel", "hermès", "hermes", "celine", "bottega veneta", "saint laurent",
+    "yves saint laurent",
 }
 
 BIG_BALLER_BRANDS = PRO_BRANDS | {
@@ -27,11 +28,27 @@ BIG_BALLER_BRANDS = PRO_BRANDS | {
     "raf simons", "helmut lang",
 }
 
-WATCH_TERMS = {"watch", "datejust", "daytona", "submariner", "gmt", "explorer", "speedmaster", "seamaster", "black bay", "pelagos", "tank", "santos", "nautilus", "aquanaut", "royal oak", "overseas"}
-BAG_TERMS = {"bag", "handbag", "purse", "wallet on chain", "woc", "speedy", "neverfull", "pochette", "metis", "evelyne", "picotin", "garden party", "triomphe", "cassette", "jodie", "birkin", "kelly", "constance", "re-edition"}
-JEWELRY_TERMS = {"ring", "bracelet", "necklace", "pendant", "chain", "cross", "dagger", "alhambra", "love bracelet", "juste un clou", "keys", "hardware"}
-SHOE_TERMS = {"geobasket", "replica", "gat", "sneaker", "sneakers", "boots", "boot", "tabi", "wyatt", "dunks"}
+WATCH_TERMS = {
+    "watch", "datejust", "daytona", "submariner", "gmt", "gmt master", "explorer",
+    "speedmaster", "seamaster", "black bay", "pelagos", "tank", "santos",
+    "nautilus", "aquanaut", "royal oak", "overseas", "patrimony", "calatrava",
+}
+BAG_TERMS = {
+    "bag", "handbag", "purse", "wallet on chain", "woc", "speedy", "neverfull",
+    "pochette", "metis", "evelyne", "picotin", "garden party", "triomphe",
+    "cassette", "jodie", "birkin", "kelly", "constance", "re-edition", "flap",
+}
+JEWELRY_TERMS = {
+    "ring", "bracelet", "necklace", "pendant", "chain", "cross", "dagger",
+    "alhambra", "love bracelet", "juste un clou", "keys", "hardware", "paper chain",
+}
+SHOE_TERMS = {"geobasket", "replica", "gat", "sneaker", "sneakers", "boots", "boot", "tabi", "wyatt", "dunks", "america's cup", "america’s cup"}
 ARCHIVE_TERMS = {"archive", "vintage", "raf simons", "helmut lang", "rick owens", "number nine", "ccp", "carol christian poell"}
+
+STRICT_AUTH_BRANDS = {
+    "rolex", "omega", "tudor", "cartier", "van cleef & arpels", "vca", "chanel",
+    "hermès", "hermes", "patek philippe", "audemars piguet", "vacheron constantin",
+}
 
 
 def _title(item: Any) -> str:
@@ -73,6 +90,10 @@ def _is_archive(item: Any) -> bool:
     return _has_any(_title(item), ARCHIVE_TERMS)
 
 
+def _requires_strict_auth(item: Any, brand: str) -> bool:
+    return brand in STRICT_AUTH_BRANDS or _is_watch(item)
+
+
 def classify_discord_tiers(
     item: Any,
     profit: float,
@@ -80,15 +101,15 @@ def classify_discord_tiers(
     signals: Any = None,
     auth_result: Any = None,
 ) -> TierDecision:
-    title = _title(item)
     brand = _brand(item)
     price = float(getattr(item, "price", 0) or 0)
     liquidity = float(getattr(signals, "liquidity_score", 0) or 0)
     auth_conf = float(getattr(auth_result, "confidence", 0.0) or 0.0) if auth_result else 0.0
+    strict_auth_required = _requires_strict_auth(item, brand)
 
-    beginner_floor = profit >= 150 and margin >= 0.30 and liquidity >= 8
-    pro_floor = profit >= 300 and margin >= 0.25 and price < 10000
-    big_floor = profit >= 500 and margin >= 0.20 and price >= 5000
+    beginner_floor = profit >= 150 and margin >= 0.30 and liquidity >= 8.0 and price <= 2500
+    pro_floor = profit >= 300 and margin >= 0.25 and liquidity >= 6.5 and price < 10000
+    big_floor = profit >= 500 and margin >= 0.20 and liquidity >= 5.0 and price >= 5000
 
     if big_floor and brand in BIG_BALLER_BRANDS and (
         _is_watch(item) or _is_bag(item) or _is_archive(item)
@@ -96,7 +117,7 @@ def classify_discord_tiers(
         return TierDecision(
             minimum_tier="big_baller",
             channel_tiers=["big_baller"],
-            reasons=["high-ticket", "strong auth", "big baller category"],
+            reasons=["high-ticket", "strong auth", "big baller category", "tier-specific liquidity floor"],
         )
 
     if beginner_floor and brand in BEGINNER_BRANDS and (
@@ -106,26 +127,29 @@ def classify_discord_tiers(
         (brand == "prada" and (_is_bag(item) or _is_shoe(item))) or
         (brand == "rick owens" and _is_shoe(item)) or
         (brand in {"maison margiela", "margiela"} and _is_shoe(item))
-    ):
+    ) and not strict_auth_required:
         return TierDecision(
             minimum_tier="beginner",
             channel_tiers=["beginner", "pro", "big_baller"],
             reasons=["beginner-safe category", "high liquidity", "nested routing"],
         )
 
+    pro_auth_floor = 0.82 if strict_auth_required else 0.72
     if pro_floor and brand in PRO_BRANDS and (
         _is_watch(item) or _is_jewelry(item) or _is_bag(item) or _is_archive(item)
-    ) and auth_conf >= 0.72:
+    ) and auth_conf >= pro_auth_floor:
+        reasons = ["pro category", "nested routing", "tier-specific liquidity floor"]
+        reasons.append("strict auth category" if strict_auth_required else "standard auth threshold")
         return TierDecision(
             minimum_tier="pro",
             channel_tiers=["pro", "big_baller"],
-            reasons=["pro category", "auth-eligible", "nested routing"],
+            reasons=reasons,
         )
 
     # Fallback to threshold-only routing for simple cases so we don't drop obvious wins.
-    if big_floor:
-        return TierDecision("big_baller", ["big_baller"], ["threshold fallback"])
-    if pro_floor:
+    if big_floor and auth_conf >= 0.80:
+        return TierDecision("big_baller", ["big_baller"], ["threshold fallback", "high-ticket"])
+    if pro_floor and auth_conf >= pro_auth_floor:
         return TierDecision("pro", ["pro", "big_baller"], ["threshold fallback"])
     if beginner_floor:
         return TierDecision("beginner", ["beginner", "pro", "big_baller"], ["threshold fallback"])
