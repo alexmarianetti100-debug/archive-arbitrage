@@ -1381,14 +1381,11 @@ class GapHunter:
                     continue
 
             # CRITICAL: Verify the item actually matches the brand/query
-            # Day 2 Fix 4: Strengthen brand matching for Poshmark relevance
+            # Stronger brand phrase and category matching to cut keyword-stuffed junk.
             query_words = query.lower().split()
             title_lower_check = item.title.lower()
 
-            # Brand name must appear in title (first 1-2 words of query = brand)
-            # e.g., "rick owens" from "rick owens geobasket", "gaultier" from "gaultier mesh top"
-            brand_words = query_words[:2] if len(query_words) >= 2 else query_words[:1]
-            brand_in_title = any(bw in title_lower_check for bw in brand_words)
+            brand_in_title = self._query_brand_in_title(query, title_lower_check)
 
             # For Japanese Mercari (jp.mercari.com), check for Japanese brand names or Chrome Hearts mention
             is_jp_mercari = "jp.mercari.com" in item.url or (hasattr(item, 'raw_data') and 'jp.mercari.com' in str(item.raw_data))
@@ -1401,6 +1398,11 @@ class GapHunter:
                     logger.debug(f"    Japanese brand match for '{query}': {item.title[:50]}")
 
             if not brand_in_title:
+                logger.debug(f"    Skipped brand mismatch for '{query}': {item.title[:50]}")
+                continue
+
+            if not is_jp_mercari and not self._query_category_matches_title(query, title_lower_check):
+                logger.debug(f"    Skipped category mismatch for '{query}': {item.title[:50]}")
                 continue
 
             # Require at least 2 query words to appear in the title (not just 1 brand word)
@@ -2220,7 +2222,7 @@ class GapHunter:
 
     @staticmethod
     def _detect_category(title: str) -> str:
-        """Detect item category from title for auth scoring."""
+        """Detect item category from title for auth scoring and query matching."""
         title_lower = title.lower()
         categories = {
             "shoes": [
@@ -2268,9 +2270,13 @@ class GapHunter:
             "hat": [
                 "hat", "cap", "beanie", "trucker hat", "new era",
             ],
+            "eyewear": [
+                "glasses", "sunglasses", "eyewear", "frames", "frame", "eyeglasses",
+                "cox ucker", "box officer", "trypoleagain",
+            ],
             "accessories": [
                 "necklace", "ring", "bracelet", "pendant", "jewelry",
-                "chain", "glasses", "sunglasses", "eyewear",
+                "chain",
                 "cross pendant", "dagger pendant", "floral cross",
                 "scroll bracelet", "paper chain", "orb necklace",
                 "pearl choker", "armor ring", "pearl necklace",
@@ -2281,6 +2287,64 @@ class GapHunter:
             if any(kw in title_lower for kw in keywords):
                 return cat
         return ""
+
+    @staticmethod
+    def _brand_aliases(brand: str) -> list[str]:
+        aliases = {
+            "number nine": ["number nine", "number (n)ine"],
+            "number (n)ine": ["number nine", "number (n)ine"],
+            "jean paul gaultier": ["jean paul gaultier", "gaultier", "jpg"],
+            "gaultier": ["jean paul gaultier", "gaultier", "jpg"],
+            "maison margiela": ["maison margiela", "maison martin margiela", "margiela", "mmm"],
+            "margiela": ["maison margiela", "maison martin margiela", "margiela", "mmm"],
+            "dior homme": ["dior homme", "dior men", "christian dior"],
+            "dior men": ["dior homme", "dior men", "christian dior"],
+            "christian dior": ["dior homme", "dior men", "christian dior"],
+            "thierry mugler": ["thierry mugler", "mugler"],
+            "mugler": ["thierry mugler", "mugler"],
+            "comme des garcons": ["comme des garcons", "cdg"],
+            "cdg": ["comme des garcons", "cdg"],
+            "takahiromiyashita": ["takahiromiyashita", "soloist"],
+            "soloist": ["takahiromiyashita", "soloist"],
+            "enfants riches deprimes": ["enfants riches deprimes", "erd"],
+            "erd": ["enfants riches deprimes", "erd"],
+        }
+        return aliases.get(brand, [brand] if brand else [])
+
+    @classmethod
+    def _query_brand_in_title(cls, query: str, title: str) -> bool:
+        query_brand = cls._detect_brand(query)
+        if not query_brand:
+            query_words = query.lower().split()
+            brand_words = query_words[:2] if len(query_words) >= 2 else query_words[:1]
+            return any(bw in title for bw in brand_words)
+        return any(alias in title for alias in cls._brand_aliases(query_brand))
+
+    @classmethod
+    def _query_category_matches_title(cls, query: str, title: str) -> bool:
+        query_lower = query.lower()
+        title_lower = title.lower()
+
+        query_category = cls._detect_category(query_lower)
+        if not query_category:
+            if any(token in query_lower for token in ["cox ucker", "box officer", "trypoleagain"]):
+                query_category = "eyewear"
+            elif "gabardine" in query_lower:
+                # Too ambiguous to enforce a category match yet.
+                return True
+
+        if not query_category or query_category == "accessories":
+            return True
+
+        title_category = cls._detect_category(title_lower)
+        if title_category and title_category != query_category:
+            return False
+
+        if query_category == "eyewear":
+            eyewear_tokens = ["glasses", "sunglasses", "eyewear", "frames", "frame", "eyeglasses", "cox ucker", "box officer", "trypoleagain"]
+            return any(tok in title_lower for tok in eyewear_tokens)
+
+        return True
 
     @staticmethod
     def _detect_brand(title: str) -> str:
