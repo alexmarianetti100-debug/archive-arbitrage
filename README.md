@@ -1,320 +1,156 @@
 # Archive Arbitrage
 
-Automated archive fashion arbitrage platform. Scrapes multiple marketplaces for underpriced designer pieces, calculates real market pricing using live sold comps, detects iconic collections, and surfaces profitable opportunities.
+Archive Arbitrage is a fashion resale arbitrage tool for finding underpriced archive and luxury items, estimating real resale value from sold comps, and sending deal alerts.
 
-## 🚀 Quick Start (New Setup)
+## Canonical Runtime
+
+The real runtime for this project is the local virtualenv:
 
 ```bash
-# 1. Clone and enter directory
-cd archive-arbitrage
-
-# 2. Run setup validation
-./validate_setup.sh
-
-# 3. Install dependencies
-pip install -r requirements.txt
-playwright install chromium
-
-# 4. Configure environment
-cp .env.example .env
-# Edit .env with your actual credentials
-
-# 5. Run dependency check
-python3 core/dependencies.py
-
-# 6. Test with single cycle
-python3 gap_hunter.py --once
+source venv/bin/activate
 ```
 
-## 📋 Prerequisites
-
-- Python 3.11+
-- pip
-- Virtual environment (recommended)
-- Playwright browsers (auto-installed)
-
-## 🔧 Installation
-
-### Option 1: Standard Installation
+Inside that venv, the main service is:
 
 ```bash
-# Create virtual environment
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Install Playwright browsers
-playwright install chromium
-
-# Verify installation
-python3 core/dependencies.py
+python gap_hunter.py
 ```
 
-### Option 2: Development Installation
+Outside the venv, the project may appear broken because required dependencies are not available globally. That is expected.
 
+---
+
+## What To Run
+
+### Main service
 ```bash
-# Install with development dependencies
-pip install -r requirements.txt
-pip install -r requirements-dev.txt
-
-# Or install as editable package
-pip install -e ".[dev]"
+source venv/bin/activate
+python gap_hunter.py
 ```
 
-## ⚙️ Configuration
+### Fast smoke test
+This is the safest way to verify the runner without triggering the full Japan sweep:
 
-### Quick Setup
-
-1. Copy the example environment file:
-   ```bash
-   cp .env.example .env.local
-   ```
-
-2. Edit `.env.local` and fill in your credentials (see below for details)
-
-3. **Never commit `.env.local` to git!** It's already in `.gitignore`.
-
-### Required Configuration
-
-| Variable | Source | Description |
-|----------|--------|-------------|
-| `TELEGRAM_BOT_TOKEN` | [@BotFather](https://t.me/botfather) | Telegram bot token for alerts |
-| `DATABASE_URL` | Default provided | SQLite database path |
-
-### Optional Configuration
-
-| Variable | Source | Description |
-|----------|--------|-------------|
-| `STRIPE_SECRET_KEY` | [Stripe Dashboard](https://dashboard.stripe.com) | Payment processing |
-| `STRIPE_PRICE_ID` | Stripe Dashboard | Subscription price ID |
-| `DISCORD_WEBHOOK_URL` | Discord Channel Settings | Discord alerts |
-| `WHOP_API_KEY` | [Whop Dashboard](https://whop.com/dashboard) | Community posts |
-| `PROXY_USERNAME/PASSWORD` | [Webshare](https://www.webshare.io/) | Vinted proxy |
-
-### Configuration Validation
-
-Validate your configuration:
 ```bash
-# Check all environment variables
-python3 -c "from core.config import ConfigValidator; ConfigValidator().validate()"
-
-# Show configuration help
-python3 gap_hunter.py --help-config
+source venv/bin/activate
+python gap_hunter.py --once --max-targets 1 --skip-japan
 ```
 
-### Security Notes
-
-- **Never commit `.env.local` to git** - it contains secrets
-- Use `.env.example` as a template only
-- Rotate secrets regularly
-- Use Stripe test keys for development (`sk_test_...`)
-- Use separate Telegram bot for testing
-
-## 🎯 Running the Service
-
-### Gap Hunter (Main Service)
-
+### One cycle with Japan enabled
 ```bash
-# Run one cycle (good for testing)
-python3 gap_hunter.py --once
-
-# Run continuously (production)
-python3 gap_hunter.py
-
-# Filter by brand
-python3 gap_hunter.py --brand "rick owens"
-
-# Custom queries
-python3 gap_hunter.py --query "rick owens dunks,raf simons bomber"
-
-# Limit targets per cycle
-python3 gap_hunter.py --max-targets 10
+source venv/bin/activate
+python gap_hunter.py --once --max-targets 3
 ```
 
-### Legacy Pipeline
+### Legacy pipeline
+Still present, but not the primary runtime:
 
 ```bash
-# Full pipeline: scrape → qualify → alerts
+source venv/bin/activate
 python pipeline.py run
-
-# Just scrape
-python pipeline.py scrape
-
-# Start API server
-python pipeline.py serve
 ```
 
-### Testing
+---
 
+## Current Project Shape
+
+### Primary path
+- `gap_hunter.py` — canonical runtime
+- `trend_engine.py` — dynamic target selection / rotation
+- `core/` — pricing, validation, alerting, Japan integration, state helpers
+- `scrapers/` — marketplace scrapers
+- `data/` — local state, caches, DB files, trend history
+
+### Secondary / legacy
+- `pipeline.py` — older pipeline path, still real but no longer the center of gravity
+- `api/` — API-related work
+- `frontend-react/` — frontend work
+
+### Support tooling
+- `scripts/debug/` — debug helpers
+- `scripts/verify/` — manual verification / one-off operational checks
+- `tests/` — actual pytest-style test suite
+- `docs/archive/` — historical plans, status docs, and implementation notes
+
+---
+
+## Setup
+
+### 1. Activate the venv
 ```bash
-# Run all tests
-pytest
-
-# Run with coverage
-pytest --cov=.
-
-# Run specific test file
-pytest tests/test_auth_system.py
-
-# Validate dependencies
-python3 core/dependencies.py
-
-# Run setup validation
-./validate_setup.sh
+source venv/bin/activate
 ```
 
-## 📁 Project Structure
-
-```
-archive-arbitrage/
-├── gap_hunter.py           # Main service (new)
-├── pipeline.py             # Legacy pipeline
-├── requirements.txt        # Production dependencies
-├── requirements-dev.txt    # Development dependencies
-├── setup.py               # Package setup
-├── .env.example           # Environment template
-├── validate_setup.sh      # Setup validator
-│
-├── core/                  # Core business logic
-│   ├── dependencies.py    # Dependency validation
-│   ├── authenticity_v2.py # Authentication system
-│   ├── deal_quality.py    # Deal scoring
-│   ├── pricing_engine.py  # Price calculations
-│   └── whop_alerts.py     # Whop integration
-│
-├── scrapers/              # Marketplace scrapers
-│   ├── grailed.py         # Grailed (working)
-│   ├── poshmark.py        # Poshmark (working)
-│   ├── ebay.py            # eBay (working)
-│   ├── depop.py           # Depop (Playwright)
-│   ├── vinted.py          # Vinted (needs fix)
-│   └── base.py            # Base scraper class
-│
-├── db/                    # Database models
-├── api/                   # REST API
-├── frontend-react/        # Web frontend
-├── tests/                 # Test suite
-└── data/                  # Local data storage
-```
-
-## 🔍 Dependency Validation
-
-The service validates dependencies on startup. If something is missing:
-
+### 2. Verify dependencies
 ```bash
-# Check all dependencies
-python3 core/dependencies.py
-
-# Check only critical (required) dependencies
-python3 core/dependencies.py --critical-only
-
-# Check development dependencies too
-python3 core/dependencies.py --dev
+python core/dependencies.py --critical-only
 ```
 
-## 🐛 Troubleshooting
-
-### Missing Dependencies
-
+### 3. Validate config
 ```bash
-# If you see "❌ CRITICAL DEPENDENCIES MISSING"
+python gap_hunter.py --help-config
+```
+
+### 4. Install / update deps if needed
+```bash
 pip install -r requirements.txt
-playwright install chromium
+python -m playwright install chromium
 ```
 
-### Vinted Not Working
+---
 
-Vinted scraper is currently broken. The service will skip it automatically.
-See `BACKLOG.md` for planned fixes.
+## Core Commands
 
-### Database Issues
-
+### Main runner
 ```bash
-# Reset database
-rm data/archive.db
-python3 -c "from db.sqlite_models import init_db; init_db()"
+python gap_hunter.py
 ```
 
-### Permission Errors
-
+### Useful flags
 ```bash
-# Make scripts executable
-chmod +x validate_setup.sh
-chmod +x run.sh
-chmod +x stop.sh
+python gap_hunter.py --once
+python gap_hunter.py --brand "rick owens"
+python gap_hunter.py --query "rick owens dunks,raf simons bomber"
+python gap_hunter.py --max-targets 10
+python gap_hunter.py --skip-japan
 ```
 
-## 📊 Current Status
-
-### ✅ Working
-- **Grailed Scraper** - Active listings + sold comps via Algolia API
-- **Poshmark Scraper** - HTML scraping with CSS selectors
-- **eBay Scraper** - API + HTML fallback
-- **Depop Scraper** - Playwright browser automation
-- **Authentication System** - Multi-signal fake detection
-- **Deal Quality Scoring** - 0-100 score with fire levels
-- **Telegram Alerts** - Subscriber management + deal alerts
-- **Discord Alerts** - Rich embeds with tiers
-- **Whop Integration** - Deal posting to community
-
-### ⚠️ Partially Working
-- **Vinted Scraper** - All domains returning 0 items (needs fix)
-
-### ❌ Removed
-- **Mercari** - Blocked by Cloudflare Enterprise
-- **ShopGoodwill** - API consistently returns 500
-
-## 🛠️ Development
-
-### Code Quality
-
+### Cache / data helpers
 ```bash
-# Format code
-black .
-
-# Lint
-flake8 .
-
-# Type check
-mypy .
-
-# Run all checks
-black . && flake8 . && mypy .
+python gap_hunter.py --cache-stats
+python gap_hunter.py --cache-flush
+python gap_hunter.py --cache-clear
+python gap_hunter.py --data-metrics
+python gap_hunter.py --data-prune
 ```
 
-### Adding New Dependencies
+### Blocklist helpers
+```bash
+python gap_hunter.py --blocklist-list
+python gap_hunter.py --blocklist-block SELLER_NAME
+python gap_hunter.py --blocklist-unblock SELLER_NAME
+python gap_hunter.py --blocklist-stats
+```
 
-1. Add to `requirements.txt` with pinned version
-2. Update `core/dependencies.py` REQUIRED_DEPENDENCIES list
-3. Document in README
-4. Test with `python3 core/dependencies.py`
+---
 
-## 📚 Documentation
+## Integrations
 
-- `CLI_GUIDE.md` - Command-line interface guide
-- `BACKLOG.md` - Feature backlog and roadmap
-- `FIX_PLAN.md` - Current fix plan (Phase 1-6)
-- `docs/` - Additional documentation
+Wired into the current `gap_hunter.py` path:
+- Telegram alerts
+- Discord alerts
+- Whop alerts
+- Japan arbitrage scan
 
-## 🤝 Contributing
+For current reality, see:
+- `docs/STATUS.md`
+- `docs/ARCHITECTURE.md`
+- `docs/OPERATIONS.md`
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run tests: `pytest`
-5. Run linting: `black . && flake8 .`
-6. Submit a pull request
+---
 
-## 📝 License
+## Notes
 
-Private - All rights reserved.
-
-## 🆘 Support
-
-For issues or questions:
-1. Check `BACKLOG.md` for known issues
-2. Run `python3 core/dependencies.py` to verify setup
-3. Check logs in `data/` directory
-4. Review `.env` configuration
+- The repo has been through several generations. Not every top-level file represents the current path.
+- `gap_hunter.py` is the current source of truth for the live arbitrage runner.
+- Historical implementation docs have been moved into `docs/archive/` to reduce noise.
