@@ -68,3 +68,12 @@ htmlcov/
 # Local development
 *.local
 local_settings.py
+
+# Local artifact clutter
+.local-artifacts/
+*.bak
+*_debug.png
+*_health.json
+*.db-shm
+*.db-wal
+*.jsonl
