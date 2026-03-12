@@ -63,6 +63,7 @@ from core.authenticity_v2 import AuthenticityCheckerV2, format_auth_bar, format_
 from core.desirability import check_desirability, REJECT_PATTERNS
 from telegram_bot import send_deal_to_subscribers, send_message, init_telegram_db, get_active_subscribers, TELEGRAM_CHANNEL_ID
 from core.discord_alerts import send_discord_alert, DISCORD_ENABLED
+from core.tier_policy import classify_discord_tiers
 from core.whop_alerts import send_whop_alert, format_whop_deal_content
 from core.deal_quality import calculate_deal_quality, format_signal_line, format_quality_header, DealSignals, THRESHOLD_FIRE_1
 from core.auth_filter import authenticate_comps, filter_authenticated_comps
@@ -1718,21 +1719,24 @@ class GapHunter:
             try:
                 # Discord
                 if DISCORD_ENABLED:
-                    from core.discord_alerts import determine_tier
-                    tier = determine_tier(item, net_profit, margin_percent / 100)
-                    discord_sent = await send_discord_alert(
-                        item=item,
-                        message=message,
-                        fire_level=signals.fire_level,
-                        signals=signals,
-                        auth_result=None,
-                        tier=tier,
-                    )
-                    if discord_sent:
-                        logger.info(f"    ✅ Discord alert sent ({tier} tier)")
-                        alerts_sent = True
+                    decision = classify_discord_tiers(item, net_profit, margin_percent / 100, signals=signals, auth_result=None)
+                    if decision.channel_tiers:
+                        discord_sent = await send_discord_alert(
+                            item=item,
+                            message=message,
+                            fire_level=signals.fire_level,
+                            signals=signals,
+                            auth_result=None,
+                            tier=decision.minimum_tier or "beginner",
+                            tiers=decision.channel_tiers,
+                        )
+                        if discord_sent:
+                            logger.info(f"    ✅ Discord alert sent ({decision.minimum_tier} -> {decision.channel_tiers})")
+                            alerts_sent = True
+                        else:
+                            logger.warning(f"    ❌ Discord alert failed")
                     else:
-                        logger.warning(f"    ❌ Discord alert failed")
+                        logger.info(f"    ⏭ Japan deal did not match a Discord tier policy")
             except Exception as e:
                 logger.error(f"    ❌ Discord error: {e}")
             
@@ -1932,13 +1936,21 @@ class GapHunter:
                 except Exception:
                     pass
 
-            # Determine tier for this deal
-            from core.discord_alerts import determine_tier
-            deal_tier = determine_tier(item, deal.profit_estimate, deal.gap_percent)
-            logger.info(f"    📊 Deal tier: {deal_tier} (profit: ${deal.profit_estimate:.0f}, margin: {deal.gap_percent*100:.0f}%)")
+            # Determine subscription tier routing for this deal
+            tier_decision = classify_discord_tiers(
+                item,
+                deal.profit_estimate,
+                deal.gap_percent,
+                signals=signals,
+                auth_result=auth_result,
+            )
+            logger.info(
+                f"    📊 Deal tier decision: {tier_decision.minimum_tier} -> {tier_decision.channel_tiers} "
+                f"(profit: ${deal.profit_estimate:.0f}, margin: {deal.gap_percent*100:.0f}%)"
+            )
             
-            # Post to Discord
-            if DISCORD_ENABLED:
+            # Post to Discord using nested entitlement routing
+            if DISCORD_ENABLED and tier_decision.channel_tiers:
                 try:
                     await send_discord_alert(
                         item=item,
@@ -1946,7 +1958,8 @@ class GapHunter:
                         fire_level=signals.fire_level,
                         signals=signals,
                         auth_result=auth_result,
-                        tier=deal_tier,
+                        tier=tier_decision.minimum_tier or "beginner",
+                        tiers=tier_decision.channel_tiers,
                     )
                 except Exception as e:
                     logger.warning(f"Discord alert failed: {e}")

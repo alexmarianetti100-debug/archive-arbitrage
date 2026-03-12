@@ -250,12 +250,14 @@ async def send_discord_alert(
     signals: Any = None,
     auth_result: Any = None,
     tier: str = "beginner",
+    tiers: Optional[List[str]] = None,
 ) -> bool:
     """Send a deal alert to Discord via webhook.
 
     Args:
-        tier: 'beginner', 'pro', or 'big_baller' — determines which channel(s) to post to
-    
+        tier: legacy minimum tier label
+        tiers: explicit channel tiers to post to, using nested entitlement routing
+
     Returns True if sent successfully.
     """
     if not DISCORD_ENABLED:
@@ -268,37 +270,30 @@ async def send_discord_alert(
         "embeds": [embed],
     }
 
-    # Determine which webhook to use based on tier
-    # Each tier ONLY gets deals that qualify for that specific tier
+    channel_tiers = list(dict.fromkeys(tiers or [tier]))
     urls = []
-
-    if tier == "big_baller":
-        # Big Baller deals ONLY go to Big Baller channel
-        if DISCORD_WEBHOOK_BIG_BALLER:
-            urls.append(DISCORD_WEBHOOK_BIG_BALLER)
-    elif tier == "pro":
-        # Pro deals ONLY go to Pro channel
-        if DISCORD_WEBHOOK_PRO:
-            urls.append(DISCORD_WEBHOOK_PRO)
-    else:  # beginner
-        # Beginner deals ONLY go to Beginner channel
-        if DISCORD_WEBHOOK_BEGINNER:
-            urls.append(DISCORD_WEBHOOK_BEGINNER)
+    for channel_tier in channel_tiers:
+        if channel_tier == "beginner" and DISCORD_WEBHOOK_BEGINNER:
+            urls.append((channel_tier, DISCORD_WEBHOOK_BEGINNER))
+        elif channel_tier == "pro" and DISCORD_WEBHOOK_PRO:
+            urls.append((channel_tier, DISCORD_WEBHOOK_PRO))
+        elif channel_tier == "big_baller" and DISCORD_WEBHOOK_BIG_BALLER:
+            urls.append((channel_tier, DISCORD_WEBHOOK_BIG_BALLER))
 
     # Fallback to legacy webhooks if tier webhooks not configured
     if not urls:
         if DISCORD_WEBHOOK_URL:
-            urls.append(DISCORD_WEBHOOK_URL)
+            urls.append(("legacy", DISCORD_WEBHOOK_URL))
         if DISCORD_WEBHOOK_URL_2:
-            urls.append(DISCORD_WEBHOOK_URL_2)
+            urls.append(("legacy", DISCORD_WEBHOOK_URL_2))
 
     success = False
     async with httpx.AsyncClient(timeout=10) as client:
-        for webhook_url in urls:
+        for channel_tier, webhook_url in urls:
             try:
                 resp = await client.post(webhook_url, json=payload)
                 if resp.status_code in (200, 204):
-                    logger.info(f"✅ Discord alert sent ({tier}): {item.title[:50] if hasattr(item, 'title') else 'deal'}")
+                    logger.info(f"✅ Discord alert sent ({channel_tier}): {item.title[:50] if hasattr(item, 'title') else 'deal'}")
                     success = True
                 else:
                     logger.warning(f"Discord webhook returned {resp.status_code}: {resp.text[:200]}")
