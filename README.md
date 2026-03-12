@@ -65,6 +65,7 @@ python pipeline.py run
 - `pipeline.py` — older pipeline path, still real but no longer the center of gravity
 - `api/` — API-related work
 - `frontend-react/` — frontend work
+- `archive/legacy-runners/` — archived experimental/unified runner attempts
 
 ### Support tooling
 - `scripts/debug/` — debug helpers

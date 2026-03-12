@@ -104,7 +104,9 @@ Completed on 2026-03-12:
 - added `--skip-japan` for bounded smoke tests
 - moved debug scripts to `scripts/debug/`
 - moved verification scripts to `scripts/verify/`
+- moved root probe scripts to `scripts/manual-tests/`
 - archived historical implementation docs into `docs/archive/`
+- archived placeholder unified runners into `archive/legacy-runners/`
 
 Next likely cleanup items:
 - move root-level `test_*.py` live probes out of root
