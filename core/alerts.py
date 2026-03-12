@@ -561,7 +561,7 @@ async def alert_if_profitable(
         except Exception as e:
             print(f"  [Whop Hook] Failed to trigger Whop alert: {e}")
     else:
-        print(f"  [Whop Hook] Skipped: Not an A-grade deal (Grade: {getattr(price_info, deal_grade, None)})")
+        print(f"  [Whop Hook] Skipped: Not an A-grade deal (Grade: {getattr(price_info, 'deal_grade', None) or getattr(price_info, 'grade', None)})")
         
     return sent_discord
 

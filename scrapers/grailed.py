@@ -5,6 +5,7 @@ Uses Grailed's internal API when possible, with HTML fallback.
 """
 
 import json
+import os
 import re
 from datetime import datetime
 from typing import Optional
@@ -22,9 +23,14 @@ class GrailedScraper(BaseScraper):
     BASE_URL = "https://www.grailed.com"
     API_URL = "https://www.grailed.com/api"
     
-    # Grailed's Algolia search params (extracted from their frontend)
-    ALGOLIA_APP_ID = "MNRWEFSS2Q"
-    ALGOLIA_API_KEY = "a3a4de2e05d9e9b463911705fb6323ad"  # Public search key
+    # Grailed's Algolia search params - can be overridden via env vars
+    ALGOLIA_APP_ID = os.getenv("GRAILED_ALGOLIA_APP_ID", "MNRWEFSS2Q")
+    ALGOLIA_API_KEY = os.getenv("GRAILED_ALGOLIA_API_KEY", "a3a4de2e05d9e9b463911705fb6323ad")
+    
+    # Track API health
+    _api_failures = 0
+    _api_last_failure = None
+    _use_fallback = False
     
     async def search_sold(
         self,
@@ -79,9 +85,45 @@ class GrailedScraper(BaseScraper):
         "alexander mcqueen": "Alexander McQueen", "thierry mugler": "Thierry Mugler",
     }
 
-    async def _search_algolia(self, query: str, max_results: int, sold: bool = False) -> list[ScrapedItem]:
-        """Search using Grailed's Algolia backend."""
+    async def search_sold_bulk(self, query: str = "", pages: int = 10, per_page: int = 1000) -> list[ScrapedItem]:
+        """
+        Fetch multiple pages of sold items for high-volume analysis.
+        Runs pages concurrently (semaphore-limited). Used by trend engine.
+        """
+        import asyncio as _aio
+        sem = _aio.Semaphore(3)
+
+        async def _fetch_page(page: int) -> list[ScrapedItem]:
+            async with sem:
+                try:
+                    items = await self._search_algolia(query, per_page, sold=True, page=page)
+                    await _aio.sleep(0.3)
+                    return items
+                except Exception as e:
+                    print(f"Bulk page {page} failed: {e}")
+                    return []
+
+        results = await _aio.gather(*[_fetch_page(p) for p in range(pages)])
+        all_items = [item for batch in results for item in batch]
+
+        # Deduplicate by source_id
+        seen: set[str] = set()
+        unique = []
+        for item in all_items:
+            sid = item.source_id or item.url
+            if sid and sid not in seen:
+                seen.add(sid)
+                unique.append(item)
+
+        return unique
+
+    async def _search_algolia(self, query: str, max_results: int, sold: bool = False, page: int = 0) -> list[ScrapedItem]:
+        """Search using Grailed's Algolia backend with health tracking."""
         items = []
+        
+        # Check if we should use fallback due to previous failures
+        if self._use_fallback:
+            raise Exception("Algolia API marked as unhealthy, using fallback")
         
         # Use separate index for sold items
         index_name = "Listing_sold_production" if sold else "Listing_production"
@@ -90,7 +132,7 @@ class GrailedScraper(BaseScraper):
         payload = {
             "query": query,
             "hitsPerPage": max_results,
-            "page": 0,
+            "page": page,
         }
 
         # Try to extract designer for facet filtering (tighter results)
@@ -108,18 +150,37 @@ class GrailedScraper(BaseScraper):
         
         # Retry Algolia with backoff on rate limits (429) or server errors (5xx)
         response = None
+        last_error = None
+        
         for _attempt in range(3):
-            response = await self.client.post(algolia_url, json=payload, headers=headers)
-            if response.status_code == 200:
-                break
-            if response.status_code in (429, 500, 502, 503):
-                import asyncio as _aio
-                await _aio.sleep(1.5 * (_attempt + 1))
+            try:
+                response = await self.client.post(algolia_url, json=payload, headers=headers)
+                if response.status_code == 200:
+                    # Success - reset failure count
+                    if self._api_failures > 0:
+                        self._api_failures = 0
+                        self._use_fallback = False
+                    break
+                if response.status_code in (429, 500, 502, 503):
+                    import asyncio as _aio
+                    await _aio.sleep(1.5 * (_attempt + 1))
+                    continue
+                last_error = f"Algolia returned {response.status_code}"
+            except Exception as e:
+                last_error = str(e)
                 continue
-            raise Exception(f"Algolia returned {response.status_code}")
         
         if response is None or response.status_code != 200:
-            raise Exception(f"Algolia failed after retries (last status: {response.status_code if response else 'none'})")
+            # Track failure
+            self._api_failures += 1
+            self._api_last_failure = datetime.now()
+            
+            # Mark as unhealthy after 5 consecutive failures
+            if self._api_failures >= 5:
+                self._use_fallback = True
+                print(f"⚠️  Grailed Algolia API marked unhealthy after {self._api_failures} failures")
+            
+            raise Exception(f"Algolia failed after retries: {last_error or 'unknown error'}")
         
         data = response.json()
         
@@ -133,6 +194,16 @@ class GrailedScraper(BaseScraper):
                 continue
         
         return items
+    
+    @classmethod
+    def get_health_status(cls) -> dict:
+        """Get API health status."""
+        return {
+            "failures": cls._api_failures,
+            "last_failure": cls._api_last_failure.isoformat() if cls._api_last_failure else None,
+            "using_fallback": cls._use_fallback,
+            "healthy": cls._api_failures < 5 and not cls._use_fallback,
+        }
     
     def _parse_algolia_hit(self, hit: dict) -> Optional[ScrapedItem]:
         """Parse an Algolia search hit."""

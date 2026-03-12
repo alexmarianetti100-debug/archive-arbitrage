@@ -96,6 +96,23 @@ def detect_category(title: str) -> str | None:
 
 async def scrape_source(source_name: str, scraper_class, brand: str, max_items: int = 15) -> List[ScrapedItem]:
     """Scrape a single source for a brand."""
+    # Guard against a misconfigured scraper_class being a string
+    if isinstance(scraper_class, str):
+        try:
+            # First try our explicit ALL_SOURCES mapping if it has strings
+            resolver = ALL_SOURCES.get(source_name)
+            if isinstance(resolver, str):
+                import importlib
+                mod_name = f"scrapers.{resolver.lower()}"
+                mod = importlib.import_module(mod_name)
+                scraper_class = getattr(mod, resolver)
+            else:
+                scraper_class = resolver
+        except Exception as e:
+            import traceback; traceback.print_exc()
+            print(f"    {source_name} error resolving class: {e}")
+            return []
+
     try:
         async with scraper_class() as scraper:
             items = await scraper.search(brand, max_results=max_items)

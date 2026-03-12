@@ -27,7 +27,7 @@ from scrapers.demand_scorer import score_demand, DemandResult
 
 # Cache file for market prices
 CACHE_FILE = os.path.join(os.path.dirname(__file__), "../../data/price_cache.json")
-CACHE_TTL = 900  # 15 minutes
+CACHE_TTL = 0  # Always recalculate — no caching
 
 
 # Average market prices by brand (fallback estimates)

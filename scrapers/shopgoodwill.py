@@ -5,6 +5,7 @@ NOTE: ShopGoodwill's API is unreliable (returns 500 errors frequently).
 This scraper requires Playwright browser automation for reliable results.
 """
 
+import logging
 import re
 from datetime import datetime, timedelta
 from typing import Optional
@@ -13,6 +14,8 @@ from urllib.parse import urlencode
 from bs4 import BeautifulSoup
 
 from .base import BaseScraper, ScrapedItem
+
+logger = logging.getLogger("scraper.shopgoodwill")
 
 
 class ShopGoodwillScraper(BaseScraper):
@@ -81,23 +84,11 @@ class ShopGoodwillScraper(BaseScraper):
                     if item:
                         items.append(item)
                 except Exception as e:
-                    print(f"Error parsing item: {e}")
+                    logger.debug(f"Error parsing ShopGoodwill item: {e}")
                     continue
                     
         except Exception as e:
-            print(f"ShopGoodwill API unavailable ({e}).")
-            
-            # Try Playwright if available
-            if False:  # Playwright disabled
-                print("Falling back to Playwright browser automation...")
-                try:
-                    items = await self._search_scrape(query, max_results)
-                except Exception as pw_error:
-                    print(f"Playwright scraping also failed: {pw_error}")
-                    print("Note: ShopGoodwill may require running outside sandbox environment.")
-            else:
-                print("Note: ShopGoodwill search requires Playwright. Install with:")
-                print("  pip install playwright && playwright install chromium")
+            logger.debug(f"ShopGoodwill API unavailable ({e}), skipping.")
             
         return items
     

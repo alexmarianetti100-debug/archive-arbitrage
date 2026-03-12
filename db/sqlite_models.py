@@ -1,16 +1,21 @@
 """
 SQLite database models for Archive Arbitrage.
 Rebuilt 2026-02-18 — all functions required by the codebase.
+Updated 2026-03-09 — uses connection pooling
 """
 
 import sqlite3
 import json
+import logging
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 from dataclasses import dataclass, field, asdict
 
+from .connection_pool import get_pool, db_connection, db_transaction
+
 DB_PATH = Path(__file__).parent.parent / "data" / "archive.db"
+logger = logging.getLogger("sqlite_models")
 
 
 # ---------------------------------------------------------------------------
@@ -201,12 +206,20 @@ def _row_to_product(row) -> Product:
 # ---------------------------------------------------------------------------
 
 def _get_conn() -> sqlite3.Connection:
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(DB_PATH))
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA foreign_keys=ON")
-    return conn
+    """
+    Get database connection from pool (for backward compatibility).
+    
+    NOTE: This gets a connection from the pool. The caller is responsible
+    for returning it using conn.close() which returns it to the pool.
+    """
+    pool = get_pool()
+    return pool._get_connection()
+
+
+def _return_conn(conn):
+    """Return connection to pool (for backward compatibility)."""
+    pool = get_pool()
+    pool._return_connection(conn)
 
 
 # ---------------------------------------------------------------------------
@@ -215,8 +228,9 @@ def _get_conn() -> sqlite3.Connection:
 
 def init_db():
     """Create all tables and run migrations."""
-    conn = _get_conn()
-    c = conn.cursor()
+    # Use transaction context manager for proper connection handling
+    with db_transaction() as conn:
+        c = conn.cursor()
 
     # --- items ---
     c.execute("""
@@ -415,8 +429,7 @@ def init_db():
     ]:
         c.execute(stmt)
 
-    conn.commit()
-    conn.close()
+    # Transaction committed automatically by context manager
 
 
 # ---------------------------------------------------------------------------

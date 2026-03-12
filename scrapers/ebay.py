@@ -3,11 +3,16 @@ eBay scraper — HTML search scraping, no API key required.
 
 Fetches eBay search results page and extracts active BIN + auction listings.
 Archive pieces are frequently mis-listed by sellers unaware of brand value.
+
+Hardened implementation with rate limiting and timeouts.
 """
 
+import asyncio
 import logging
 import os
 import re
+import time
+from datetime import datetime
 from typing import List, Optional
 from urllib.parse import urlencode
 
@@ -19,6 +24,13 @@ from .base import BaseScraper, ScrapedItem
 logger = logging.getLogger("scraper.ebay")
 
 SEARCH_URL = "https://www.ebay.com/sch/i.html"
+
+# Timeouts (increased for eBay's slow responses)
+REQUEST_TIMEOUT = 45.0  # Was 15s
+CONNECT_TIMEOUT = 30.0  # Was implicit
+
+# Rate limiting
+MIN_REQUEST_INTERVAL = 1.0  # Max 1 request per second
 
 
 def _proxy_url() -> Optional[str]:
@@ -35,28 +47,78 @@ class EbayScraper(BaseScraper):
     """
     Scrape eBay active listings via HTML search.
     Uses curl_cffi Chrome impersonation + Webshare proxy to bypass eBay bot detection.
+    Includes rate limiting and health tracking.
     """
 
     SOURCE_NAME = "ebay"
     BASE_URL = "https://www.ebay.com"
+    
+    # Health tracking
+    _success_count = 0
+    _failure_count = 0
+    _last_request_time = 0
+    _last_failure = None
+    _rate_limit_hits = 0
 
     def __init__(self, proxy_manager=None):
         super().__init__(proxy_manager)
         self._proxy = _proxy_url()
 
+    async def _enforce_rate_limit(self):
+        """Enforce minimum time between requests."""
+        elapsed = time.time() - self._last_request_time
+        if elapsed < MIN_REQUEST_INTERVAL:
+            sleep_time = MIN_REQUEST_INTERVAL - elapsed
+            logger.debug(f"eBay rate limit: sleeping {sleep_time:.2f}s")
+            await asyncio.sleep(sleep_time)
+        self._last_request_time = time.time()
+
     async def _fetch(self, params: dict) -> Optional[BeautifulSoup]:
+        """Fetch eBay page with rate limiting and timeouts."""
+        await self._enforce_rate_limit()
+        
         proxies = {"https": self._proxy} if self._proxy else None
+        session = None
         try:
-            async with AsyncSession(impersonate="chrome124") as session:
-                url = SEARCH_URL + "?" + urlencode(params)
-                resp = await session.get(url, proxies=proxies, timeout=15)
-                if resp.status_code != 200 or "splashui/challenge" in str(resp.url):
-                    logger.debug(f"eBay bot challenge or non-200: {resp.status_code}")
-                    return None
-                return BeautifulSoup(resp.text, "html.parser")
+            # Use chrome120 (latest supported by curl_cffi)
+            session = AsyncSession(impersonate="chrome120")
+            url = SEARCH_URL + "?" + urlencode(params)
+            
+            # Use longer timeout for eBay
+            resp = await session.get(
+                url, 
+                proxies=proxies, 
+                timeout=REQUEST_TIMEOUT
+            )
+            
+            # Check for rate limiting
+            if resp.status_code == 429:
+                self._rate_limit_hits += 1
+                logger.warning(f"eBay rate limited (429)")
+                return None
+            
+            if resp.status_code != 200 or "splashui/challenge" in str(resp.url):
+                logger.debug(f"eBay bot challenge or non-200: {resp.status_code}")
+                return None
+            
+            # Parse HTML before closing session to avoid event loop issues
+            soup = BeautifulSoup(resp.text, "html.parser")
+            return soup
+            
+        except asyncio.TimeoutError:
+            logger.warning(f"eBay request timed out after {REQUEST_TIMEOUT}s")
+            return None
         except Exception as e:
             logger.debug(f"eBay fetch error: {e}")
             return None
+        finally:
+            # Close session without using async context manager
+            # to avoid event loop issues on macOS
+            if session:
+                try:
+                    await session.close()
+                except Exception:
+                    pass
 
     # Minimum credible price for archive fashion on eBay.
     # Auction starting bids ($1, $4, $13) and international placeholder prices
@@ -64,6 +126,7 @@ class EbayScraper(BaseScraper):
     MIN_PRICE = 30.0
 
     async def search(self, query: str, max_results: int = 20) -> List[ScrapedItem]:
+        """Search eBay with error handling and health tracking."""
         params = {
             "_nkw": query,
             "_sacat": "11450",  # Clothing, Shoes & Accessories
@@ -72,9 +135,24 @@ class EbayScraper(BaseScraper):
             "_sop": "10",       # Sort: newly listed
             "_ipg": "60",
         }
+        
         soup = await self._fetch(params)
         if soup is None:
+            self._record_failure("fetch_failed")
             return []
+            
+        items = self._parse_items(soup, max_results)
+        
+        if items:
+            self._record_success()
+            logger.info(f"  eBay: {len(items)} results for '{query}'")
+        else:
+            self._record_failure("parse_failed")
+            
+        return items
+    
+    def _parse_items(self, soup: BeautifulSoup, max_results: int) -> List[ScrapedItem]:
+        """Parse items from eBay HTML."""
         items = []
 
         for card in soup.select("li.s-card, li.s-item")[1:max_results + 6]:  # [1:] skips first ad card
@@ -153,8 +231,33 @@ class EbayScraper(BaseScraper):
                 logger.debug(f"eBay card parse error: {e}")
                 continue
 
-        logger.info(f"  eBay: {len(items)} results for '{query}'")
         return items
+
+    def _record_success(self):
+        """Record successful scrape."""
+        self.__class__._success_count += 1
+
+    def _record_failure(self, reason: str):
+        """Record failed scrape."""
+        self.__class__._failure_count += 1
+        self.__class__._last_failure = datetime.now()
+        logger.debug(f"eBay failure: {reason}")
+
+    @classmethod
+    def get_health_status(cls) -> dict:
+        """Get scraper health status."""
+        total = cls._success_count + cls._failure_count
+        success_rate = cls._success_count / total if total > 0 else 1.0
+
+        return {
+            "success_count": cls._success_count,
+            "failure_count": cls._failure_count,
+            "success_rate": success_rate,
+            "last_failure": cls._last_failure.isoformat() if cls._last_failure else None,
+            "rate_limit_hits": cls._rate_limit_hits,
+            "healthy": success_rate > 0.8 and cls._failure_count < 10,
+            "timeout_seconds": REQUEST_TIMEOUT,
+        }
 
     async def search_sold(self, query: str, max_results: int = 20) -> List[ScrapedItem]:
         """Scrape eBay sold/completed listings for price comps."""

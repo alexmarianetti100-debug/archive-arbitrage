@@ -1,4 +1,16 @@
 {
-  "blocklist": [],
-  "block_counts": {}
+  "blocklist": [
+    "bad_seller_123"
+  ],
+  "block_counts": {
+    "suspicious_seller_456": 1
+  },
+  "block_reasons": {
+    "bad_seller_123": "selling fakes"
+  },
+  "block_timestamps": {
+    "bad_seller_123": "2026-03-09T09:09:08.379663"
+  },
+  "updated_at": "2026-03-09T09:09:24.861169",
+  "version": 1
 }

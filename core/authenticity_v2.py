@@ -552,9 +552,11 @@ class AuthenticityCheckerV2:
     # Signal 3: Seller Reputation
     # ------------------------------------------------------------------
     def _check_seller(
-        self, name: str, rating: Optional[float], sales: int,
+        self, name: str, rating: Optional[float], sales: Optional[int],
         joined: Optional[str], source: str
     ) -> Tuple[float, List[str], SellerAnalysis]:
+        # Handle None values gracefully
+        sales = sales or 0
         analysis = SellerAnalysis(total_sales=sales, avg_rating=rating or 0)
         reasons = []
         score = 0.6  # Neutral start
