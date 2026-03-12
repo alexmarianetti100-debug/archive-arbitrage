@@ -27,6 +27,16 @@ from typing import List, Dict, Optional, Tuple
 from collections import defaultdict
 from pathlib import Path
 
+# Validate dependencies before importing optional ones
+sys.path.insert(0, os.path.dirname(__file__))
+from core.dependencies import validate_all
+
+# Run dependency check on startup
+if not validate_all(critical_only=True):
+    print("\n❌ Cannot start: Missing critical dependencies")
+    print("   Install with: pip install -r requirements.txt")
+    sys.exit(1)
+
 try:
     import imagehash
     from PIL import Image
@@ -38,14 +48,16 @@ except ImportError:
 from dotenv import load_dotenv
 load_dotenv()
 
-sys.path.insert(0, os.path.dirname(__file__))
+# Validate configuration before starting
+from core.config import validate_config
+validate_config(exit_on_error=True)
 
 from scrapers import GrailedScraper, PoshmarkScraper, ScrapedItem
 from scrapers.multi_platform import EbaySoldScraper
 from scrapers.vinted import VintedScraperWrapper as VintedScraper
 from scrapers.ebay import EbayScraper
 from scrapers.depop import DepopScraper
-# Mercari removed — Cloudflare Enterprise tier blocks all proxies
+from scrapers.mercari import MercariScraper
 # ShopGoodwill removed — API consistently returns 500
 from core.authenticity_v2 import AuthenticityCheckerV2, format_auth_bar, format_auth_grade, MIN_AUTH_SCORE
 from core.desirability import check_desirability, REJECT_PATTERNS
@@ -53,6 +65,25 @@ from telegram_bot import send_deal_to_subscribers, send_message, init_telegram_d
 from core.discord_alerts import send_discord_alert, DISCORD_ENABLED
 from core.whop_alerts import send_whop_alert, format_whop_deal_content
 from core.deal_quality import calculate_deal_quality, format_signal_line, format_quality_header, DealSignals, THRESHOLD_FIRE_1
+from core.auth_filter import authenticate_comps, filter_authenticated_comps
+from core.japan_integration import find_japan_arbitrage_deals, JapanArbitrageMonitor
+from core.deal_validation import validate_deal, track_customer_interaction, ValidationStatus
+from core.blue_chip_targets import (
+    ALL_BLUE_CHIP_TARGETS, 
+    get_target_config, 
+    get_targets_by_tier,
+    get_target_stats
+)
+from core.pricing_engine import PricingEngine
+from core.hyper_pricing import (
+    calculate_hyper_price,
+    detect_category_from_query,
+    extract_days_ago,
+    Comp,
+)
+from core.condition_parser import parse_condition
+from core.size_scorer import score_size
+from core.deal_tracker import DealPrediction, record_prediction
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(name)s] %(message)s')
 logging.getLogger("vinted").setLevel(logging.CRITICAL)         # suppress proxy 403/502 noise
@@ -76,7 +107,22 @@ def _get_trend_engine():
 # Config
 MIN_GAP_PERCENT = float(os.getenv("GAP_MIN_PERCENT", "0.30"))  # 30% below sold avg
 MIN_PROFIT_DOLLARS = float(os.getenv("GAP_MIN_PROFIT", "75"))   # At least $75 profit
-MIN_SOLD_COMPS = int(os.getenv("GAP_MIN_COMPS", "20"))           # Need 20+ sold comps for reliable median
+MIN_SOLD_COMPS = int(os.getenv("GAP_MIN_COMPS", "8"))            # Need 8+ sold comps (was 20, too high for niche items)
+
+# ── Pricing Engine (centralized cache) ──
+_pricing_engine = None
+
+def _get_pricing_engine():
+    """Get or initialize PricingEngine singleton."""
+    global _pricing_engine
+    if _pricing_engine is None:
+        try:
+            _pricing_engine = PricingEngine()
+            logger.info("✅ PricingEngine initialized")
+        except Exception as e:
+            logger.warning(f"⚠️ PricingEngine initialization failed: {e}")
+            _pricing_engine = False
+    return _pricing_engine if _pricing_engine else None
 POLL_INTERVAL = int(os.getenv("GAP_POLL_INTERVAL", "120"))      # 2 min between cycles
 
 # ── Collab listing filters ────────────────────────────────────────────────────
@@ -138,8 +184,50 @@ def estimate_shipping(item: "ScrapedItem") -> float:
 
 STATE_FILE = os.path.join(os.path.dirname(__file__), "data", "gap_state.json")
 SOLD_CACHE_FILE = os.path.join(os.path.dirname(__file__), "data", "sold_cache.json")
-SOLD_CACHE_TTL = 1800  # 30 min — balances freshness vs Grailed rate limits
-MAX_COMP_AGE_DAYS = 180  # Only use sold comps from the last 6 months
+SOLD_CACHE_TTL = 7200  # 2 hours — reduces Grailed API calls by ~75%
+# Archive fashion and luxury items have lower liquidity — use longer windows and lower thresholds
+# to ensure we can find comps for rare/archive pieces
+ARCHIVE_ITEM_KEYWORDS = ['archive', 'vintage', 'rick owens', 'margiela', 'raf simons',
+                         'helmut lang', 'number nine', 'carol christian poell',
+                         'boris bidjan saberi', 'undercover', 'yohji yamamoto',
+                         'comme des garcons', 'junya watanabe', 'ann demeulemeester',
+                         'chrome hearts', 'haider ackermann', 'julius']
+
+LUXURY_ITEM_KEYWORDS = ['rolex', 'cartier', 'omega', 'patek', 'audemars',
+                        'hermes', 'chanel', 'louis vuitton', 'lv ', 'prada',
+                        'gucci', 'balenciaga', 'saint laurent', 'ysl',
+                        'van cleef', 'bvlgari', 'tiffany', 'dior', 'bottega veneta',
+                        'issey miyake', 'thierry mugler', 'mugler', 'jil sander',
+                        'maison margiela', 'margiela', 'craig green', 'kiko kostadinov']
+
+def _is_archive_query(query: str) -> bool:
+    """Check if query is for archive/vintage items that need relaxed thresholds."""
+    query_lower = query.lower()
+    return any(kw in query_lower for kw in ARCHIVE_ITEM_KEYWORDS)
+
+def _is_luxury_query(query: str) -> bool:
+    """Check if query is for luxury items that need relaxed thresholds."""
+    query_lower = query.lower()
+    return any(kw in query_lower for kw in LUXURY_ITEM_KEYWORDS)
+
+def _get_comp_thresholds(query: str):
+    """Get comp thresholds based on item type."""
+    if _is_archive_query(query):
+        return {
+            'min_comps': 5,  # Lower threshold for archive items (was 10)
+            'max_age_days': 365,  # 1 year for archive items
+        }
+    elif _is_luxury_query(query):
+        return {
+            'min_comps': 3,  # Very low threshold for luxury (hard to find comps)
+            'max_age_days': 730,  # 2 years for luxury items
+        }
+    return {
+        'min_comps': MIN_SOLD_COMPS,  # Default 8
+        'max_age_days': 365,  # Default 1 year (was 180 days)
+    }
+
+MAX_COMP_AGE_DAYS = 180  # Default: only use sold comps from the last 6 months
 
 # ── Platform price discount factors ──
 # Grailed buyers pay a premium. Items on other platforms naturally sell for less.
@@ -402,14 +490,23 @@ class GapHunter:
         self.cycle_count = 0
         self.stats = defaultdict(int)
         self.running = True
-        self.seller_blocklist: set = set()
-        self.seller_block_counts: Dict[str, int] = {}  # seller -> auth_block count
         self.image_hashes: Dict[str, List[Dict]] = {}  # hash -> list of {seller, url, title}
         self._fx_cache: Dict[str, tuple] = {}  # currency -> (rate, timestamp)
+        
+        # Initialize seller manager (replaces manual blocklist handling)
+        from core.seller_manager import SellerManager
+        self.seller_manager = SellerManager()
+        
+        # Initialize data manager for state persistence
+        from core.data_manager import DataManager
+        self.data_manager = DataManager()
+        
         self._load_state()
         self._load_sold_cache()
-        self._load_blocklist()
         self._load_image_hashes()
+        
+        # Prune data every 10 cycles
+        self.cycles_since_prune = 0
 
         signal.signal(signal.SIGINT, self._shutdown)
         signal.signal(signal.SIGTERM, self._shutdown)
@@ -420,23 +517,40 @@ class GapHunter:
         # Playwright cleanup happens in run() after the loop exits
 
     def _load_state(self):
+        """Load state using DataManager."""
         try:
-            if os.path.exists(STATE_FILE):
-                with open(STATE_FILE) as f:
-                    data = json.load(f)
-                    self.seen_ids = set(data.get("seen_ids", []))
-                    self.cycle_count = data.get("cycle_count", 0)
-        except Exception:
-            pass
+            if hasattr(self, 'data_manager'):
+                data = self.data_manager.load("gap_state", {})
+                self.seen_ids = set(data.get("seen_ids", []))
+                self.cycle_count = data.get("cycle_count", 0)
+            else:
+                # Fallback to direct file I/O
+                if os.path.exists(STATE_FILE):
+                    with open(STATE_FILE) as f:
+                        data = json.load(f)
+                        self.seen_ids = set(data.get("seen_ids", []))
+                        self.cycle_count = data.get("cycle_count", 0)
+        except Exception as e:
+            logger.warning(f"Failed to load state: {e}")
+            self.seen_ids = set()
+            self.cycle_count = 0
 
     def _save_state(self):
+        """Save state using DataManager."""
         try:
-            os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
+            # Keep only last 50k IDs to prevent unbounded growth
             ids = list(self.seen_ids)[-50000:]
-            with open(STATE_FILE, "w") as f:
-                json.dump({"seen_ids": ids, "cycle_count": self.cycle_count}, f)
-        except Exception:
-            pass
+            data = {"seen_ids": ids, "cycle_count": self.cycle_count}
+            
+            if hasattr(self, 'data_manager'):
+                self.data_manager.save("gap_state", data)
+            else:
+                # Fallback to direct file I/O
+                os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
+                with open(STATE_FILE, "w") as f:
+                    json.dump(data, f)
+        except Exception as e:
+            logger.warning(f"Failed to save state: {e}")
 
     def _get_fx_rate(self, currency: str) -> Optional[float]:
         """Return live USD conversion rate for the given currency. Cached 1h."""
@@ -497,41 +611,40 @@ class GapHunter:
             pass
 
     def _load_blocklist(self):
-        try:
-            if os.path.exists(BLOCKLIST_FILE):
-                with open(BLOCKLIST_FILE) as f:
-                    data = json.load(f)
-                    self.seller_blocklist = set(data.get("blocklist", []))
-                    self.seller_block_counts = data.get("block_counts", {})
-        except Exception:
-            pass
+        """Deprecated: Use self.seller_manager instead."""
+        pass
 
     def _save_blocklist(self):
-        try:
-            os.makedirs(os.path.dirname(BLOCKLIST_FILE), exist_ok=True)
-            with open(BLOCKLIST_FILE, "w") as f:
-                json.dump({
-                    "blocklist": list(self.seller_blocklist),
-                    "block_counts": self.seller_block_counts,
-                }, f, indent=2)
-        except Exception:
-            pass
+        """Deprecated: Use self.seller_manager.flush() instead."""
+        if hasattr(self, 'seller_manager'):
+            self.seller_manager.flush()
 
     def _load_image_hashes(self):
+        """Load image hashes using DataManager."""
         try:
-            if os.path.exists(IMAGE_HASHES_FILE):
-                with open(IMAGE_HASHES_FILE) as f:
-                    self.image_hashes = json.load(f)
-        except Exception:
-            pass
+            if hasattr(self, 'data_manager'):
+                self.image_hashes = self.data_manager.load("image_hashes", {})
+            else:
+                # Fallback to direct file I/O
+                if os.path.exists(IMAGE_HASHES_FILE):
+                    with open(IMAGE_HASHES_FILE) as f:
+                        self.image_hashes = json.load(f)
+        except Exception as e:
+            logger.warning(f"Failed to load image hashes: {e}")
+            self.image_hashes = {}
 
     def _save_image_hashes(self):
+        """Save image hashes using DataManager."""
         try:
-            os.makedirs(os.path.dirname(IMAGE_HASHES_FILE), exist_ok=True)
-            with open(IMAGE_HASHES_FILE, "w") as f:
-                json.dump(self.image_hashes, f, indent=2)
-        except Exception:
-            pass
+            if hasattr(self, 'data_manager'):
+                self.data_manager.save("image_hashes", self.image_hashes, compress=True)
+            else:
+                # Fallback to direct file I/O
+                os.makedirs(os.path.dirname(IMAGE_HASHES_FILE), exist_ok=True)
+                with open(IMAGE_HASHES_FILE, "w") as f:
+                    json.dump(self.image_hashes, f, indent=2)
+        except Exception as e:
+            logger.warning(f"Failed to save image hashes: {e}")
 
     async def _get_image_hash(self, image_url: str) -> Optional[str]:
         """Get perceptual hash of first image. Returns hash string or None."""
@@ -589,14 +702,13 @@ class GapHunter:
 
     def _record_auth_block(self, seller: str):
         """Track auth blocks per seller; auto-blocklist after 3."""
-        if not seller:
+        if not seller or not hasattr(self, 'seller_manager'):
             return
-        key = seller.lower().strip()
-        self.seller_block_counts[key] = self.seller_block_counts.get(key, 0) + 1
-        if self.seller_block_counts[key] >= 3 and key not in self.seller_blocklist:
-            self.seller_blocklist.add(key)
-            logger.warning(f"🚫 Auto-blocklisted seller '{seller}' (auth_blocked {self.seller_block_counts[key]}x)")
-            self._save_blocklist()
+        
+        was_auto_blocked = self.seller_manager.record_auth_failure(seller)
+        if was_auto_blocked:
+            count = self.seller_manager.get_block_count(seller)
+            logger.warning(f"🚫 Auto-blocklisted seller '{seller}' (auth_blocked {count}x)")
 
     # ── Women's / non-menswear keywords ──
     WOMENS_KEYWORDS = [
@@ -735,21 +847,56 @@ class GapHunter:
                         return True
         return False
 
-    async def get_sold_data(self, query: str) -> Optional[SoldData]:
-        """Get sold price data for a query, using cache when available."""
+    async def get_sold_data(self, query: str, return_raw: bool = False) -> Optional[SoldData]:
+        """Get sold price data for a query, using PricingEngine cache when available.
+        
+        Args:
+            query: Search query
+            return_raw: If True, also return the raw sold items for hyper-pricing
+        
+        Returns:
+            SoldData or tuple(SoldData, list) if return_raw=True
+        """
+        # ── Try PricingEngine first ──
+        pricing_engine = _get_pricing_engine()
+        if pricing_engine:
+            cached_entry = pricing_engine.get_price(query)
+            if cached_entry and cached_entry.data:
+                # Extract price from cached data
+                cached_data = cached_entry.data
+                if isinstance(cached_data, dict) and 'price' in cached_data:
+                    price = cached_data['price']
+                    logger.debug(f"  💰 PricingEngine cache hit for '{query}': ${price}")
+                    # Convert to SoldData format
+                    return SoldData(
+                        query=query,
+                        avg_price=price,
+                        median_price=price,
+                        min_price=price * 0.9,
+                        max_price=price * 1.1,
+                        count=cached_entry.hit_count + 1,
+                        timestamp=cached_entry.timestamp,
+                    )
+        
+        # ── Fall back to legacy cache ──
         if query in self.sold_cache:
             cached = self.sold_cache[query]
             if time.time() - cached.timestamp < SOLD_CACHE_TTL:
                 return cached
 
+        # Get dynamic thresholds based on item type
+        thresholds = _get_comp_thresholds(query)
+        min_comps = thresholds['min_comps']
+        max_age_days = thresholds['max_age_days']
+
         try:
             async with GrailedScraper() as scraper:
                 sold = await scraper.search_sold(query, max_results=30)  # Fetch more to account for filtering
 
-            # ── Temporal filtering: only use comps from last MAX_COMP_AGE_DAYS ──
+            # ── Temporal filtering: only use comps from last max_age_days ──
             from datetime import datetime as _dt, timedelta, timezone
             now = _dt.now(timezone.utc)
-            cutoff = now - timedelta(days=MAX_COMP_AGE_DAYS)
+            cutoff = now - timedelta(days=max_age_days)
 
             def _filter_fresh(items):
                 fresh, stale = [], 0
@@ -768,37 +915,47 @@ class GapHunter:
 
             fresh_sold, stale_count = _filter_fresh(sold or [])
             if stale_count > 0:
-                logger.debug(f"  Filtered out {stale_count} stale comps (>{MAX_COMP_AGE_DAYS}d) for '{query}'")
+                logger.debug(f"  Filtered out {stale_count} stale comps (>{max_age_days}d) for '{query}'")
 
             # ── eBay sold fallback: kick in when Grailed doesn't have enough comps ──
             ebay_fallback_used = False
-            if len(fresh_sold) < MIN_SOLD_COMPS:
+            if len(fresh_sold) < min_comps:
                 try:
                     async with EbaySoldScraper() as ebay_scraper:
                         ebay_sold = await ebay_scraper.search_sold(query, max_results=50)
                     ebay_fresh, _ = _filter_fresh(ebay_sold or [])
                     combined = fresh_sold + ebay_fresh
-                    if len(combined) >= MIN_SOLD_COMPS:
+                    if len(combined) >= min_comps:
                         logger.info(f"  📦 eBay sold fallback: {len(ebay_fresh)} comps for '{query}' "
                                     f"(Grailed had {len(fresh_sold)})")
                         fresh_sold = combined
                         ebay_fallback_used = True
                     else:
                         logger.debug(f"  eBay fallback insufficient for '{query}' "
-                                     f"({len(combined)} combined, need {MIN_SOLD_COMPS})")
+                                     f"({len(combined)} combined, need {min_comps})")
                 except Exception as e:
                     logger.debug(f"  eBay sold fallback failed for '{query}': {e}")
 
-            if len(fresh_sold) < MIN_SOLD_COMPS:
+            if len(fresh_sold) < min_comps:
+                logger.info(f"  📊 Insufficient comps for '{query}': {len(fresh_sold)} fresh, need {min_comps} (had {len(sold or [])} total)")
                 return None
 
             sold = fresh_sold
 
-            if len(sold) < MIN_SOLD_COMPS:
-                return None
-
+            # ── Authentication filtering: prioritize authenticated comps ──
+            auth_result = authenticate_comps(sold, item_price=sum(i.price for i in sold) / len(sold))
+            if not auth_result['usable']:
+                logger.debug(f"  Auth filtering failed for '{query}': {auth_result['reason']}")
+                # Still proceed but log the issue
+            
+            # Use authenticated comps if available
+            if auth_result['authenticated_comps'] >= 3:
+                logger.info(f"  ✅ Using {auth_result['authenticated_comps']} authenticated comps "
+                           f"(confidence: {auth_result['confidence']:.1%})")
+                sold = filter_authenticated_comps(sold)
+            
             prices = sorted([i.price for i in sold if i.price and i.price > 0])
-            if len(prices) < MIN_SOLD_COMPS:
+            if len(prices) < min_comps:
                 return None
 
             # ── Filter out suspiciously low sold comps (likely reps) ──
@@ -806,7 +963,7 @@ class GapHunter:
                 initial_median = prices[len(prices) // 2]
                 threshold = initial_median * 0.20
                 filtered_prices = [p for p in prices if p >= threshold]
-                if len(filtered_prices) >= MIN_SOLD_COMPS:
+                if len(filtered_prices) >= min_comps:
                     if len(prices) != len(filtered_prices):
                         logger.debug(f"  Filtered out {len(prices) - len(filtered_prices)} suspiciously low sold comps for '{query}'")
                     prices = filtered_prices
@@ -854,12 +1011,149 @@ class GapHunter:
             if ebay_fallback_used:
                 self.stats["ebay_sold_fallback_used"] = self.stats.get("ebay_sold_fallback_used", 0) + 1
 
+            # ── Store in PricingEngine cache ──
+            if pricing_engine:
+                try:
+                    pricing_engine.set_price(
+                        query=query,
+                        price=data.avg_price,
+                        source="grailed" if not ebay_fallback_used else "grailed+ebay",
+                    )
+                    logger.debug(f"  💾 Stored in PricingEngine cache: '{query}' = ${data.avg_price:.0f}")
+                except Exception as e:
+                    logger.warning(f"  ⚠️ Failed to store in PricingEngine: {e}")
+
             self.sold_cache[query] = data
             return data
 
         except Exception as e:
             logger.debug(f"Sold data failed for '{query}': {e}")
             return None
+
+    async def get_hyper_sold_data(self, query: str, item_title: str = "", item_category: str = "") -> Optional[SoldData]:
+        """
+        Get sold data with hyper-accurate pricing using time decay + condition + size.
+        
+        This is an enhanced version of get_sold_data that:
+        1. Applies exponential time decay to weight recent comps higher
+        2. Parses condition from comp titles and weights condition-matched comps higher
+        3. Normalizes prices for size differences
+        
+        Falls back to standard get_sold_data if hyper-pricing fails.
+        """
+        # First get standard sold data
+        base_data = await self.get_sold_data(query)
+        if not base_data:
+            return None
+        
+        try:
+            # Detect category for time decay settings
+            category = detect_category_from_query(query)
+            if item_category:
+                category = item_category.lower()
+            
+            # Parse target item attributes
+            target_condition, _, _ = parse_condition(item_title, brand=self._detect_brand(item_title))
+            target_size, _, _ = score_size(item_title, category=item_category)
+            
+            # Build Comp objects from sold items
+            # We need to re-fetch the sold items to get full details
+            async with GrailedScraper() as scraper:
+                sold_items = await scraper.search_sold(query, max_results=30)
+            
+            if not sold_items or len(sold_items) < 3:
+                # Not enough comps for hyper-pricing, use standard
+                return base_data
+            
+            comps = []
+            for item in sold_items:
+                # Parse condition from comp title
+                comp_condition, _, _ = parse_condition(item.title, brand=self._detect_brand(item.title))
+                
+                # Parse size from comp title
+                comp_size, _, _ = score_size(item.title, category=item_category)
+                
+                # Calculate days ago from sold date
+                days_ago = 30  # Default
+                raw_data = getattr(item, 'raw_data', {}) or {}
+                sold_at = raw_data.get('sold_at') or raw_data.get('created_at')
+                if sold_at:
+                    days_ago = extract_days_ago(sold_at)
+                
+                # Check if authenticated
+                authenticated = getattr(item, 'authenticated', False) or 'authenticated' in item.title.lower()
+                
+                comps.append(Comp(
+                    price=item.price,
+                    condition_tier=comp_condition,
+                    size=comp_size,
+                    days_ago=days_ago,
+                    platform=getattr(item, 'source', 'unknown'),
+                    authenticated=authenticated,
+                ))
+            
+            # Calculate hyper-accurate price
+            hyper_price, metadata = calculate_hyper_price(
+                comps=comps,
+                target_condition=target_condition,
+                target_size=target_size,
+                category=category,
+                verbose=False,
+            )
+            
+            if hyper_price > 0 and metadata.get('num_comps', 0) >= 3:
+                # Check CV (coefficient of variation) for confidence
+                cv = metadata.get('cv', 1.0)
+                cv_threshold = float(os.getenv('HYPER_CV_THRESHOLD', '1.5'))
+                
+                if cv > cv_threshold:
+                    # High variance = low confidence, use standard pricing
+                    logger.warning(f"  ⚠️ Hyper-price CV too high ({cv:.2f} > {cv_threshold}), using standard: ${base_data.avg_price:.0f}")
+                    base_data._hyper_pricing = False
+                    base_data._cv = cv
+                    base_data._cv_rejected = True
+                    return base_data
+                
+                # Create enhanced SoldData
+                data = SoldData(
+                    query=query,
+                    avg_price=hyper_price,
+                    median_price=hyper_price,  # Use hyper price as both
+                    min_price=base_data.min_price,
+                    max_price=base_data.max_price,
+                    count=metadata['num_comps'],
+                    timestamp=time.time(),
+                    avg_days_to_sell=base_data.avg_days_to_sell,
+                )
+                # Store hyper-pricing metadata
+                data._hyper_pricing = True
+                data._hyper_metadata = metadata
+                data._target_condition = target_condition
+                data._target_size = target_size
+                data._cv = cv
+                
+                # Determine confidence level
+                if cv < 0.5:
+                    confidence = "high"
+                elif cv < 1.0:
+                    confidence = "medium"
+                else:
+                    confidence = "low"
+                data._confidence_level = confidence
+                
+                logger.info(f"  💎 Hyper-price for '{query}': ${hyper_price:.0f} "
+                           f"({confidence} confidence, CV={cv:.2f}, {metadata['num_comps']} comps)")
+                
+                self.sold_cache[query] = data
+                return data
+            else:
+                # Hyper-pricing failed, return standard data
+                logger.debug(f"  Hyper-pricing insufficient comps ({metadata.get('num_comps', 0)}), using standard")
+                return base_data
+                
+        except Exception as e:
+            logger.debug(f"Hyper-pricing failed for '{query}', using standard: {e}")
+            return base_data
 
     async def find_gaps(self, query: str, sold_data: SoldData) -> List[GapDeal]:
         """Find active listings priced below sold average."""
@@ -881,16 +1175,9 @@ class GapHunter:
                 return []
 
         async def _depop():
-            try:
-                if not hasattr(self, '_depop_scraper'):
-                    self._depop_scraper = DepopScraper()
-                return await asyncio.wait_for(self._depop_scraper.search(query, max_results=15), timeout=30.0)
-            except asyncio.TimeoutError:
-                logger.debug(f"    Depop timed out for '{query}'")
-                return []
-            except Exception as e:
-                logger.debug(f"    Depop search failed: {e}")
-                return []
+            # Depop disabled — Playwright consistently crashes on macOS
+            # Re-enable only if/when Depop scraper is fixed to use HTTP instead of browser
+            return []
 
         async def _vinted():
             try:
@@ -913,35 +1200,59 @@ class GapHunter:
                 logger.debug(f"    eBay search failed: {e}")
                 return []
 
-        # ── Chrome Hearts: Grailed-only, new listings only ──
-        # CH fakes flood Poshmark/Mercari/Vinted; Grailed has purchase verification.
-        # Only surface listings posted in the last 30 minutes to catch fresh drops.
+        async def _mercari():
+            try:
+                if not hasattr(self, '_mercari'):
+                    self._mercari = MercariScraper()
+                # Note: Mercari searches US, JP, and TW domains sequentially
+                return await asyncio.wait_for(self._mercari.search(query, max_results=10), timeout=45.0)
+            except asyncio.TimeoutError:
+                logger.warning(f"    ⚠️ Mercari timed out for '{query}'")
+                return []
+            except Exception as e:
+                logger.warning(f"    ⚠️ Mercari search failed for '{query}': {e}")
+                return []
+
+        # ── Chrome Hearts: Multi-platform with extended window ──
+        # CH is luxury, not hype — use 72hr window and seller trust instead of platform-only.
         is_chrome_hearts = "chrome hearts" in query.lower()
 
         if is_chrome_hearts:
-            grailed_items = await _grailed()
-            results_list = [grailed_items, [], [], [], []]
-            logger.info(f"  [CH] Grailed-only mode: {len(grailed_items)} raw results")
+            # Search Grailed + Poshmark + eBay + Mercari (skip Depop/Vinted for CH)
+            grailed_items, poshmark_items, _, _, ebay_items, mercari_items = await asyncio.gather(
+                _grailed(), _poshmark(), _depop(), _vinted(), _ebay(), _mercari()
+            )
+            results_list = [grailed_items, poshmark_items, [], [], ebay_items, mercari_items]
+            logger.info(f"  [CH] Multi-platform: {len(grailed_items)} Grailed, {len(poshmark_items)} Poshmark, {len(ebay_items)} eBay, {len(mercari_items)} Mercari")
         else:
-            results_list = await asyncio.gather(_grailed(), _poshmark(), _depop(), _vinted(), _ebay())
+            results_list = await asyncio.gather(_grailed(), _poshmark(), _depop(), _vinted(), _ebay(), _mercari())
 
         all_items = [item for sublist in results_list for item in sublist]
+        
+        # Debug: Log total items found before any filtering
+        logger.info(f"    📊 Raw items found: {len(all_items)} total")
+        platform_counts = {}
+        for item in all_items:
+            platform_counts[item.source] = platform_counts.get(item.source, 0) + 1
+        for platform, count in sorted(platform_counts.items()):
+            logger.info(f"      - {platform}: {count}")
 
-        # Chrome Hearts recency gate: skip anything listed > 30 minutes ago
+        # Chrome Hearts recency gate: 72 hours (luxury moves much slower than streetwear)
         if is_chrome_hearts:
             from datetime import datetime as _dt, timezone
             now_utc = _dt.now(timezone.utc)
             fresh = []
             for item in all_items:
                 if item.listed_at is None:
-                    logger.debug(f"  [CH] No listing timestamp, skipping: {item.title[:50]}")
+                    # Keep items without timestamps — better to check them than miss deals
+                    fresh.append(item)
                     continue
                 age_mins = (now_utc - item.listed_at).total_seconds() / 60
-                if age_mins <= 30:
+                if age_mins <= 4320:  # 72 hours
                     fresh.append(item)
                 else:
                     logger.debug(f"  [CH] Too old ({age_mins:.0f}m), skipping: {item.title[:50]}")
-            logger.info(f"  [CH] {len(fresh)}/{len(all_items)} listings within 30 minutes")
+            logger.info(f"  [CH] {len(fresh)}/{len(all_items)} listings within 72 hours")
             all_items = fresh
 
         for item in all_items:
@@ -984,7 +1295,7 @@ class GapHunter:
                 continue
 
             # ── Seller blocklist check ──
-            if item.seller and item.seller.lower().strip() in self.seller_blocklist:
+            if item.seller and hasattr(self, 'seller_manager') and self.seller_manager.is_blocked(item.seller):
                 logger.debug(f"    Skipped blocklisted seller: {item.seller}")
                 self.stats["blocklist_skipped"] += 1
                 continue
@@ -1015,7 +1326,8 @@ class GapHunter:
                     continue
 
             # ── Rep price ceiling check (Fix 3) ──
-            if self._check_rep_price_ceiling(query, item.price, item.title):
+            # Skip for Grailed — all items are purchase-verified
+            if item.source != "grailed" and self._check_rep_price_ceiling(query, item.price, item.title):
                 logger.info(f"    🚫 Below rep price ceiling — likely fake: ${item.price:.0f} for '{query}' — {item.title[:60]}")
                 self.stats["rep_ceiling_skipped"] += 1
                 continue
@@ -1077,18 +1389,49 @@ class GapHunter:
             # e.g., "rick owens" from "rick owens geobasket", "gaultier" from "gaultier mesh top"
             brand_words = query_words[:2] if len(query_words) >= 2 else query_words[:1]
             brand_in_title = any(bw in title_lower_check for bw in brand_words)
+
+            # For Japanese Mercari (jp.mercari.com), check for Japanese brand names or Chrome Hearts mention
+            is_jp_mercari = "jp.mercari.com" in item.url or (hasattr(item, 'raw_data') and 'jp.mercari.com' in str(item.raw_data))
+            if is_jp_mercari and not brand_in_title:
+                # Check for Japanese Chrome Hearts name or common CH indicators
+                jp_brand_indicators = ['クロムハーツ', 'chrome hearts', 'ｸﾛﾑﾊｰﾂ']
+                has_jp_brand = any(ind in title_lower_check for ind in jp_brand_indicators)
+                if has_jp_brand:
+                    brand_in_title = True
+                    logger.debug(f"    Japanese brand match for '{query}': {item.title[:50]}")
+
             if not brand_in_title:
                 continue
 
             # Require at least 2 query words to appear in the title (not just 1 brand word)
+            # For Japanese Mercari, relax this to 1 word since titles are in Japanese
+            min_matching_words = 1 if is_jp_mercari else 2
             matching_words = sum(1 for word in query_words if word in title_lower_check)
-            if matching_words < 2:
-                logger.debug(f"    Skipped poor match: only {matching_words}/2+ words match for '{query}' - {item.title[:50]}")
+
+            # Also check for Japanese category words as valid matches
+            if is_jp_mercari:
+                jp_category_words = {
+                    'ring': ['リング', '指輪'],
+                    'necklace': ['ネックレス', 'ペンダント'],
+                    'bracelet': ['ブレスレット'],
+                    'pendant': ['ペンダント'],
+                    'earring': ['ピアス', 'イヤリング'],
+                    'chain': ['チェーン'],
+                }
+                for qw in query_words:
+                    if qw in jp_category_words:
+                        if any(jp_word in title_lower_check for jp_word in jp_category_words[qw]):
+                            matching_words += 1
+
+            if matching_words < min_matching_words:
+                logger.debug(f"    Skipped poor match: only {matching_words}/{min_matching_words}+ words match for '{query}' - {item.title[:50]}")
                 continue
 
             # Add minimum title similarity check - at least 40% of query words should match
+            # For Japanese Mercari, use lower threshold since titles are in Japanese
+            min_similarity = 0.25 if is_jp_mercari else 0.40
             similarity_ratio = matching_words / len(query_words)
-            if similarity_ratio < 0.40:
+            if similarity_ratio < min_similarity:
                 logger.debug(f"    Skipped low similarity: {similarity_ratio:.0%} for '{query}' - {item.title[:50]}")
                 continue
 
@@ -1159,13 +1502,17 @@ class GapHunter:
             # Calculate gap with platform price adjustment
             # Grailed sold median is our baseline, but items on cheaper platforms
             # naturally sell for less. Adjust the reference to avoid phantom profit.
+            
+            # Use hyper-accurate price if available, otherwise standard
+            reference_price = getattr(sold_data, '_hyper_pricing', False) and sold_data.avg_price or sold_data.median_price
+            
             platform_discount = PLATFORM_PRICE_DISCOUNT.get(item.source, 0.80)
-            adjusted_reference = sold_data.median_price * platform_discount
+            adjusted_reference = reference_price * platform_discount
             gap = adjusted_reference - item.price
             gap_percent = gap / adjusted_reference if adjusted_reference > 0 else 0
 
             # Profit estimate: assume selling on Grailed (~12% total fees) + shipping
-            sell_price = sold_data.median_price * 0.88  # After Grailed fees + PayPal
+            sell_price = reference_price * 0.88  # After Grailed fees + PayPal
             shipping_est = estimate_shipping(item)
             profit = sell_price - item.price - shipping_est  # category-aware shipping estimate
             real_margin = profit / item.price if item.price > 0 else 0
@@ -1199,6 +1546,10 @@ class GapHunter:
                     sold_count=sold_data.count,
                     query=query,
                 ))
+            else:
+                # Debug: Log why item didn't make the cut
+                if gap_percent >= 0.20:  # Only log items that were close
+                    logger.debug(f"    ⏭ Below threshold: {item.source} ${item.price:.0f} → gap {gap_percent*100:.0f}% (need {effective_min_gap*100:.0f}%), profit ${profit:.0f} (need ${effective_min_profit:.0f}) - {item.title[:40]}")
 
         # ── Price clustering detection (Fix 2) ──
         # If 3+ listings priced within $30 of each other AND all below 40% of sold median → rep batch
@@ -1220,13 +1571,153 @@ class GapHunter:
                         self.stats["rep_batch_skipped"] += len(deals)
                         return []
 
+        # Debug: Summary of filtering for this query
+        if not deals:
+            logger.info(f"    📊 Filter summary for '{query}':")
+            logger.info(f"      - Items after recency filter: {len(all_items)}")
+            logger.info(f"      - Stale skipped: {self.stats.get('stale_skipped', 0)}")
+            logger.info(f"      - Price drop skipped: {self.stats.get('price_drop_skipped', 0)}")
+            logger.info(f"      - Rep ceiling skipped: {self.stats.get('rep_ceiling_skipped', 0)}")
+            logger.info(f"      - Low trust skipped: {self.stats.get('low_trust_skipped', 0)}")
+            logger.info(f"      - Implausible gap skipped: {self.stats.get('implausible_gap_skipped', 0)}")
+            logger.info(f"      - Deals passed all filters: 0")
+        else:
+            logger.info(f"    📊 {len(deals)} deals passed all filters for '{query}'")
+
         return deals
 
-    async def process_deal(self, deal: GapDeal) -> bool:
+    async def process_deal(self, deal: GapDeal, is_japan_deal: bool = False) -> bool:
         """Auth check, quality score, and send a gap deal."""
         item = deal.item
         brand = self._detect_brand(item.title)
         category = self._detect_category(item.title)
+        
+        # ── Japan Deal Special Handling ──
+        if is_japan_deal and hasattr(item, '_japan_data'):
+            japan_data = item._japan_data
+            # Handle both dataclass and dict formats
+            if isinstance(japan_data, dict):
+                brand = japan_data.get('brand', 'Unknown')
+                title = japan_data.get('title', '')[:30]
+                recommendation = japan_data.get('recommendation', '')
+                net_profit = japan_data.get('net_profit', 0)
+                margin_percent = japan_data.get('margin_percent', 0)
+                item_price_jpy = japan_data.get('item_price_jpy', 0)
+                item_price_usd = japan_data.get('item_price_usd', 0)
+                total_landed_cost = japan_data.get('total_landed_cost', 0)
+                us_market_price = japan_data.get('us_market_price', 0)
+                proxy_service = japan_data.get('proxy_service', 'Buyee')
+                shipping_method = japan_data.get('shipping_method', 'EMS')
+                auction_url = japan_data.get('auction_url', '')
+                image_url = japan_data.get('image_url', '')
+                category = japan_data.get('category', '')
+                bids = japan_data.get('bids', 0)
+                end_time = japan_data.get('end_time')
+            else:
+                # Dataclass format
+                brand = japan_data.brand
+                title = japan_data.title[:30]
+                recommendation = japan_data.recommendation
+                net_profit = japan_data.net_profit
+                margin_percent = japan_data.margin_percent
+                item_price_jpy = japan_data.item_price_jpy
+                item_price_usd = japan_data.item_price_usd
+                total_landed_cost = japan_data.total_landed_cost
+                us_market_price = japan_data.us_market_price
+                proxy_service = japan_data.proxy_service
+                shipping_method = japan_data.shipping_method
+                auction_url = japan_data.auction_url
+                image_url = japan_data.image_url
+                category = japan_data.category
+                bids = japan_data.bids
+                end_time = japan_data.end_time
+            
+            logger.info(f"    🗾 Processing Japan deal: {brand} {title}...")
+
+            # Skip auth check for Japan deals (proxy services authenticate)
+            auth_result = None
+
+            # Create Japan-specific signals
+            from core.deal_quality import DealSignals
+            signals = DealSignals(
+                fire_level=3 if recommendation == 'STRONG_BUY' else 2,
+                gap_percent=margin_percent / 100,
+                profit_estimate=net_profit,
+                line_name='Japan Import',
+                season_name=category,
+                condition_tier='NEW',
+                detected_size='',
+                liquidity_score=8,
+            )
+
+            # Build Japan-specific message
+            header = "🗾 JAPAN ARBITRAGE"
+            # Handle title_jp for both dict and dataclass
+            if isinstance(japan_data, dict):
+                title_jp = japan_data.get('title_jp', '')
+            else:
+                title_jp = japan_data.title_jp
+            message = (
+                f"{header}\n\n"
+                f"<b>{title_jp}</b>\n"
+                f"{title}\n\n"
+                f"💵 <b>Japan Price:</b> ¥{item_price_jpy:,} (${item_price_usd:,.0f})\n"
+                f"📦 <b>Landed Cost:</b> ${total_landed_cost:,.0f}\n"
+                f"📊 <b>US Market:</b> ${us_market_price:,.0f}\n"
+                f"💰 <b>Net Profit:</b> ${net_profit:,.0f}\n"
+                f"📈 <b>Margin:</b> {margin_percent:.1f}%\n\n"
+                f"🚢 <b>Proxy:</b> {proxy_service}\n"
+                f"📮 <b>Shipping:</b> {shipping_method}\n"
+                f"⏰ <b>Ends:</b> {end_time.strftime('%Y-%m-%d %H:%M') if hasattr(end_time, 'strftime') else 'Unknown'}\n"
+                f"🔥 <b>Bids:</b> {bids}\n\n"
+                f"<a href='{auction_url}'>🔗 Bid on Buyee</a>"
+            )
+
+            # Send alerts
+            alerts_sent = False
+
+            try:
+                # Discord
+                if DISCORD_ENABLED:
+                    from core.discord_alerts import determine_tier
+                    tier = determine_tier(item, net_profit, margin_percent / 100)
+                    discord_sent = await send_discord_alert(
+                        item=item,
+                        message=message,
+                        fire_level=signals.fire_level,
+                        signals=signals,
+                        auth_result=None,
+                        tier=tier,
+                    )
+                    if discord_sent:
+                        logger.info(f"    ✅ Discord alert sent ({tier} tier)")
+                        alerts_sent = True
+                    else:
+                        logger.warning(f"    ❌ Discord alert failed")
+            except Exception as e:
+                logger.error(f"    ❌ Discord error: {e}")
+            
+            # Telegram
+            try:
+                import telegram_bot
+                if telegram_bot.BOT_TOKEN and telegram_bot.TELEGRAM_CHANNEL_ID:
+                    await telegram_bot.send_message(
+                        chat_id=int(telegram_bot.TELEGRAM_CHANNEL_ID),
+                        text=message,
+                        parse_mode="HTML",
+                        disable_preview=False
+                    )
+                    logger.info(f"    ✅ Telegram channel alert sent")
+                    alerts_sent = True
+            except Exception as e:
+                logger.error(f"    ❌ Telegram error: {e}")
+            
+            if alerts_sent:
+                self.stats['deals_sent'] = self.stats.get('deals_sent', 0) + 1
+                return True
+            else:
+                logger.warning(f"    ⚠️ No alerts sent for Japan deal")
+                return False
 
         # Auth check
         try:
@@ -1238,7 +1729,7 @@ class GapHunter:
                     brand=brand,
                     category=category,
                     seller_name=item.seller or "",
-                    seller_sales=getattr(item, "seller_sales", 0),
+                    seller_sales=getattr(item, "seller_sales", 0) or 0,
                     seller_rating=getattr(item, "seller_rating", None),
                     images=item.images,
                     source=item.source,
@@ -1352,6 +1843,11 @@ class GapHunter:
                 except Exception:
                     pass
 
+            # Determine tier for this deal
+            from core.discord_alerts import determine_tier
+            deal_tier = determine_tier(item, deal.profit_estimate, deal.gap_percent)
+            logger.info(f"    📊 Deal tier: {deal_tier} (profit: ${deal.profit_estimate:.0f}, margin: {deal.gap_percent*100:.0f}%)")
+            
             # Post to Discord
             if DISCORD_ENABLED:
                 try:
@@ -1361,6 +1857,7 @@ class GapHunter:
                         fire_level=signals.fire_level,
                         signals=signals,
                         auth_result=auth_result,
+                        tier=deal_tier,
                     )
                 except Exception as e:
                     logger.warning(f"Discord alert failed: {e}")
@@ -1396,33 +1893,89 @@ class GapHunter:
                 logger.error(f"Whop alert failed: {e}")
 
             self.stats["deals_sent"] += 1
+            
+            # Track deal prediction for accuracy analysis
+            try:
+                is_hyper = getattr(deal, '_hyper_pricing', False) or getattr(sold_data, '_hyper_pricing', False)
+                cv = getattr(sold_data, '_cv', None)
+                confidence = getattr(sold_data, '_confidence_level', None)
+                
+                prediction = DealPrediction(
+                    timestamp=datetime.now().isoformat(),
+                    query=deal.query,
+                    item_title=item.title,
+                    item_url=item.url,
+                    predicted_price=deal.sold_avg,
+                    prediction_method="hyper" if is_hyper else "standard",
+                    cv=cv,
+                    confidence_level=confidence,
+                    num_comps=deal.sold_count,
+                )
+                record_prediction(prediction)
+                logger.debug(f"Tracked deal prediction for accuracy analysis")
+            except Exception as e:
+                logger.debug(f"Failed to track deal prediction: {e}")
+            
             return True
         except Exception as e:
             logger.error(f"Send failed: {e}")
             return False
 
-    async def run_cycle(self, brand_filter=None, custom_queries=None, max_targets=None, source_filter=None):
-        """Run one hunting cycle."""
+    async def run_cycle(self, brand_filter=None, custom_queries=None, max_targets=None, source_filter=None, use_blue_chip=False, customer_tier="intermediate", skip_japan: bool = False):
+        """Run one hunting cycle.
+        
+        Args:
+            use_blue_chip: If True, prioritize blue-chip luxury targets
+            customer_tier: 'beginner', 'intermediate', or 'expert' for target filtering
+        """
         self.cycle_count += 1
+        self.cycles_since_prune += 1
         cycle_start = time.time()
-
-        # ── Dynamic targets: per-cycle varied subset from TrendEngine ──
-        # get_cycle_targets() returns a fresh randomised mix each call:
-        #   - ALWAYS_RUN anchors (top broad performers, every cycle)
-        #   - Random draw from velocity pool + EXTENDED_TARGETS
-        #   - Dead queries (50+ runs, 0 deals) are auto-excluded
-        # Falls back to CORE_TARGETS if TrendEngine fails entirely.
-        from trend_engine import CORE_TARGETS
-        targets = CORE_TARGETS  # safety fallback
-        trend_engine = _get_trend_engine()
-        if trend_engine:
+        
+        # ── Periodic data pruning ──
+        if self.cycles_since_prune >= 10:
+            logger.info("🧹 Running periodic data pruning...")
             try:
-                dynamic = await trend_engine.get_cycle_targets(n=60)
-                if dynamic:
-                    targets = dynamic
-                    logger.info(f"🔥 {len(targets)} targets this cycle (varied rotation)")
+                if hasattr(self, 'data_manager'):
+                    results = self.data_manager.prune_all()
+                    total_removed = sum(r.get('removed', 0) for r in results.values() if isinstance(r.get('removed'), int))
+                    if total_removed > 0:
+                        logger.info(f"🧹 Pruned {total_removed} old entries from data files")
             except Exception as e:
-                logger.warning(f"⚠️ TrendEngine failed, running on {len(targets)} core targets: {e}")
+                logger.warning(f"Data pruning failed: {e}")
+            self.cycles_since_prune = 0
+
+        # ── Target Selection ──
+        targets = []
+        
+        # Option 1: Blue-chip targets (high-value luxury focus)
+        if use_blue_chip:
+            blue_chip_targets = get_targets_by_tier(customer_tier)
+            targets = [t.query for t in blue_chip_targets]
+            logger.info(f"💎 Using {len(targets)} blue-chip targets ({customer_tier} tier)")
+            
+            # Log blue-chip stats
+            stats = get_target_stats()
+            logger.info(f"   📊 Blue-chip stats: {stats['watches']} watches, {stats['bags']} bags, "
+                       f"{stats['jewelry']} jewelry, avg margin {stats['avg_margin']:.1%}")
+        
+        # Option 2: Dynamic targets from TrendEngine
+        else:
+            from trend_engine import CORE_TARGETS
+            targets = CORE_TARGETS  # safety fallback
+            trend_engine = _get_trend_engine()
+            if trend_engine:
+                try:
+                    dynamic = await trend_engine.get_cycle_targets(n=20)
+                    if dynamic:
+                        targets = dynamic
+                        logger.info(f"🔥 {len(targets)} targets this cycle (varied rotation)")
+                except Exception as e:
+                    logger.warning(f"⚠️ TrendEngine failed, running on {len(targets)} core targets: {e}")
+        
+        # Ensure trend_engine is defined for later use
+        if 'trend_engine' not in locals():
+            trend_engine = None
 
         # Apply custom queries override
         if custom_queries:
@@ -1448,16 +2001,23 @@ class GapHunter:
             if not self.running:
                 break
 
-            # Get sold data
-            sold = await self.get_sold_data(query)
+            # Get sold data (use hyper-accurate pricing)
+            sold = await self.get_hyper_sold_data(query)
             if not sold:
                 logger.debug(f"  [{i+1}] {query}: insufficient sold data")
                 continue
 
-            logger.info(f"  [{i+1}/{len(targets)}] {query} - sold avg: ${sold.avg_price:.0f} ({sold.count} comps)")
+            # Log whether we're using hyper-pricing or standard
+            is_hyper = getattr(sold, '_hyper_pricing', False)
+            price_type = "💎 hyper" if is_hyper else "standard"
+            logger.info(f"  [{i+1}/{len(targets)}] {query} - {price_type} avg: ${sold.avg_price:.0f} ({sold.count} comps)")
 
             # Find gaps
             gaps = await self.find_gaps(query, sold)
+            
+            # Debug: Log why no gaps were found
+            if not gaps:
+                logger.info(f"    📊 No gaps found for '{query}' - checking filter stats...")
 
             for deal in gaps:
                 logger.info(
@@ -1465,6 +2025,23 @@ class GapHunter:
                     f"(gap {deal.gap_percent*100:.0f}%, +${deal.profit_estimate:.0f}) "
                     f"- {deal.item.title[:50]}"
                 )
+                
+                # ── Validate deal before alerting ──
+                # Skip validation for Grailed items — purchase verification already ensures availability
+                if deal.item.source != "grailed":
+                    try:
+                        validation = await validate_deal(deal, customer_tier="intermediate")
+                        if validation.status != ValidationStatus.VALID:
+                            logger.info(f"    ⚠️ Deal failed validation: {validation.reason}")
+                            self.stats['validation_failed'] = self.stats.get('validation_failed', 0) + 1
+                            continue
+                        
+                        logger.debug(f"    ✅ Deal validated: {len(validation.checks_passed)} checks passed")
+                    except Exception as e:
+                        logger.warning(f"    ⚠️ Validation error (proceeding anyway): {e}")
+                else:
+                    logger.debug(f"    ✅ Grailed item — skipping validation (purchase verified)")
+                
                 if await self.process_deal(deal):
                     total_deals += 1
 
@@ -1477,6 +2054,62 @@ class GapHunter:
                     pass
 
             await asyncio.sleep(1.5)  # Rate limiting
+
+        # ── Japan Arbitrage Scan ──
+        # Run every cycle for maximum opportunity capture unless explicitly skipped
+        if not skip_japan:
+            logger.info("🗾 Running Japan arbitrage scan...")
+            try:
+                japan_deals = await find_japan_arbitrage_deals(
+                    min_margin=25.0,
+                    min_profit=200.0,
+                )
+                
+                if japan_deals:
+                    logger.info(f"  🎯 Found {len(japan_deals)} Japan arbitrage opportunities")
+                    
+                    for deal in japan_deals:
+                        logger.debug(f"  Processing Japan deal: {deal.brand} {deal.title} - {deal.recommendation}")
+                        if deal.recommendation in ['STRONG_BUY', 'BUY']:
+                            logger.debug(f"    Deal qualifies for processing (STRONG_BUY or BUY)")
+                            # Create mock item for processing
+                            class MockItem:
+                                def __init__(self, japan_deal):
+                                    self.title = f"{japan_deal.brand} {japan_deal.title}"
+                                    self.price = japan_deal.total_landed_cost
+                                    self.source = 'japan_buyee'
+                                    self.url = japan_deal.auction_url
+                                    self.images = [japan_deal.image_url] if japan_deal.image_url else []
+                                    self._japan_data = japan_deal
+                            
+                            # Create mock deal signals
+                            class MockDeal:
+                                def __init__(self, japan_deal, item):
+                                    self.item = item
+                                    self.sold_avg = japan_deal.us_market_price
+                                    self.gap_percent = japan_deal.margin_percent / 100
+                                    self.profit_estimate = japan_deal.net_profit
+                                    self.sold_count = 10  # Estimated
+                            
+                            item = MockItem(deal)
+                            mock_deal = MockDeal(deal, item)
+                            
+                            # Process like a regular deal
+                            logger.debug(f"    Calling process_deal for Japan deal...")
+                            process_result = await self.process_deal(mock_deal, is_japan_deal=True)
+                            logger.debug(f"    process_deal returned: {process_result}")
+                            if process_result:
+                                total_deals += 1
+                                logger.info(f"    🗾 Japan deal sent: {deal.brand} (+${deal.net_profit:.0f})")
+                            else:
+                                logger.warning(f"    ⚠️ process_deal returned False for Japan deal")
+                else:
+                    logger.info("  📊 No Japan arbitrage opportunities this scan")
+                    
+            except Exception as e:
+                logger.error(f"  ❌ Japan scan error: {e}")
+                import traceback
+                logger.debug(f"Japan scan traceback: {traceback.format_exc()}")
 
         elapsed = time.time() - cycle_start
 
@@ -1507,7 +2140,7 @@ class GapHunter:
                 f"seen={len(self.seen_ids)}"
             )
 
-    async def run(self, once: bool = False, brand_filter=None, custom_queries=None, max_targets=None, source_filter=None):
+    async def run(self, once: bool = False, brand_filter=None, custom_queries=None, max_targets=None, source_filter=None, use_blue_chip=False, skip_japan: bool = False):
         """Main loop."""
         init_telegram_db()
 
@@ -1517,6 +2150,8 @@ class GapHunter:
             logger.info(f"   Brand filter: {', '.join(brand_filter)}")
         if custom_queries:
             logger.info(f"   Custom queries: {len(custom_queries)}")
+        elif use_blue_chip:
+            logger.info(f"   Targets: BLUE-CHIP LUXURY (High margin, authenticated)")
         else:
             logger.info(f"   Targets: dynamic (Grailed velocity + rotation, varied per cycle)")
         if max_targets:
@@ -1525,11 +2160,23 @@ class GapHunter:
         logger.info(f"   Min profit: ${MIN_PROFIT_DOLLARS}")
         logger.info(f"   Min sold comps: {MIN_SOLD_COMPS}")
         logger.info(f"   Poll interval: {POLL_INTERVAL}s")
+        if skip_japan:
+            logger.info(f"   🗾 Japan arbitrage: SKIPPED (CLI flag)")
+        else:
+            logger.info(f"   🗾 Japan arbitrage: ENABLED (every cycle)")
+            logger.info(f"     Platforms: Yahoo Auctions, Mercari, Rakuma (via Buyee)")
         logger.info("=" * 60)
 
         while self.running:
             try:
-                await self.run_cycle(brand_filter=brand_filter, custom_queries=custom_queries, max_targets=max_targets, source_filter=source_filter)
+                await self.run_cycle(
+                    brand_filter=brand_filter, 
+                    custom_queries=custom_queries, 
+                    max_targets=max_targets, 
+                    source_filter=source_filter,
+                    use_blue_chip=use_blue_chip,
+                    skip_japan=skip_japan,
+                )
             except Exception as e:
                 logger.error(f"Cycle error: {e}")
 
@@ -1561,6 +2208,11 @@ class GapHunter:
         if hasattr(self, '_vinted'):
             try:
                 await self._vinted.close()
+            except Exception:
+                pass
+        if hasattr(self, '_mercari'):
+            try:
+                await self._mercari.close()
             except Exception:
                 pass
 
@@ -1664,9 +2316,36 @@ if __name__ == "__main__":
     parser.add_argument("--brand", type=str, help="Filter by brand (e.g. 'rick owens'). Comma-separated for multiple.")
     parser.add_argument("--query", type=str, help="Custom search queries, comma-separated (e.g. 'rick owens dunks,raf simons bomber')")
     parser.add_argument("--max-targets", type=int, help="Max number of targets per cycle")
+    parser.add_argument("--skip-japan", action="store_true", help="Skip the Japan arbitrage sweep (useful for fast smoke tests)")
     parser.add_argument("--list-brands", action="store_true", help="List all brands in targets and exit")
     parser.add_argument("--list-targets", action="store_true", help="List all search targets and exit")
+    parser.add_argument("--help-config", action="store_true", help="Show configuration help and exit")
+    
+    # Blocklist management
+    parser.add_argument("--blocklist-block", type=str, metavar="SELLER", help="Block a seller")
+    parser.add_argument("--blocklist-unblock", type=str, metavar="SELLER", help="Unblock a seller")
+    parser.add_argument("--blocklist-list", action="store_true", help="List blocked sellers")
+    parser.add_argument("--blocklist-stats", action="store_true", help="Show blocklist statistics")
+    parser.add_argument("--blocklist-clear", action="store_true", help="Clear all blocked sellers")
+    parser.add_argument("--blocklist-reason", type=str, default="manual", help="Reason for blocking")
+    
+    # Data management
+    parser.add_argument("--data-metrics", action="store_true", help="Show data file metrics")
+    parser.add_argument("--data-prune", action="store_true", help="Prune old data files")
+    parser.add_argument("--data-prune-force", action="store_true", help="Force pruning even if under threshold")
+    
+    # Cache management
+    parser.add_argument("--cache-stats", action="store_true", help="Show pricing cache statistics")
+    parser.add_argument("--cache-flush", action="store_true", help="Flush expired cache entries")
+    parser.add_argument("--cache-clear", action="store_true", help="Clear all cache entries")
+    
     args = parser.parse_args()
+
+    # Config help mode
+    if args.help_config:
+        from core.config import print_config_help
+        print_config_help()
+        exit(0)
 
     # List modes
     if args.list_brands:
@@ -1698,6 +2377,63 @@ if __name__ == "__main__":
         print(f"\nTotal: {len(TARGETS)} targets")
         exit(0)
 
+    # Blocklist management commands
+    if args.blocklist_block:
+        from core.seller_manager import block_seller_cli
+        block_seller_cli(args.blocklist_block, args.blocklist_reason or "manual")
+        exit(0)
+
+    if args.blocklist_unblock:
+        from core.seller_manager import unblock_seller_cli
+        unblock_seller_cli(args.blocklist_unblock)
+        exit(0)
+
+    if args.blocklist_list:
+        from core.seller_manager import list_blocked_cli
+        list_blocked_cli()
+        exit(0)
+
+    if args.blocklist_stats:
+        from core.seller_manager import SellerManager
+        manager = SellerManager()
+        stats = manager.get_stats()
+        print("\nBlocklist Statistics:")
+        for key, value in stats.items():
+            print(f"  {key}: {value}")
+        exit(0)
+
+    if args.blocklist_clear:
+        from core.seller_manager import clear_blocklist_cli
+        clear_blocklist_cli()
+        exit(0)
+
+    # Data management commands
+    if args.data_metrics:
+        from core.data_manager import data_metrics_cli
+        data_metrics_cli()
+        exit(0)
+
+    if args.data_prune:
+        from core.data_manager import prune_data_cli
+        prune_data_cli(force=args.data_prune_force)
+        exit(0)
+
+    # Cache management commands
+    if args.cache_stats:
+        from core.pricing_engine import show_cache_stats
+        show_cache_stats()
+        exit(0)
+
+    if args.cache_flush:
+        from core.pricing_engine import flush_cache
+        flush_cache()
+        exit(0)
+
+    if args.cache_clear:
+        from core.pricing_engine import clear_cache
+        clear_cache()
+        exit(0)
+
     # Parse filters
     brand_filter = [b.strip() for b in args.brand.split(",")] if args.brand else None
     custom_queries = [q.strip() for q in args.query.split(",")] if args.query else None
@@ -1708,4 +2444,5 @@ if __name__ == "__main__":
         brand_filter=brand_filter,
         custom_queries=custom_queries,
         max_targets=args.max_targets,
+        skip_japan=args.skip_japan,
     ))
