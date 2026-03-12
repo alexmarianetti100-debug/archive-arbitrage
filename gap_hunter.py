@@ -478,6 +478,12 @@ class GapDeal:
     profit_estimate: float
     sold_count: int
     query: str
+    comp_confidence: str = "medium"
+    comp_confidence_level: str = "medium"
+    comp_cv: float | None = None
+    authenticated_comps: int = 0
+    comp_auth_confidence: float = 0.0
+    hyper_pricing: bool = False
 
 
 class GapHunter:
@@ -1005,6 +1011,9 @@ class GapHunter:
             )
             # Store confidence and source metadata on SoldData
             data._confidence = comp_confidence
+            data._confidence_level = comp_confidence
+            data._authenticated_comps = auth_result.get('authenticated_comps', 0)
+            data._auth_confidence = auth_result.get('confidence', 0.0)
             data._ebay_fallback = ebay_fallback_used
 
             # Track eBay fallback activations in stats
@@ -1547,6 +1556,12 @@ class GapHunter:
                     profit_estimate=profit,
                     sold_count=sold_data.count,
                     query=query,
+                    comp_confidence=getattr(sold_data, '_confidence', 'medium'),
+                    comp_confidence_level=getattr(sold_data, '_confidence_level', getattr(sold_data, '_confidence', 'medium')),
+                    comp_cv=getattr(sold_data, '_cv', None),
+                    authenticated_comps=getattr(sold_data, '_authenticated_comps', 0),
+                    comp_auth_confidence=getattr(sold_data, '_auth_confidence', 0.0),
+                    hyper_pricing=getattr(sold_data, '_hyper_pricing', False),
                 ))
             else:
                 # Debug: Log why item didn't make the cut
@@ -1764,6 +1779,56 @@ class GapHunter:
                 f"    ⏭ Below quality threshold ({quality_score:.0f}/100, fire={signals.fire_level} < {min_fire}): {item.title[:50]}"
             )
             self.stats["quality_filtered"] += 1
+            return False
+
+        # Public alert gate: keep candidate detection broad, but require a cleaner
+        # comp/auth profile before we broadcast a deal.
+        public_min_quality = int(os.getenv("DISCORD_MIN_QUALITY_SCORE", "55"))
+        public_min_auth = float(os.getenv("DISCORD_MIN_AUTH_CONFIDENCE", "0.72"))
+        public_max_cv = float(os.getenv("DISCORD_MAX_COMP_CV", "0.90"))
+        allow_medium_comp = os.getenv("DISCORD_ALLOW_MEDIUM_COMP_CONFIDENCE", "0") == "1"
+
+        deal_comp_conf = getattr(deal, "comp_confidence_level", None) or getattr(deal, "comp_confidence", "medium")
+        deal_comp_cv = getattr(deal, "comp_cv", None)
+        deal_auth_comps = getattr(deal, "authenticated_comps", 0)
+        deal_auth_conf = getattr(deal, "comp_auth_confidence", 0.0)
+
+        if quality_score < public_min_quality:
+            logger.info(f"    ⏭ Public-send gate: score {quality_score:.0f} < {public_min_quality} — {item.title[:50]}")
+            self.stats["public_quality_filtered"] += 1
+            return False
+
+        if auth_result and auth_result.confidence < public_min_auth and item.source != "grailed":
+            logger.info(
+                f"    ⏭ Public-send gate: auth {auth_result.confidence:.0%} < {public_min_auth:.0%} on {item.source} — {item.title[:50]}"
+            )
+            self.stats["public_auth_filtered"] += 1
+            return False
+
+        if deal_comp_conf == "low":
+            logger.info(f"    ⏭ Public-send gate: low comp confidence — {item.title[:50]}")
+            self.stats["public_comp_filtered"] += 1
+            return False
+
+        if deal_comp_conf == "medium" and not allow_medium_comp and signals.fire_level < 3:
+            logger.info(
+                f"    ⏭ Public-send gate: medium comp confidence requires 🔥🔥🔥 — {item.title[:50]}"
+            )
+            self.stats["public_comp_filtered"] += 1
+            return False
+
+        if deal_comp_cv is not None and deal_comp_cv > public_max_cv:
+            logger.info(
+                f"    ⏭ Public-send gate: comp CV {deal_comp_cv:.2f} > {public_max_cv:.2f} — {item.title[:50]}"
+            )
+            self.stats["public_comp_filtered"] += 1
+            return False
+
+        if deal_auth_comps < 3 and deal_auth_conf < 0.75 and signals.fire_level < 3:
+            logger.info(
+                f"    ⏭ Public-send gate: weak sold-comp auth ({deal_auth_comps} authenticated, {deal_auth_conf:.0%} confidence) — {item.title[:50]}"
+            )
+            self.stats["public_comp_filtered"] += 1
             return False
 
         # Build the alert message with signal breakdown
