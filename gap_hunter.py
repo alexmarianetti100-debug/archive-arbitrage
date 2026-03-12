@@ -498,6 +498,7 @@ class GapHunter:
         self.running = True
         self.image_hashes: Dict[str, List[Dict]] = {}  # hash -> list of {seller, url, title}
         self._fx_cache: Dict[str, tuple] = {}  # currency -> (rate, timestamp)
+        self._last_query_metrics: Dict[str, int] = {}
         
         # Initialize seller manager (replaces manual blocklist handling)
         from core.seller_manager import SellerManager
@@ -1237,6 +1238,16 @@ class GapHunter:
             results_list = await asyncio.gather(_grailed(), _poshmark(), _depop(), _vinted(), _ebay(), _mercari())
 
         all_items = [item for sublist in results_list for item in sublist]
+        query_metrics = {
+            "raw_items_found": len(all_items),
+            "post_filter_candidates": 0,
+            "brand_mismatch_skips": 0,
+            "category_mismatch_skips": 0,
+            "stale_skips": 0,
+            "rep_ceiling_skips": 0,
+            "implausible_gap_skips": 0,
+            "low_trust_skips": 0,
+        }
         
         # Debug: Log total items found before any filtering
         logger.info(f"    📊 Raw items found: {len(all_items)} total")
@@ -1314,6 +1325,7 @@ class GapHunter:
             if item.source == "grailed" and seller_sales is not None and seller_sales < 5:
                 logger.info(f"    ⚠️ Low-trust seller '{item.seller}' ({seller_sales} sales) - skipping: {item.title[:50]}")
                 self.stats["low_trust_skipped"] += 1
+                query_metrics["low_trust_skips"] += 1
                 continue
             # Penalty for unknown seller_sales handled in process_deal auth scoring
 
@@ -1339,6 +1351,7 @@ class GapHunter:
             if item.source != "grailed" and self._check_rep_price_ceiling(query, item.price, item.title):
                 logger.info(f"    🚫 Below rep price ceiling — likely fake: ${item.price:.0f} for '{query}' — {item.title[:60]}")
                 self.stats["rep_ceiling_skipped"] += 1
+                query_metrics["rep_ceiling_skips"] += 1
                 continue
 
             # ── Collab listing credibility floor ─────────────────────────────
@@ -1408,10 +1421,12 @@ class GapHunter:
 
             if not brand_in_title:
                 logger.debug(f"    Skipped brand mismatch for '{query}': {item.title[:50]}")
+                query_metrics["brand_mismatch_skips"] += 1
                 continue
 
             if not is_jp_mercari and not self._query_category_matches_title(query, title_lower_check):
                 logger.debug(f"    Skipped category mismatch for '{query}': {item.title[:50]}")
+                query_metrics["category_mismatch_skips"] += 1
                 continue
 
             # Require at least 2 query words to appear in the title (not just 1 brand word)
@@ -1484,6 +1499,7 @@ class GapHunter:
                     logger.debug(f"    Skipped stale listing ({listing_age_days}d old): {item.title[:50]}")
                     self.stats.setdefault("stale_skipped", 0)
                     self.stats["stale_skipped"] += 1
+                    query_metrics["stale_skips"] += 1
                     continue
 
             # ── Price drop check (Grailed only) ──
@@ -1539,6 +1555,7 @@ class GapHunter:
                 )
                 self.stats.setdefault("implausible_gap_skipped", 0)
                 self.stats["implausible_gap_skipped"] += 1
+                query_metrics["implausible_gap_skips"] += 1
                 continue
 
             # Confidence-gated thresholds: medium (20-19 comps) slightly stricter than high (20+)
@@ -1567,6 +1584,9 @@ class GapHunter:
                 # Debug: Log why item didn't make the cut
                 if gap_percent >= 0.20:  # Only log items that were close
                     logger.debug(f"    ⏭ Below threshold: {item.source} ${item.price:.0f} → gap {gap_percent*100:.0f}% (need {effective_min_gap*100:.0f}%), profit ${profit:.0f} (need ${effective_min_profit:.0f}) - {item.title[:40]}")
+
+        query_metrics["post_filter_candidates"] = len(deals)
+        self._last_query_metrics = dict(query_metrics)
 
         # ── Price clustering detection (Fix 2) ──
         # If 3+ listings priced within $30 of each other AND all below 40% of sold median → rep batch
@@ -1601,6 +1621,8 @@ class GapHunter:
         else:
             logger.info(f"    📊 {len(deals)} deals passed all filters for '{query}'")
 
+        query_metrics["post_filter_candidates"] = len(deals)
+        self._last_query_metrics = dict(query_metrics)
         return deals
 
     async def process_deal(self, deal: GapDeal, is_japan_deal: bool = False) -> bool:
@@ -2086,6 +2108,7 @@ class GapHunter:
             if not gaps:
                 logger.info(f"    📊 No gaps found for '{query}' - checking filter stats...")
 
+            query_alerts_sent = 0
             for deal in gaps:
                 logger.info(
                     f"    💰 ${deal.item.price:.0f} → ${deal.sold_avg:.0f} "
@@ -2111,12 +2134,15 @@ class GapHunter:
                 
                 if await self.process_deal(deal):
                     total_deals += 1
+                    query_alerts_sent += 1
 
             # Log query performance for trend feedback loop
             if trend_engine:
                 best_gap = max((d.gap_percent for d in gaps), default=0) if gaps else 0
+                query_metrics = dict(getattr(self, '_last_query_metrics', {}) or {})
+                query_metrics['public_alerts_sent'] = query_alerts_sent
                 try:
-                    trend_engine.log_query_performance(query, len(gaps), best_gap)
+                    trend_engine.log_query_performance(query, len(gaps), best_gap, metrics=query_metrics)
                 except Exception:
                     pass
 

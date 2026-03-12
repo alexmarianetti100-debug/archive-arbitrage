@@ -740,15 +740,51 @@ class TrendEngine:
         logger.info(f"  Total merged signals: {len(merged)}")
         return merged
 
-    def log_query_performance(self, query: str, found_deals: int, best_gap_pct: float = 0.0):
+    def log_query_performance(self, query: str, found_deals: int, best_gap_pct: float = 0.0, metrics: Optional[dict] = None):
         """Track which queries actually found deals (feedback loop)."""
         perf = self._load_performance()
         if query not in perf:
-            perf[query] = {"total_runs": 0, "total_deals": 0, "best_gap": 0, "last_run": None}
+            perf[query] = {
+                "total_runs": 0,
+                "total_deals": 0,
+                "best_gap": 0,
+                "last_run": None,
+                "raw_items_found": 0,
+                "post_filter_candidates": 0,
+                "public_alerts_sent": 0,
+                "brand_mismatch_skips": 0,
+                "category_mismatch_skips": 0,
+                "stale_skips": 0,
+                "rep_ceiling_skips": 0,
+                "implausible_gap_skips": 0,
+                "low_trust_skips": 0,
+                "junk_ratio": 0.0,
+                "alert_ratio": 0.0,
+            }
         perf[query]["total_runs"] += 1
         perf[query]["total_deals"] += found_deals
         perf[query]["best_gap"] = max(perf[query]["best_gap"], best_gap_pct)
         perf[query]["last_run"] = datetime.utcnow().isoformat()
+
+        metrics = metrics or {}
+        for src_key, dest_key in [
+            ("raw_items_found", "raw_items_found"),
+            ("post_filter_candidates", "post_filter_candidates"),
+            ("public_alerts_sent", "public_alerts_sent"),
+            ("brand_mismatch_skips", "brand_mismatch_skips"),
+            ("category_mismatch_skips", "category_mismatch_skips"),
+            ("stale_skips", "stale_skips"),
+            ("rep_ceiling_skips", "rep_ceiling_skips"),
+            ("implausible_gap_skips", "implausible_gap_skips"),
+            ("low_trust_skips", "low_trust_skips"),
+        ]:
+            perf[query][dest_key] += int(metrics.get(src_key, 0) or 0)
+
+        raw_items = perf[query].get("raw_items_found", 0)
+        candidates = perf[query].get("post_filter_candidates", 0)
+        alerts = perf[query].get("public_alerts_sent", 0)
+        perf[query]["junk_ratio"] = round(1 - (candidates / raw_items), 4) if raw_items else 0.0
+        perf[query]["alert_ratio"] = round(alerts / perf[query]["total_runs"], 4) if perf[query]["total_runs"] else 0.0
         self._save_performance(perf)
 
     def get_dead_query_report(self) -> list[dict]:
