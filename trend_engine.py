@@ -43,6 +43,7 @@ from typing import Optional
 
 from trend_sources.base import TrendSignal, TrendSource
 from trend_sources.grailed_velocity import GrailedVelocitySource
+from core.query_tiering import get_weight_multiplier, get_tier_summary, QueryTier
 
 logger = logging.getLogger("trend_engine")
 
@@ -622,12 +623,15 @@ class TrendEngine:
 
         # ── 3. Rotation pool: weighted-random draw ─────────────────────────
         candidates = [q for q in rotation_pool if q.lower() not in used and not _in_cooldown(q)]
-        # Weight by opportunity score; never-run queries get a 2× boost
+        # Weight by opportunity score, modulated by query tier (A/B/trap)
+        # and never-run boost
         weights = []
         for q in candidates:
             w = opp_scores.get(q.lower(), 1.0)
             if _never_run(q):
                 w *= 2.0
+            # Apply tier-based weight multiplier from telemetry
+            w *= get_weight_multiplier(q, perf)
             weights.append(w)
 
         slots = max(0, ROTATION_CYCLE_SIZE - (len(selected) - anchors_added))
@@ -690,6 +694,18 @@ class TrendEngine:
             f"{len(dead)} dead excluded | "
             f"catalog size={len(catalog_queries)}"
         )
+        # Log query tier distribution across full catalog
+        try:
+            tier_summary = get_tier_summary(perf)
+            logger.info(
+                f"📊 Query tiers: A={tier_summary['a_count']} "
+                f"B={tier_summary['b_count']} "
+                f"trap={tier_summary['trap_count']}"
+            )
+            if tier_summary["worst_traps"]:
+                logger.debug(f"   Trap queries: {', '.join(tier_summary['worst_traps'][:3])}")
+        except Exception:
+            pass  # tier logging is non-critical
         return selected
 
     async def get_today_targets(self) -> list[str]:
@@ -785,6 +801,13 @@ class TrendEngine:
         alerts = perf[query].get("public_alerts_sent", 0)
         perf[query]["junk_ratio"] = round(1 - (candidates / raw_items), 4) if raw_items else 0.0
         perf[query]["alert_ratio"] = round(alerts / perf[query]["total_runs"], 4) if perf[query]["total_runs"] else 0.0
+
+        # Stamp the current tier classification for observability
+        from core.query_tiering import classify_query
+        tier_result = classify_query(query, perf[query])
+        perf[query]["tier"] = tier_result.tier.value
+        perf[query]["tier_reason"] = tier_result.reason
+
         self._save_performance(perf)
 
     def get_dead_query_report(self) -> list[dict]:

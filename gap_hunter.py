@@ -2097,6 +2097,20 @@ class GapHunter:
 
         logger.info(f"━━━ Cycle {self.cycle_count} | {len(targets)} targets ━━━")
 
+        # Load query tier info for cycle logging
+        _tier_labels = {}
+        try:
+            from core.query_tiering import classify_query, QueryTier
+            te = _get_trend_engine()
+            if te:
+                _perf = te._load_performance()
+                for q in targets:
+                    entry = _perf.get(q) or _perf.get(q.lower())
+                    result = classify_query(q, entry)
+                    _tier_labels[q] = result.tier.value
+        except Exception:
+            pass
+
         total_deals = 0
 
         for i, query in enumerate(targets):
@@ -2112,7 +2126,8 @@ class GapHunter:
             # Log whether we're using hyper-pricing or standard
             is_hyper = getattr(sold, '_hyper_pricing', False)
             price_type = "💎 hyper" if is_hyper else "standard"
-            logger.info(f"  [{i+1}/{len(targets)}] {query} - {price_type} avg: ${sold.avg_price:.0f} ({sold.count} comps)")
+            tier_tag = _tier_labels.get(query, "B")
+            logger.info(f"  [{i+1}/{len(targets)}] [{tier_tag}] {query} - {price_type} avg: ${sold.avg_price:.0f} ({sold.count} comps)")
 
             # Find gaps
             gaps = await self.find_gaps(query, sold)
