@@ -23,6 +23,7 @@ import logging
 import hashlib
 import io
 from dataclasses import dataclass
+from datetime import datetime
 from typing import List, Dict, Optional, Tuple
 from collections import defaultdict
 from pathlib import Path
@@ -82,6 +83,7 @@ from core.hyper_pricing import (
     extract_days_ago,
     Comp,
 )
+from core.liquidation_pricing import compute_liquidation_metrics
 from core.condition_parser import parse_condition
 from core.size_scorer import score_size
 from core.deal_tracker import DealPrediction, record_prediction
@@ -185,7 +187,7 @@ def estimate_shipping(item: "ScrapedItem") -> float:
 
 STATE_FILE = os.path.join(os.path.dirname(__file__), "data", "gap_state.json")
 SOLD_CACHE_FILE = os.path.join(os.path.dirname(__file__), "data", "sold_cache.json")
-SOLD_CACHE_TTL = 7200  # 2 hours — reduces Grailed API calls by ~75%
+SOLD_CACHE_TTL = 14400  # 4 hours — must exceed query cooldown (120min) for cache hits
 # Archive fashion and luxury items have lower liquidity — use longer windows and lower thresholds
 # to ensure we can find comps for rare/archive pieces
 ARCHIVE_ITEM_KEYWORDS = ['archive', 'vintage', 'rick owens', 'margiela', 'raf simons',
@@ -469,6 +471,13 @@ class SoldData:
     count: int
     timestamp: float
     avg_days_to_sell: float = 0.0  # Average days from listed to sold (lower = more liquid)
+    p25_price: float = 0.0
+    auth_p25_price: float = 0.0
+    liquidation_anchor: float = 0.0
+    downside_anchor: float = 0.0
+    pricing_method: str = "median"
+    pricing_confidence: str = "medium"
+    haircut_pct: float = 0.15
 
 
 @dataclass
@@ -485,6 +494,12 @@ class GapDeal:
     authenticated_comps: int = 0
     comp_auth_confidence: float = 0.0
     hyper_pricing: bool = False
+    liquidation_anchor: float = 0.0
+    downside_anchor: float = 0.0
+    expected_net_profit: float = 0.0
+    downside_net_profit: float = 0.0
+    margin_of_safety_score: float = 0.0
+    discovered_at: Optional[datetime] = None
 
 
 class GapHunter:
@@ -612,6 +627,13 @@ class GapHunter:
                     "max_price": v.max_price, "count": v.count,
                     "timestamp": v.timestamp,
                     "avg_days_to_sell": v.avg_days_to_sell,
+                    "p25_price": v.p25_price,
+                    "auth_p25_price": v.auth_p25_price,
+                    "liquidation_anchor": v.liquidation_anchor,
+                    "downside_anchor": v.downside_anchor,
+                    "pricing_method": v.pricing_method,
+                    "pricing_confidence": v.pricing_confidence,
+                    "haircut_pct": v.haircut_pct,
                 }
             with open(SOLD_CACHE_FILE, "w") as f:
                 json.dump(raw, f)
@@ -955,12 +977,15 @@ class GapHunter:
             if not auth_result['usable']:
                 logger.debug(f"  Auth filtering failed for '{query}': {auth_result['reason']}")
                 # Still proceed but log the issue
-            
+
+            auth_filtered_sold = filter_authenticated_comps(sold) if auth_result.get('authenticated_comps', 0) >= 3 else []
+            auth_prices = sorted([i.price for i in auth_filtered_sold if i.price and i.price > 0])
+
             # Use authenticated comps if available
             if auth_result['authenticated_comps'] >= 3:
                 logger.info(f"  ✅ Using {auth_result['authenticated_comps']} authenticated comps "
                            f"(confidence: {auth_result['confidence']:.1%})")
-                sold = filter_authenticated_comps(sold)
+                sold = auth_filtered_sold
             
             prices = sorted([i.price for i in sold if i.price and i.price > 0])
             if len(prices) < min_comps:
@@ -1001,15 +1026,31 @@ class GapHunter:
             # ── Comp confidence based on count (minimum is now 20, so low tier is gone) ──
             comp_confidence = "high" if len(prices) >= 20 else "medium"
 
+            liquidation = compute_liquidation_metrics(
+                sold_prices=prices,
+                authenticated_prices=auth_prices,
+                cv=None,
+                comp_count=len(prices),
+                auth_comp_count=len(auth_prices),
+                avg_days_to_sell=avg_days,
+            )
+
             data = SoldData(
                 query=query,
                 avg_price=sum(prices) / len(prices),
-                median_price=prices[len(prices) // 2],
+                median_price=liquidation.median_price,
                 min_price=min(prices),
                 max_price=max(prices),
                 count=len(prices),
                 timestamp=time.time(),
                 avg_days_to_sell=avg_days,
+                p25_price=liquidation.p25_price,
+                auth_p25_price=liquidation.auth_p25_price,
+                liquidation_anchor=liquidation.liquidation_anchor,
+                downside_anchor=liquidation.downside_anchor,
+                pricing_method=liquidation.pricing_method,
+                pricing_confidence=liquidation.pricing_confidence,
+                haircut_pct=liquidation.haircut_pct,
             )
             # Store confidence and source metadata on SoldData
             data._confidence = comp_confidence
@@ -1125,16 +1166,34 @@ class GapHunter:
                     base_data._cv_rejected = True
                     return base_data
                 
+                auth_prices = sorted([c.price for c in comps if c.authenticated and c.price > 0])
+                liquidation = compute_liquidation_metrics(
+                    sold_prices=[c.price for c in comps if c.price > 0],
+                    authenticated_prices=auth_prices,
+                    hyper_price=hyper_price,
+                    cv=cv,
+                    comp_count=metadata['num_comps'],
+                    auth_comp_count=len(auth_prices),
+                    avg_days_to_sell=base_data.avg_days_to_sell,
+                )
+
                 # Create enhanced SoldData
                 data = SoldData(
                     query=query,
                     avg_price=hyper_price,
-                    median_price=hyper_price,  # Use hyper price as both
+                    median_price=liquidation.median_price,
                     min_price=base_data.min_price,
                     max_price=base_data.max_price,
                     count=metadata['num_comps'],
                     timestamp=time.time(),
                     avg_days_to_sell=base_data.avg_days_to_sell,
+                    p25_price=liquidation.p25_price,
+                    auth_p25_price=liquidation.auth_p25_price,
+                    liquidation_anchor=liquidation.liquidation_anchor,
+                    downside_anchor=liquidation.downside_anchor,
+                    pricing_method=liquidation.pricing_method,
+                    pricing_confidence=liquidation.pricing_confidence,
+                    haircut_pct=liquidation.haircut_pct,
                 )
                 # Store hyper-pricing metadata
                 data._hyper_pricing = True
@@ -1169,6 +1228,8 @@ class GapHunter:
     async def find_gaps(self, query: str, sold_data: SoldData) -> List[GapDeal]:
         """Find active listings priced below sold average."""
         deals = []
+        near_misses = []
+        debug_near_misses = os.getenv("GAP_DEBUG_NEAR_MISSES", "1") == "1"
 
         # ── Parallel scraping across all platforms ──
         async def _grailed():
@@ -1494,7 +1555,7 @@ class GapHunter:
             # ── Listing age check ──
             # Stale listings (>30 days old) indicate the item isn't liquid
             if item.listed_at:
-                from datetime import datetime, timezone
+                from datetime import timezone
                 listing_age_days = (datetime.now(timezone.utc) - item.listed_at).days
                 if listing_age_days > 10:
                     logger.debug(f"    Skipped stale listing ({listing_age_days}d old): {item.title[:50]}")
@@ -1528,21 +1589,24 @@ class GapHunter:
                 continue
 
             # Calculate gap with platform price adjustment
-            # Grailed sold median is our baseline, but items on cheaper platforms
-            # naturally sell for less. Adjust the reference to avoid phantom profit.
-            
-            # Use hyper-accurate price if available, otherwise standard
-            reference_price = getattr(sold_data, '_hyper_pricing', False) and sold_data.avg_price or sold_data.median_price
-            
+            # Use conservative liquidation anchors instead of flattering market estimates.
+            reference_price = sold_data.liquidation_anchor or (
+                getattr(sold_data, '_hyper_pricing', False) and sold_data.avg_price or sold_data.median_price
+            )
+            downside_reference = sold_data.downside_anchor or (reference_price * 0.85)
+
             platform_discount = PLATFORM_PRICE_DISCOUNT.get(item.source, 0.80)
             adjusted_reference = reference_price * platform_discount
+            adjusted_downside_reference = downside_reference * platform_discount
             gap = adjusted_reference - item.price
             gap_percent = gap / adjusted_reference if adjusted_reference > 0 else 0
 
-            # Profit estimate: assume selling on Grailed (~12% total fees) + shipping
-            sell_price = reference_price * 0.88  # After Grailed fees + PayPal
+            # Profit estimate: conservative expected and downside liquidation after fees + shipping
+            expected_sell_price = reference_price * 0.88
+            downside_sell_price = downside_reference * 0.88
             shipping_est = estimate_shipping(item)
-            profit = sell_price - item.price - shipping_est  # category-aware shipping estimate
+            profit = expected_sell_price - item.price - shipping_est
+            downside_profit = downside_sell_price - item.price - shipping_est
             real_margin = profit / item.price if item.price > 0 else 0
 
             # ── Implausible gap sanity check ──────────────────────────────────
@@ -1567,6 +1631,11 @@ class GapHunter:
                 effective_min_gap = MIN_GAP_PERCENT * 1.17  # ~35% instead of 30%
 
             if gap_percent >= effective_min_gap and profit >= effective_min_profit:
+                pricing_conf = (sold_data.pricing_confidence or getattr(sold_data, '_confidence', 'medium')).lower()
+                pricing_bonus = {"high": 12.0, "medium": 6.0, "low": 0.0}.get(pricing_conf, 0.0)
+                downside_bonus = max(0.0, downside_profit) * 0.10
+                mos_score = max(0.0, downside_profit) + pricing_bonus + downside_bonus
+
                 deals.append(GapDeal(
                     item=item,
                     sold_avg=sold_data.avg_price,
@@ -1580,11 +1649,40 @@ class GapHunter:
                     authenticated_comps=getattr(sold_data, '_authenticated_comps', 0),
                     comp_auth_confidence=getattr(sold_data, '_auth_confidence', 0.0),
                     hyper_pricing=getattr(sold_data, '_hyper_pricing', False),
+                    liquidation_anchor=reference_price,
+                    downside_anchor=downside_reference,
+                    expected_net_profit=profit,
+                    downside_net_profit=downside_profit,
+                    margin_of_safety_score=mos_score,
+                    discovered_at=datetime.now(),
                 ))
             else:
+                if debug_near_misses:
+                    closeness = max(
+                        gap_percent / effective_min_gap if effective_min_gap > 0 else 0.0,
+                        profit / effective_min_profit if effective_min_profit > 0 else 0.0,
+                        downside_profit / max(1.0, effective_min_profit * 0.35),
+                    )
+                    if closeness >= 0.65:
+                        pricing_conf = (sold_data.pricing_confidence or getattr(sold_data, '_confidence', 'medium')).lower()
+                        pricing_bonus = {"high": 12.0, "medium": 6.0, "low": 0.0}.get(pricing_conf, 0.0)
+                        downside_bonus = max(0.0, downside_profit) * 0.10
+                        mos_score = max(0.0, downside_profit) + pricing_bonus + downside_bonus
+                        near_misses.append({
+                            "source": item.source,
+                            "price": item.price,
+                            "gap_percent": gap_percent,
+                            "profit": profit,
+                            "downside_profit": downside_profit,
+                            "liquidation_anchor": reference_price,
+                            "downside_anchor": downside_reference,
+                            "mos": mos_score,
+                            "title": item.title[:80],
+                        })
+
                 # Debug: Log why item didn't make the cut
                 if gap_percent >= 0.20:  # Only log items that were close
-                    logger.debug(f"    ⏭ Below threshold: {item.source} ${item.price:.0f} → gap {gap_percent*100:.0f}% (need {effective_min_gap*100:.0f}%), profit ${profit:.0f} (need ${effective_min_profit:.0f}) - {item.title[:40]}")
+                    logger.debug(f"    ⏭ Below threshold: {item.source} ${item.price:.0f} → gap {gap_percent*100:.0f}% (need {effective_min_gap*100:.0f}%), profit ${profit:.0f} (need ${effective_min_profit:.0f}), downside ${downside_profit:.0f} - {item.title[:40]}")
 
         query_metrics["post_filter_candidates"] = len(deals)
         self._last_query_metrics = dict(query_metrics)
@@ -1615,13 +1713,26 @@ class GapHunter:
             logger.info(f"      - Items after recency filter: {len(all_items)}")
             logger.info(f"      - Stale skipped: {self.stats.get('stale_skipped', 0)}")
             logger.info(f"      - Price drop skipped: {self.stats.get('price_drop_skipped', 0)}")
+            logger.info(f"      - Brand mismatch skipped: {query_metrics.get('brand_mismatch_skips', 0)}")
+            logger.info(f"      - Category mismatch skipped: {query_metrics.get('category_mismatch_skips', 0)}")
             logger.info(f"      - Rep ceiling skipped: {self.stats.get('rep_ceiling_skipped', 0)}")
             logger.info(f"      - Low trust skipped: {self.stats.get('low_trust_skipped', 0)}")
             logger.info(f"      - Implausible gap skipped: {self.stats.get('implausible_gap_skipped', 0)}")
             logger.info(f"      - Deals passed all filters: 0")
+            if debug_near_misses and near_misses:
+                near_misses.sort(key=lambda x: (x['mos'], x['downside_profit'], x['profit']), reverse=True)
+                logger.info(f"      - Top near-misses ({min(5, len(near_misses))} shown):")
+                for nm in near_misses[:5]:
+                    logger.info(
+                        f"        · {nm['source']} ${nm['price']:.0f} | gap {nm['gap_percent']*100:.0f}% | "
+                        f"profit ${nm['profit']:.0f} | downside ${nm['downside_profit']:.0f} | "
+                        f"liq ${nm['liquidation_anchor']:.0f} | down ${nm['downside_anchor']:.0f} | MOS {nm['mos']:.0f} | "
+                        f"{nm['title'][:55]}"
+                    )
         else:
             logger.info(f"    📊 {len(deals)} deals passed all filters for '{query}'")
 
+        deals.sort(key=lambda d: (d.margin_of_safety_score, d.downside_net_profit, d.profit_estimate), reverse=True)
         query_metrics["post_filter_candidates"] = len(deals)
         self._last_query_metrics = dict(query_metrics)
         return deals
@@ -1812,6 +1923,8 @@ class GapHunter:
         public_min_quality = int(os.getenv("DISCORD_MIN_QUALITY_SCORE", "55"))
         public_min_auth = float(os.getenv("DISCORD_MIN_AUTH_CONFIDENCE", "0.72"))
         public_max_cv = float(os.getenv("DISCORD_MAX_COMP_CV", "0.90"))
+        public_min_downside_profit = float(os.getenv("DISCORD_MIN_DOWNSIDE_PROFIT", "25"))
+        public_min_mos = float(os.getenv("DISCORD_MIN_MOS_SCORE", "35"))
         allow_medium_comp = os.getenv("DISCORD_ALLOW_MEDIUM_COMP_CONFIDENCE", "0") == "1"
 
         deal_comp_conf = getattr(deal, "comp_confidence_level", None) or getattr(deal, "comp_confidence", "medium")
@@ -1821,6 +1934,20 @@ class GapHunter:
 
         if quality_score < public_min_quality:
             logger.info(f"    ⏭ Public-send gate: score {quality_score:.0f} < {public_min_quality} — {item.title[:50]}")
+            self.stats["public_quality_filtered"] += 1
+            return False
+
+        if deal.downside_net_profit < public_min_downside_profit:
+            logger.info(
+                f"    ⏭ Public-send gate: downside profit ${deal.downside_net_profit:.0f} < ${public_min_downside_profit:.0f} — {item.title[:50]}"
+            )
+            self.stats["public_quality_filtered"] += 1
+            return False
+
+        if deal.margin_of_safety_score < public_min_mos:
+            logger.info(
+                f"    ⏭ Public-send gate: MOS {deal.margin_of_safety_score:.0f} < {public_min_mos:.0f} — {item.title[:50]}"
+            )
             self.stats["public_quality_filtered"] += 1
             return False
 
@@ -1891,7 +2018,9 @@ class GapHunter:
             f"💵 Listed: <b>${item.price:.0f}</b> on {item.source.title()}"
             + (f" ⏰ auction ends in {getattr(item, '_auction_hours_left', 0):.0f}h" if getattr(item, '_auction_hours_left', None) is not None else ""),
             f"📊 Market: <b>${deal.sold_avg:.0f}</b> ({deal.sold_count} comps, Grailed sold)",
-            f"💰 Est. Profit: <b>${deal.profit_estimate:.0f}</b> (after fees + shipping)",
+            f"🧱 Liquidation: <b>${deal.liquidation_anchor:.0f}</b> · downside <b>${deal.downside_anchor:.0f}</b>",
+            f"💰 Est. Profit: <b>${deal.expected_net_profit:.0f}</b> · downside <b>${deal.downside_net_profit:.0f}</b>",
+            f"🛡 MOS: <b>{deal.margin_of_safety_score:.0f}</b>",
             f"📈 <b>{deal.gap_percent*100:.0f}% below market</b>",
         ])
 
@@ -1946,7 +2075,7 @@ class GapHunter:
             )
             logger.info(
                 f"    📊 Deal tier decision: {tier_decision.minimum_tier} -> {tier_decision.channel_tiers} "
-                f"(profit: ${deal.profit_estimate:.0f}, margin: {deal.gap_percent*100:.0f}%)"
+                f"(profit: ${deal.expected_net_profit:.0f}, downside: ${deal.downside_net_profit:.0f}, MOS: {deal.margin_of_safety_score:.0f}, margin: {deal.gap_percent*100:.0f}%)"
             )
             
             # Post to Discord using nested entitlement routing
@@ -1970,6 +2099,11 @@ class GapHunter:
                 signal_lines = [
                     f"- Auth confidence: {auth_result.confidence*100:.0f}%" if auth_result else "- Auth confidence: N/A",
                     f"- Fire level: {'🔥' * signals.fire_level}" if signals.fire_level else "- Fire level: —",
+                    f"- Liquidation anchor: ${deal.liquidation_anchor:.0f}",
+                    f"- Downside anchor: ${deal.downside_anchor:.0f}",
+                    f"- Expected net profit: ${deal.expected_net_profit:.0f}",
+                    f"- Downside net profit: ${deal.downside_net_profit:.0f}",
+                    f"- Margin of safety: {deal.margin_of_safety_score:.0f}",
                 ]
                 if signals.season_name:
                     signal_lines.append(f"- Season: {signals.season_name}")
@@ -2137,10 +2271,11 @@ class GapHunter:
                 logger.info(f"    📊 No gaps found for '{query}' - checking filter stats...")
 
             query_alerts_sent = 0
+            query_validation_failed = 0
             for deal in gaps:
                 logger.info(
                     f"    💰 ${deal.item.price:.0f} → ${deal.sold_avg:.0f} "
-                    f"(gap {deal.gap_percent*100:.0f}%, +${deal.profit_estimate:.0f}) "
+                    f"(gap {deal.gap_percent*100:.0f}%, +${deal.expected_net_profit:.0f}, downside +${deal.downside_net_profit:.0f}, MOS {deal.margin_of_safety_score:.0f}) "
                     f"- {deal.item.title[:50]}"
                 )
                 
@@ -2152,6 +2287,7 @@ class GapHunter:
                         if validation.status != ValidationStatus.VALID:
                             logger.info(f"    ⚠️ Deal failed validation: {validation.reason}")
                             self.stats['validation_failed'] = self.stats.get('validation_failed', 0) + 1
+                            query_validation_failed += 1
                             continue
                         
                         logger.debug(f"    ✅ Deal validated: {len(validation.checks_passed)} checks passed")
@@ -2169,6 +2305,7 @@ class GapHunter:
                 best_gap = max((d.gap_percent for d in gaps), default=0) if gaps else 0
                 query_metrics = dict(getattr(self, '_last_query_metrics', {}) or {})
                 query_metrics['public_alerts_sent'] = query_alerts_sent
+                query_metrics['validation_failed'] = query_validation_failed
                 try:
                     trend_engine.log_query_performance(query, len(gaps), best_gap, metrics=query_metrics)
                 except Exception:

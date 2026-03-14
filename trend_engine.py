@@ -44,12 +44,14 @@ from typing import Optional
 from trend_sources.base import TrendSignal, TrendSource
 from trend_sources.grailed_velocity import GrailedVelocitySource
 from core.query_tiering import get_weight_multiplier, get_tier_summary, QueryTier
+from core.query_normalization import normalize_query, promoted_query_multiplier, is_demoted_query, is_promoted_query, is_broad_query, family_id_for_query, is_allowed_family_query
 
 logger = logging.getLogger("trend_engine")
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data", "trends")
 DAILY_DIR = os.path.join(DATA_DIR, "daily")
 PERFORMANCE_FILE = os.path.join(DATA_DIR, "query_performance.json")
+FAMILY_PERFORMANCE_FILE = os.path.join(DATA_DIR, "family_performance.json")
 GOLDEN_CATALOG_FILE = os.path.join(DATA_DIR, "golden_catalog.json")
 
 # ── Catalog refresh schedule ──────────────────────────────────────────────────
@@ -72,8 +74,10 @@ ANCHOR_POOL_SIZE       = 10   # Top N by opp-score → anchor pool
 ANCHOR_CYCLE_INTERVAL  = 3    # Anchors run once every N cycles
 ROTATION_CYCLE_SIZE    = 15   # Queries drawn from rotation pool per cycle
 QUERY_COOLDOWN_MINUTES = 120  # Skip query if ran less than this many minutes ago
-                               # (matches sold_cache TTL of 2 hours)
+                               # (sold_cache TTL is 4 hours — cache survives one cooldown cycle)
 LONGTAIL_PER_CYCLE     = 3    # Long-tail queries included per cycle
+PROMOTED_PER_CYCLE     = 4    # Explicit liquidity-first exact queries guaranteed per cycle when available
+BROAD_ANCHOR_CAP       = 2    # Prevent broad umbrella queries from dominating anchor slots
 
 # ── Dead query exclusion ──────────────────────────────────────────────────────
 DEAD_QUERY_MIN_RUNS  = 50   # After this many runs…
@@ -541,7 +545,8 @@ class TrendEngine:
 
         def _in_cooldown(query: str) -> bool:
             """True if query ran less than QUERY_COOLDOWN_MINUTES ago."""
-            entry = perf.get(query) or perf.get(query.lower())
+            canonical = normalize_query(query)
+            entry = perf.get(canonical) or perf.get(query) or perf.get(query.lower())
             if not entry:
                 return False
             last = entry.get("last_run")
@@ -558,19 +563,34 @@ class TrendEngine:
             Queries that were reset (total_runs=0 but last_run exists) are treated
             as cooled-down regulars, not as brand-new, to prevent them dominating
             every cycle after a reset."""
-            entry = perf.get(query) or perf.get(query.lower())
+            canonical = normalize_query(query)
+            entry = perf.get(canonical) or perf.get(query) or perf.get(query.lower())
             if not entry:
                 return True  # Never seen at all
             return entry.get("last_run") is None  # Seen but never actually executed
 
+        def _under_evaluated(query: str) -> bool:
+            """True if query has <3 runs — not enough data for tiering to classify."""
+            canonical = normalize_query(query)
+            entry = perf.get(canonical) or perf.get(query) or perf.get(query.lower())
+            if not entry:
+                return True
+            return entry.get("total_runs", 0) < 3
+
         def _clean_pool(queries: list[str]) -> list[str]:
-            """Dedupe and strip dead queries."""
+            """Dedupe, canonicalize, and strip dead/demoted queries."""
             seen, out = set(), []
             for q in queries:
-                ql = q.lower().strip()
-                if ql not in seen and ql not in dead:
+                canonical = normalize_query(q)
+                ql = canonical.lower().strip()
+                if (
+                    ql not in seen
+                    and ql not in dead
+                    and not is_demoted_query(canonical)
+                    and is_allowed_family_query(canonical)
+                ):
                     seen.add(ql)
-                    out.append(q)
+                    out.append(canonical)
             return out
 
         # ── Build global catalog pool sorted by opp score ──────────────────
@@ -583,10 +603,11 @@ class TrendEngine:
             # Sort globally by opportunity score, best first
             all_entries.sort(key=lambda e: e.get("opportunity_score", 0), reverse=True)
             catalog_queries = _clean_pool([e["query"] for e in all_entries])
-            opp_scores = {
-                e["query"].lower(): e.get("opportunity_score", 1)
-                for e in all_entries
-            }
+            opp_scores = {}
+            for e in all_entries:
+                canonical = normalize_query(e["query"])
+                score = e.get("opportunity_score", 1) * promoted_query_multiplier(canonical)
+                opp_scores[canonical.lower()] = max(score, opp_scores.get(canonical.lower(), 0))
         else:
             catalog_queries = []
             opp_scores = {}
@@ -602,27 +623,60 @@ class TrendEngine:
 
         selected: list[str] = []
         used: set[str] = set()
+        used_families: set[str] = set()
 
         # ── 1. Anchor queries (every ANCHOR_CYCLE_INTERVAL cycles) ─────────
         anchor_due = (self.cycle_counter % ANCHOR_CYCLE_INTERVAL == 0)
         anchors_added = 0
+        broad_anchors_added = 0
         for q in anchor_pool:
-            if q.lower() in used:
+            family_id = family_id_for_query(q)
+            if q.lower() in used or family_id in used_families:
+                continue
+            if is_broad_query(q) and broad_anchors_added >= BROAD_ANCHOR_CAP:
                 continue
             if anchor_due and not _in_cooldown(q):
                 selected.append(q)
                 used.add(q.lower())
+                used_families.add(family_id)
                 anchors_added += 1
+                if is_broad_query(q):
+                    broad_anchors_added += 1
 
-        # ── 2. Never-run queries get priority slots ─────────────────────────
-        never_run = [q for q in catalog_queries if _never_run(q) and q.lower() not in used]
-        for q in never_run[:5]:   # up to 5 priority never-run slots
-            if q.lower() not in used and not _in_cooldown(q):
+        # ── 2. Promoted liquidity-first exact queries ───────────────────────
+        promoted_pool = [
+            q for q in catalog_queries
+            if is_promoted_query(q)
+            and q.lower() not in used
+            and family_id_for_query(q) not in used_families
+            and not _in_cooldown(q)
+        ]
+        promoted_added = 0
+        for q in promoted_pool[:PROMOTED_PER_CYCLE]:
+            family_id = family_id_for_query(q)
+            if q.lower() not in used and family_id not in used_families:
                 selected.append(q)
                 used.add(q.lower())
+                used_families.add(family_id)
+                promoted_added += 1
 
-        # ── 3. Rotation pool: weighted-random draw ─────────────────────────
-        candidates = [q for q in rotation_pool if q.lower() not in used and not _in_cooldown(q)]
+        # ── 3. Never-run queries get priority slots ─────────────────────────
+        never_run = [
+            q for q in catalog_queries
+            if _never_run(q) and q.lower() not in used and family_id_for_query(q) not in used_families
+        ]
+        for q in never_run[:5]:   # up to 5 priority never-run slots
+            family_id = family_id_for_query(q)
+            if q.lower() not in used and family_id not in used_families and not _in_cooldown(q):
+                selected.append(q)
+                used.add(q.lower())
+                used_families.add(family_id)
+
+        # ── 4. Rotation pool: weighted-random draw ─────────────────────────
+        candidates = [
+            q for q in rotation_pool
+            if q.lower() not in used and family_id_for_query(q) not in used_families and not _in_cooldown(q)
+        ]
         # Weight by opportunity score, modulated by query tier (A/B/trap)
         # and never-run boost
         weights = []
@@ -630,8 +684,13 @@ class TrendEngine:
             w = opp_scores.get(q.lower(), 1.0)
             if _never_run(q):
                 w *= 2.0
+            elif _under_evaluated(q):
+                w *= 1.5  # boost queries with <3 runs to reach classification threshold
             # Apply tier-based weight multiplier from telemetry
             w *= get_weight_multiplier(q, perf)
+            w *= promoted_query_multiplier(q)
+            if is_broad_query(q):
+                w *= 0.55
             weights.append(w)
 
         slots = max(0, ROTATION_CYCLE_SIZE - (len(selected) - anchors_added))
@@ -661,24 +720,30 @@ class TrendEngine:
                 if remaining_w > 0:
                     pool_copy = [(q, p / remaining_w) for q, p in pool_copy]
             for q in rotation_picks:
-                if q.lower() not in used:
+                family_id = family_id_for_query(q)
+                if q.lower() not in used and family_id not in used_families:
                     selected.append(q)
                     used.add(q.lower())
+                    used_families.add(family_id)
 
         # ── 4. Long-tail pool ──────────────────────────────────────────────
         lt_never_run = [q for q in LONGTAIL_TARGETS
-                        if q.lower() not in dead and q.lower() not in used and _never_run(q)]
+                        if q.lower() not in dead and q.lower() not in used
+                        and family_id_for_query(q) not in used_families and _never_run(q)]
         lt_cooled = [q for q in LONGTAIL_TARGETS
                      if q.lower() not in dead and q.lower() not in used
+                     and family_id_for_query(q) not in used_families
                      and not _never_run(q) and not _in_cooldown(q)]
 
         # Prioritise never-run long-tail, then cooled-down long-tail
         lt_candidates = lt_never_run + lt_cooled
         random.shuffle(lt_candidates)
         for q in lt_candidates[:LONGTAIL_PER_CYCLE]:
-            if q.lower() not in used:
+            family_id = family_id_for_query(q)
+            if q.lower() not in used and family_id not in used_families:
                 selected.append(q)
                 used.add(q.lower())
+                used_families.add(family_id)
 
         # ── Increment internal cycle counter ──────────────────────────────
         self.cycle_counter += 1
@@ -687,8 +752,9 @@ class TrendEngine:
         never_run_count = sum(1 for q in selected if _never_run(q))
         logger.info(
             f"🎯 Cycle targets: {len(selected)} queries | "
-            f"anchors={anchors_added} (due={anchor_due}) | "
-            f"rotation={len(selected) - anchors_added - LONGTAIL_PER_CYCLE} | "
+            f"anchors={anchors_added} (due={anchor_due}, broad={broad_anchors_added}) | "
+            f"promoted={promoted_added} | "
+            f"rotation={len(selected) - anchors_added - promoted_added - LONGTAIL_PER_CYCLE} | "
             f"long-tail={min(LONGTAIL_PER_CYCLE, len(lt_candidates))} | "
             f"never-run={never_run_count} | "
             f"{len(dead)} dead excluded | "
@@ -723,9 +789,10 @@ class TrendEngine:
             # Dedupe
             seen, out = set(), []
             for q in all_q:
-                if q.lower() not in seen:
-                    seen.add(q.lower())
-                    out.append(q)
+                canonical = normalize_query(q)
+                if canonical.lower() not in seen and not is_demoted_query(canonical):
+                    seen.add(canonical.lower())
+                    out.append(canonical)
             logger.info(f"📋 Full catalog pool: {len(out)} queries")
             return out
 
@@ -759,8 +826,9 @@ class TrendEngine:
     def log_query_performance(self, query: str, found_deals: int, best_gap_pct: float = 0.0, metrics: Optional[dict] = None):
         """Track which queries actually found deals (feedback loop)."""
         perf = self._load_performance()
-        if query not in perf:
-            perf[query] = {
+        canonical = normalize_query(query)
+        if canonical not in perf:
+            perf[canonical] = {
                 "total_runs": 0,
                 "total_deals": 0,
                 "best_gap": 0,
@@ -774,13 +842,17 @@ class TrendEngine:
                 "rep_ceiling_skips": 0,
                 "implausible_gap_skips": 0,
                 "low_trust_skips": 0,
+                "validation_failed": 0,
                 "junk_ratio": 0.0,
                 "alert_ratio": 0.0,
+                "aliases": [],
             }
-        perf[query]["total_runs"] += 1
-        perf[query]["total_deals"] += found_deals
-        perf[query]["best_gap"] = max(perf[query]["best_gap"], best_gap_pct)
-        perf[query]["last_run"] = datetime.utcnow().isoformat()
+        if query != canonical and query not in perf[canonical].get("aliases", []):
+            perf[canonical].setdefault("aliases", []).append(query)
+        perf[canonical]["total_runs"] += 1
+        perf[canonical]["total_deals"] += found_deals
+        perf[canonical]["best_gap"] = max(perf[canonical]["best_gap"], best_gap_pct)
+        perf[canonical]["last_run"] = datetime.utcnow().isoformat()
 
         metrics = metrics or {}
         for src_key, dest_key in [
@@ -793,22 +865,55 @@ class TrendEngine:
             ("rep_ceiling_skips", "rep_ceiling_skips"),
             ("implausible_gap_skips", "implausible_gap_skips"),
             ("low_trust_skips", "low_trust_skips"),
+            ("validation_failed", "validation_failed"),
         ]:
-            perf[query][dest_key] += int(metrics.get(src_key, 0) or 0)
+            perf[canonical][dest_key] += int(metrics.get(src_key, 0) or 0)
 
-        raw_items = perf[query].get("raw_items_found", 0)
-        candidates = perf[query].get("post_filter_candidates", 0)
-        alerts = perf[query].get("public_alerts_sent", 0)
-        perf[query]["junk_ratio"] = round(1 - (candidates / raw_items), 4) if raw_items else 0.0
-        perf[query]["alert_ratio"] = round(alerts / perf[query]["total_runs"], 4) if perf[query]["total_runs"] else 0.0
+        raw_items = perf[canonical].get("raw_items_found", 0)
+        candidates = perf[canonical].get("post_filter_candidates", 0)
+        alerts = perf[canonical].get("public_alerts_sent", 0)
+        perf[canonical]["junk_ratio"] = round(1 - (candidates / raw_items), 4) if raw_items else 0.0
+        perf[canonical]["alert_ratio"] = round(alerts / perf[canonical]["total_runs"], 4) if perf[canonical]["total_runs"] else 0.0
 
         # Stamp the current tier classification for observability
         from core.query_tiering import classify_query
-        tier_result = classify_query(query, perf[query])
-        perf[query]["tier"] = tier_result.tier.value
-        perf[query]["tier_reason"] = tier_result.reason
+        tier_result = classify_query(canonical, perf[canonical])
+        perf[canonical]["tier"] = tier_result.tier.value
+        perf[canonical]["tier_reason"] = tier_result.reason
+
+        family_perf = self._load_family_performance()
+        family_id = family_id_for_query(canonical)
+        family_entry = family_perf.setdefault(family_id, {
+            "family_id": family_id,
+            "canonical_query": canonical,
+            "queries": [],
+            "total_runs": 0,
+            "total_deals": 0,
+            "best_gap": 0.0,
+            "raw_items_found": 0,
+            "post_filter_candidates": 0,
+            "public_alerts_sent": 0,
+            "validation_failed": 0,
+            "junk_ratio": 0.0,
+            "alert_ratio": 0.0,
+        })
+        if canonical not in family_entry["queries"]:
+            family_entry["queries"].append(canonical)
+        family_entry["total_runs"] += 1
+        family_entry["total_deals"] += found_deals
+        family_entry["best_gap"] = max(family_entry["best_gap"], best_gap_pct)
+        family_entry["raw_items_found"] += int(metrics.get("raw_items_found", 0) or 0)
+        family_entry["post_filter_candidates"] += int(metrics.get("post_filter_candidates", 0) or 0)
+        family_entry["public_alerts_sent"] += int(metrics.get("public_alerts_sent", 0) or 0)
+        family_entry["validation_failed"] += int(metrics.get("validation_failed", 0) or 0)
+        raw_items_f = family_entry["raw_items_found"]
+        candidates_f = family_entry["post_filter_candidates"]
+        alerts_f = family_entry["public_alerts_sent"]
+        family_entry["junk_ratio"] = round(1 - (candidates_f / raw_items_f), 4) if raw_items_f else 0.0
+        family_entry["alert_ratio"] = round(alerts_f / family_entry["total_runs"], 4) if family_entry["total_runs"] else 0.0
 
         self._save_performance(perf)
+        self._save_family_performance(family_perf)
 
     def get_dead_query_report(self) -> list[dict]:
         """Return dead queries (50+ runs, 0 deals) sorted by run count."""
@@ -839,6 +944,13 @@ class TrendEngine:
             }
         except Exception:
             return None
+
+    def get_family_performance_summary(self, limit: int = 10) -> list[dict]:
+        """Return top family-level performance summaries for debugging/reporting."""
+        perf = self._load_family_performance()
+        rows = list(perf.values())
+        rows.sort(key=lambda x: (x.get("public_alerts_sent", 0), x.get("total_deals", 0), x.get("best_gap", 0.0)), reverse=True)
+        return rows[:limit]
 
     # ═══════════════════════════════════════════════════════════════════
     # GOLDEN CATALOG
@@ -887,19 +999,38 @@ class TrendEngine:
         signals = self._apply_feedback(signals)
 
         tier1, tier2, tier3 = [], [], []
+        canonical_entries: dict[str, dict] = {}
+        skipped_by_policy = 0
 
         for sig in signals:
-            entry = {
-                "query": sig.specific_query,
-                "brand": sig.brand,
-                "item_type": sig.item_type,
-                "avg_sold_price": round(sig.avg_sold_price, 2),
-                "monthly_volume": sig.est_sold_volume,
-                "opportunity_score": round(sig.opportunity_score, 2),
-            }
+            canonical = normalize_query(sig.specific_query)
+            if is_demoted_query(canonical) or not is_allowed_family_query(canonical):
+                skipped_by_policy += 1
+                continue
 
-            price = sig.avg_sold_price
-            vol   = sig.est_sold_volume
+            entry = canonical_entries.get(canonical)
+            if not entry:
+                canonical_entries[canonical] = {
+                    "query": canonical,
+                    "brand": sig.brand,
+                    "item_type": sig.item_type,
+                    "avg_sold_price": round(sig.avg_sold_price, 2),
+                    "monthly_volume": sig.est_sold_volume,
+                    "opportunity_score": round(sig.opportunity_score * promoted_query_multiplier(canonical), 2),
+                }
+            else:
+                # Merge duplicate/alias signals conservatively: keep the strongest observed
+                # opportunity signature rather than double-counting duplicate families.
+                entry["avg_sold_price"] = max(entry["avg_sold_price"], round(sig.avg_sold_price, 2))
+                entry["monthly_volume"] = max(entry["monthly_volume"], sig.est_sold_volume)
+                entry["opportunity_score"] = max(
+                    entry["opportunity_score"],
+                    round(sig.opportunity_score * promoted_query_multiplier(canonical), 2),
+                )
+
+        for entry in canonical_entries.values():
+            price = entry["avg_sold_price"]
+            vol = entry["monthly_volume"]
 
             if price >= TIER1_MIN_PRICE and vol >= TIER1_MIN_VOLUME:
                 tier1.append(entry)
@@ -933,7 +1064,8 @@ class TrendEngine:
             f"  ✅ Golden catalog saved: "
             f"T1={len(tier1)} (≥${TIER1_MIN_PRICE:.0f}/≥{TIER1_MIN_VOLUME}mo), "
             f"T2={len(tier2)} (≥${TIER2_MIN_PRICE:.0f}/≥{TIER2_MIN_VOLUME}mo), "
-            f"T3={len(tier3)} (≥${TIER3_MIN_PRICE:.0f}/≥{TIER3_MIN_VOLUME}mo)"
+            f"T3={len(tier3)} (≥${TIER3_MIN_PRICE:.0f}/≥{TIER3_MIN_VOLUME}mo) | "
+            f"canonical={len(canonical_entries)} | policy-skipped={skipped_by_policy}"
         )
         if tier1:
             logger.info("  🏆 Top Tier 1 items:")
@@ -963,7 +1095,8 @@ class TrendEngine:
         cooldown_delta = timedelta(minutes=QUERY_COOLDOWN_MINUTES)
 
         def _cooled(q: str) -> bool:
-            entry = perf.get(q) or perf.get(q.lower())
+            canonical = normalize_query(q)
+            entry = perf.get(canonical) or perf.get(q) or perf.get(q.lower())
             if not entry or not entry.get("last_run"):
                 return True
             try:
@@ -972,23 +1105,37 @@ class TrendEngine:
                 return True
 
         # Never-run first, then cooled-down, both from combined static pool
+        canonical_static = [normalize_query(q) for q in CORE_TARGETS + EXTENDED_TARGETS + LONGTAIL_TARGETS]
         all_static = list(dict.fromkeys(
-            q for q in CORE_TARGETS + EXTENDED_TARGETS + LONGTAIL_TARGETS
-            if q.lower().strip() not in dead
+            q for q in canonical_static
+            if q.lower().strip() not in dead and not is_demoted_query(q) and is_allowed_family_query(q)
         ))
-        never_run = [q for q in all_static if not perf.get(q) and not perf.get(q.lower())]
+        promoted = [q for q in all_static if is_promoted_query(q) and _cooled(q)]
+        never_run = [q for q in all_static if q not in promoted and not perf.get(q) and not perf.get(q.lower())]
         cooled = [q for q in all_static if q not in never_run and _cooled(q)]
         rest = [q for q in all_static if q not in never_run and q not in cooled]
 
+        random.shuffle(promoted)
         random.shuffle(never_run)
         random.shuffle(cooled)
         random.shuffle(rest)
 
-        candidates = never_run + cooled + rest
-        return candidates[:n]
+        candidates = promoted[:PROMOTED_PER_CYCLE] + never_run + cooled + rest
+        out, used_families = [], set()
+        for q in candidates:
+            family_id = family_id_for_query(q)
+            if family_id in used_families:
+                continue
+            out.append(q)
+            used_families.add(family_id)
+            if len(out) >= n:
+                break
+        return out
 
     def _get_dead_queries(self) -> set[str]:
-        return {d["query"].lower() for d in self.get_dead_query_report()}
+        dead = {normalize_query(d["query"]).lower() for d in self.get_dead_query_report()}
+        dead.update({q for q in dead if is_demoted_query(q)})
+        return dead
 
     def reset_dead_queries(self, queries: list[str] = None) -> int:
         """
@@ -1074,14 +1221,69 @@ class TrendEngine:
         if os.path.exists(PERFORMANCE_FILE):
             try:
                 with open(PERFORMANCE_FILE) as f:
-                    return json.load(f)
+                    raw = json.load(f)
+                merged: dict[str, dict] = {}
+                for query, data in raw.items():
+                    canonical = normalize_query(query)
+                    entry = merged.setdefault(canonical, {
+                        "total_runs": 0,
+                        "total_deals": 0,
+                        "best_gap": 0,
+                        "last_run": None,
+                        "raw_items_found": 0,
+                        "post_filter_candidates": 0,
+                        "public_alerts_sent": 0,
+                        "brand_mismatch_skips": 0,
+                        "category_mismatch_skips": 0,
+                        "stale_skips": 0,
+                        "rep_ceiling_skips": 0,
+                        "implausible_gap_skips": 0,
+                        "low_trust_skips": 0,
+                        "validation_failed": 0,
+                        "junk_ratio": 0.0,
+                        "alert_ratio": 0.0,
+                        "aliases": [],
+                    })
+                    for key in [
+                        "total_runs", "total_deals", "raw_items_found", "post_filter_candidates",
+                        "public_alerts_sent", "brand_mismatch_skips", "category_mismatch_skips",
+                        "stale_skips", "rep_ceiling_skips", "implausible_gap_skips", "low_trust_skips",
+                        "validation_failed",
+                    ]:
+                        entry[key] += int(data.get(key, 0) or 0)
+                    entry["best_gap"] = max(entry["best_gap"], float(data.get("best_gap", 0) or 0))
+                    last_run = data.get("last_run")
+                    if last_run and (not entry["last_run"] or last_run > entry["last_run"]):
+                        entry["last_run"] = last_run
+                    if query != canonical and query not in entry["aliases"]:
+                        entry["aliases"].append(query)
+                for canonical, entry in merged.items():
+                    raw_items = entry.get("raw_items_found", 0)
+                    candidates = entry.get("post_filter_candidates", 0)
+                    alerts = entry.get("public_alerts_sent", 0)
+                    entry["junk_ratio"] = round(1 - (candidates / raw_items), 4) if raw_items else 0.0
+                    entry["alert_ratio"] = round(alerts / entry["total_runs"], 4) if entry["total_runs"] else 0.0
+                return merged
             except (json.JSONDecodeError, IOError):
                 pass
         return {}
 
     def _save_performance(self, perf: dict):
         with open(PERFORMANCE_FILE, "w") as f:
-            json.dump(perf, f, indent=2)
+            json.dump(dict(sorted(perf.items())), f, indent=2)
+
+    def _load_family_performance(self) -> dict:
+        if os.path.exists(FAMILY_PERFORMANCE_FILE):
+            try:
+                with open(FAMILY_PERFORMANCE_FILE) as f:
+                    return json.load(f)
+            except (json.JSONDecodeError, IOError):
+                pass
+        return {}
+
+    def _save_family_performance(self, perf: dict):
+        with open(FAMILY_PERFORMANCE_FILE, "w") as f:
+            json.dump(dict(sorted(perf.items())), f, indent=2)
 
     # Legacy method — kept for backward compat but no longer used internally
     def generate_searches(self, trends: list[TrendSignal]) -> list[str]:
