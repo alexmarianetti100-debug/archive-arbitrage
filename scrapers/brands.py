@@ -90,7 +90,6 @@ ARCHIVE_BRANDS = [
     "ann demeulemeester",
     "ann demeulemeester homme",
     "dries van noten",
-    "haider ackermann",
     "carol christian poell",
     "ccp",
     "ccp prosthetic",
@@ -353,8 +352,7 @@ PRIORITY_BRANDS = [
     "dries van noten",
     "carol christian poell",
     "boris bidjan saberi",
-    "haider ackermann",
-    
+
     # Japanese archive
     "number nine",
     "undercover",

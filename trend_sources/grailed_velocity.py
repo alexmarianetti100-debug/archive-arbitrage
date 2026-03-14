@@ -51,7 +51,7 @@ ARCHIVE_BRANDS = {
     "gucci", "versace", "dries van noten", "mihara yasuhiro", "burberry",
     "enfants riches deprimes", "wacko maria", "human made", "number nine",
     "ann demeulemeester", "carol christian poell", "boris bidjan saberi",
-    "haider ackermann", "alexander mcqueen", "thierry mugler", "stone island",
+    "alexander mcqueen", "thierry mugler", "stone island",
     "amiri", "gallery dept", "vetements", "acronym", "alyx", "supreme",
     "off-white", "neighborhood",
 }

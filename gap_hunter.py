@@ -194,7 +194,7 @@ ARCHIVE_ITEM_KEYWORDS = ['archive', 'vintage', 'rick owens', 'margiela', 'raf si
                          'helmut lang', 'number nine', 'carol christian poell',
                          'boris bidjan saberi', 'undercover', 'yohji yamamoto',
                          'comme des garcons', 'junya watanabe', 'ann demeulemeester',
-                         'chrome hearts', 'haider ackermann', 'julius']
+                         'chrome hearts', 'julius']
 
 LUXURY_ITEM_KEYWORDS = ['rolex', 'cartier', 'omega', 'patek', 'audemars',
                         'hermes', 'chanel', 'louis vuitton', 'lv ', 'prada',
@@ -2615,7 +2615,7 @@ class GapHunter:
             "yohji yamamoto", "comme des garcons", "cdg",
             "issey miyake", "kapital", "carol christian poell",
             "boris bidjan saberi", "julius", "ann demeulemeester",
-            "haider ackermann", "alexander mcqueen", "celine",
+            "alexander mcqueen", "celine",
             "neighborhood", "wtaps", "human made", "sacai",
             "roen", "soloist", "takahiromiyashita", "bape",
             "visvim", "junya watanabe", "wacko maria",
@@ -2677,7 +2677,7 @@ if __name__ == "__main__":
                           "thierry mugler", "enfants riches deprimes", "hysteric glamour",
                           "yohji yamamoto", "y-3", "comme des garcons", "cdg", "issey miyake",
                           "kapital", "carol christian poell", "boris bidjan saberi", "julius",
-                          "ann demeulemeester", "haider ackermann", "celine",
+                          "ann demeulemeester", "celine",
                           "balenciaga", "saint laurent", "prada", "bottega veneta",
                           "givenchy", "gucci", "versace", "dries van noten",
                           "stone island", "needles", "visvim", "mihara yasuhiro",

@@ -191,7 +191,6 @@ CORE_TARGETS = [
     "yohji yamamoto coat",
     "comme des garcons jacket",
     "junya watanabe coat",
-    "haider ackermann coat",
     "carol christian poell boots",
     "boris bidjan saberi coat",
 ]
@@ -417,7 +416,6 @@ EXTENDED_TARGETS = [
     "comme des garcons jacket", "comme des garcons coat", "junya watanabe coat",
     "ann demeulemeester coat", "ann demeulemeester shirt", "ann demeulemeester blazer",
     "carol christian poell leather", "carol christian poell boots", "carol christian poell coat",
-    "haider ackermann coat", "haider ackermann blazer", "haider ackermann silk shirt",
     "vivienne westwood orb necklace", "vivienne westwood armor ring",
     "vivienne westwood corset", "vivienne westwood anglomania jacket",
     "julius cargo pants", "julius boots", "julius bomber jacket", "julius gas mask",
@@ -474,8 +472,6 @@ LONGTAIL_TARGETS = [
     # Carol Christian Poell
     "carol christian poell leather jacket", "carol christian poell coat",
     "carol christian poell boots", "carol christian poell drip rubber",
-    # Haider Ackermann
-    "haider ackermann leather jacket", "haider ackermann blazer", "haider ackermann silk shirt",
     # Julius
     "julius leather jacket", "julius boots", "julius cargo pants", "julius gas mask hoodie",
     # Issey Miyake

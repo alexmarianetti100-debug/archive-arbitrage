@@ -598,22 +598,6 @@ ICONIC_SEASONS = {
         (r"bbs|bbs11", 1.3, "BBS piece"),
     ],
 
-    # === HAIDER ACKERMANN ===
-    "haider ackermann": [
-        # Pre-Berluti era = highest value
-        (r"(aw|fw|ss).?(0[0-9]|1[0-6])|200[0-9]|201[0-6]", 2.0, "Pre-Berluti archive"),
-
-        # Iconic elements
-        (r"velvet|velour", 2.2, "Velvet piece"),
-        (r"layer|layered|draped", 1.8, "Layered/Draped piece"),
-        (r"leather|suede|shearling", 1.8, "Leather piece"),
-        (r"silk|satin|brocade", 1.5, "Silk/Satin piece"),
-
-        # Runway/notable
-        (r"runway|show.?piece", 1.8, "Runway piece"),
-        (r"sample", 2.0, "Sample piece"),
-    ],
-
     # === HUSSEIN CHALAYAN ===
     "hussein chalayan": [
         # Legendary conceptual pieces
@@ -1230,7 +1214,6 @@ BRAND_ALIASES = {
     "poell": "carol christian poell",
     "bbs": "boris bidjan saberi",
     "boris": "boris bidjan saberi",
-    "haider": "haider ackermann",
     "chalayan": "hussein chalayan",
     "hussein": "hussein chalayan",
     "wvb": "walter van beirendonck",
@@ -1393,7 +1376,6 @@ if __name__ == "__main__":
         ("dries van noten", "Dries Van Noten SS97 floral embroidered jacket"),
         ("carol christian poell", "CCP Carol Christian Poell Object Dyed Prosthetic boot"),
         ("boris bidjan saberi", "BBS Boris Bidjan Saberi Blood Stained leather"),
-        ("haider ackermann", "Haider Ackermann velvet layered coat 2014"),
         ("hussein chalayan", "Hussein Chalayan Coffee Table Dress LED"),
         ("walter van beirendonck", "Walter Van Beirendonck Wild & Lethal Trash 1996"),
         ("craig green", "Craig Green quilted laced jacket 2014"),

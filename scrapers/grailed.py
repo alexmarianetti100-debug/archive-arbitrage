@@ -80,7 +80,6 @@ class GrailedScraper(BaseScraper):
         "ann demeulemeester": "Ann Demeulemeester",
         "boris bidjan saberi": "Boris Bidjan Saberi", "julius": "Julius",
         "carol christian poell": "Carol Christian Poell",
-        "haider ackermann": "Haider Ackermann",
         "hysteric glamour": "Hysteric Glamour", "kapital": "Kapital",
         "alexander mcqueen": "Alexander McQueen", "thierry mugler": "Thierry Mugler",
     }

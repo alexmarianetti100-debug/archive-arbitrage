@@ -74,7 +74,7 @@ TIER_B_BRANDS = [
 
 # Group C: Solid brands, checked every 3rd cycle
 TIER_C_BRANDS = [
-    "boris bidjan saberi", "carol christian poell", "haider ackermann",
+    "boris bidjan saberi", "carol christian poell",
     "vetements", "alexander mcqueen", "hussein chalayan",
     "supreme", "off-white", "gallery dept", "amiri",
     "bape", "human made", "cav empt", "wacko maria",
@@ -407,7 +407,7 @@ class RealtimeMonitor:
             "yohji yamamoto", "comme des garcons", "cdg",
             "issey miyake", "kapital", "carol christian poell",
             "boris bidjan saberi", "julius", "ann demeulemeester",
-            "haider ackermann", "vetements", "alexander mcqueen",
+            "vetements", "alexander mcqueen",
             "hussein chalayan", "balenciaga", "saint laurent",
             "prada", "gucci", "louis vuitton", "supreme", "off-white",
             "gallery dept", "amiri", "bape", "human made",

@@ -69,7 +69,6 @@ BRAND_ALIASES: Dict[str, List[str]] = {
     "dolce gabbana": ["dolce & gabbana", "d&g"],
     "ann demeulemeester": ["ann d", "ann demeule"],
     "dries van noten": ["dries", "dvn"],
-    "haider ackermann": ["haider"],
     "vetements": [],
 }
 

@@ -62,8 +62,7 @@ BRAND_MARKET_ESTIMATES = {
     "helmut lang": {"jacket": 400, "pants": 200, "shirt": 180, "tee": 100, "default": 200},
     "ann demeulemeester": {"jacket": 450, "pants": 250, "shirt": 200, "tee": 120, "default": 250},
     "dries van noten": {"jacket": 400, "pants": 250, "shirt": 200, "tee": 120, "default": 250},
-    "haider ackermann": {"jacket": 500, "pants": 280, "shirt": 220, "tee": 130, "default": 280},
-    
+
     # === STREETWEAR / HYPE ===
     "supreme": {"jacket": 400, "pants": 200, "shirt": 180, "tee": 80, "hoodie": 250, "hat": 80, "default": 150},
     "palace": {"jacket": 300, "pants": 150, "shirt": 120, "tee": 60, "hoodie": 180, "default": 120},
