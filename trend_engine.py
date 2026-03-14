@@ -596,6 +596,15 @@ class TrendEngine:
                 + catalog.get("tier2", [])
                 + catalog.get("tier3", [])
             )
+            # Liquidity gate: skip queries with < 5 monthly sales regardless
+            # of margin — too illiquid to be actionable for subscribers.
+            pre_filter = len(all_entries)
+            all_entries = [e for e in all_entries if e.get("monthly_volume", 0) >= 5]
+            if len(all_entries) < pre_filter:
+                logger.info(
+                    f"  Liquidity filter: dropped {pre_filter - len(all_entries)} "
+                    f"queries with <5 monthly sales"
+                )
             # Sort globally by opportunity score, best first
             all_entries.sort(key=lambda e: e.get("opportunity_score", 0), reverse=True)
             catalog_queries = _clean_pool([e["query"] for e in all_entries])

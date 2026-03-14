@@ -70,6 +70,7 @@ from core.deal_quality import calculate_deal_quality, format_signal_line, format
 from core.auth_filter import authenticate_comps, filter_authenticated_comps
 from core.japan_integration import find_japan_arbitrage_deals, JapanArbitrageMonitor
 from core.deal_validation import validate_deal, track_customer_interaction, ValidationStatus
+from core.validation_engine import ValidationEngine
 from core.blue_chip_targets import (
     ALL_BLUE_CHIP_TARGETS, 
     get_target_config, 
@@ -478,6 +479,8 @@ class SoldData:
     pricing_method: str = "median"
     pricing_confidence: str = "medium"
     haircut_pct: float = 0.15
+    comp_titles: list = None  # Titles of sold comps (for validation engine)
+    comp_sizes: list = None   # Sizes of sold comps (for size parity check)
 
 
 @dataclass
@@ -507,6 +510,7 @@ class GapHunter:
 
     def __init__(self):
         self.auth = AuthenticityCheckerV2()
+        self.validation = ValidationEngine()
         self.seen_ids: set = set()
         self.sold_cache: Dict[str, SoldData] = {}
         self.cycle_count = 0
@@ -1023,6 +1027,10 @@ class GapHunter:
                         pass
             avg_days = sum(days_to_sell_list) / len(days_to_sell_list) if days_to_sell_list else 0.0
 
+            # ── Capture comp titles and sizes for validation engine ──
+            comp_titles = [s.title for s in sold if s.title]
+            comp_sizes = [s.size for s in sold if getattr(s, 'size', None)]
+
             # ── Comp confidence based on count (minimum is now 20, so low tier is gone) ──
             comp_confidence = "high" if len(prices) >= 20 else "medium"
 
@@ -1051,6 +1059,8 @@ class GapHunter:
                 pricing_method=liquidation.pricing_method,
                 pricing_confidence=liquidation.pricing_confidence,
                 haircut_pct=liquidation.haircut_pct,
+                comp_titles=comp_titles,
+                comp_sizes=comp_sizes,
             )
             # Store confidence and source metadata on SoldData
             data._confidence = comp_confidence
@@ -1897,6 +1907,30 @@ class GapHunter:
                 return False
         except Exception:
             auth_result = None
+
+        # ── Validation engine circuit breaker ──
+        # Check for mismatched comps (diffusion lines, size parity) before scoring.
+        sold_data_for_deal = self.sold_cache.get(deal.query)
+        v_comp_titles = getattr(sold_data_for_deal, 'comp_titles', None) if sold_data_for_deal else None
+        v_comp_sizes = getattr(sold_data_for_deal, 'comp_sizes', None) if sold_data_for_deal else None
+        listing_size = getattr(item, 'size', None)
+
+        validation_results = self.validation.validate(
+            listing_title=item.title,
+            comp_titles=v_comp_titles,
+            listing_size=listing_size,
+            comp_sizes=v_comp_sizes,
+            listing_price=item.price,
+            comp_avg_price=deal.sold_avg,
+            query=deal.query,
+        )
+        for vr in validation_results:
+            if not vr.passed:
+                logger.info(
+                    f"    🚫 Validation blocked ({vr.check_name}): {vr.reason} — {item.title[:50]}"
+                )
+                self.stats["validation_engine_blocked"] = self.stats.get("validation_engine_blocked", 0) + 1
+                return False
 
         # ── Calculate deal quality score ──
         auth_conf = auth_result.confidence if auth_result else 0.5
