@@ -59,6 +59,9 @@ from scrapers.vinted import VintedScraperWrapper as VintedScraper
 from scrapers.ebay import EbayScraper
 from scrapers.depop import DepopScraper
 from scrapers.mercari import MercariScraper
+from scrapers.therealreal import TheRealRealScraper
+from scrapers.fashionphile import FashionphileScraper
+from scrapers.secondstreet import SecondStreetScraper
 # ShopGoodwill removed — API consistently returns 500
 from core.authenticity_v2 import AuthenticityCheckerV2, format_auth_bar, format_auth_grade, MIN_AUTH_SCORE
 from core.desirability import check_desirability, REJECT_PATTERNS
@@ -68,6 +71,7 @@ from core.tier_policy import classify_discord_tiers
 from core.whop_alerts import send_whop_alert, format_whop_deal_content
 from core.deal_quality import calculate_deal_quality, format_signal_line, format_quality_header, DealSignals, THRESHOLD_FIRE_1
 from core.auth_filter import authenticate_comps, filter_authenticated_comps
+from scrapers.product_fingerprint import parse_title_to_fingerprint
 from core.japan_integration import find_japan_arbitrage_deals, JapanArbitrageMonitor
 from core.deal_validation import validate_deal, track_customer_interaction, ValidationStatus
 from core.validation_engine import ValidationEngine
@@ -166,25 +170,29 @@ def estimate_shipping(item: "ScrapedItem") -> float:
     category_lower = (item.category or "").lower()
     combined = title_lower + " " + category_lower
 
-    # Heavy outerwear
+    # Shipping estimates updated for 2026 rates (USPS +7.8%, UPS/FedEx +6%)
+    # Heavy outerwear (2-5 lbs)
     if any(k in combined for k in ("jacket", "coat", "parka", "anorak", "bomber", "leather", "hoodie")):
-        return 28.0
-    # Footwear
+        return 32.0
+    # Footwear (3-6 lbs with box)
     if any(k in combined for k in ("boot", "shoe", "sneaker", "geobasket", "ramone", "creeper", "tabi",
                                     "loafer", "sandal", "heel", "pump", "mule", "clog")):
-        return 20.0
-    # Bags, heavy accessories
-    if any(k in combined for k in ("bag", "backpack", "tote", "suitcase", "luggage")):
-        return 18.0
-    # Small accessories / jewelry
+        return 22.0
+    # Small accessories / jewelry (First Class or small Priority)
     if any(k in combined for k in ("ring", "pendant", "necklace", "bracelet", "earring", "chain",
-                                    "charm", "pin", "brooch", "wallet", "card holder")):
-        return 7.0
-    # Bottoms / pants / denim
+                                    "charm", "pin", "brooch")):
+        return 8.0
+    # Bottoms / pants / denim (1-2 lbs)
     if any(k in combined for k in ("pant", "jean", "denim", "cargo", "trouser", "short")):
-        return 13.0
-    # Default (tops, shirts, tees, knitwear)
-    return 15.0
+        return 15.0
+    # Eyewear (small but fragile — needs box)
+    if any(k in combined for k in ("sunglasses", "glasses", "eyewear", "frames")):
+        return 12.0
+    # Belts (flat, lightweight)
+    if any(k in combined for k in ("belt",)):
+        return 10.0
+    # Default (tops, shirts, tees, knitwear — 1-2 lbs)
+    return 16.0
 
 STATE_FILE = os.path.join(os.path.dirname(__file__), "data", "gap_state.json")
 SOLD_CACHE_FILE = os.path.join(os.path.dirname(__file__), "data", "sold_cache.json")
@@ -193,14 +201,17 @@ SOLD_CACHE_TTL = 14400  # 4 hours — must exceed query cooldown (120min) for ca
 # to ensure we can find comps for rare/archive pieces
 ARCHIVE_ITEM_KEYWORDS = ['archive', 'vintage', 'rick owens', 'margiela', 'raf simons',
                          'helmut lang', 'number nine', 'carol christian poell',
-                         'boris bidjan saberi', 'undercover', 'yohji yamamoto',
-                         'comme des garcons', 'junya watanabe', 'ann demeulemeester',
-                         'chrome hearts', 'julius']
+                         'boris bidjan saberi', 'undercover',
+                         'comme des garcons', 'ann demeulemeester',
+                         'chrome hearts', 'julius', 'kapital', 'visvim',
+                         'vivienne westwood', 'enfants riches deprimes', 'erd',
+                         'jean paul gaultier', 'gaultier', 'guidi',
+                         'haider ackermann', 'dries van noten', 'hysteric glamour',
+                         'dior homme', 'thierry mugler', 'soloist', 'sacai', 'lemaire']
 
-LUXURY_ITEM_KEYWORDS = ['rolex', 'cartier', 'omega', 'patek', 'audemars',
-                        'hermes', 'chanel', 'louis vuitton', 'lv ', 'prada',
+LUXURY_ITEM_KEYWORDS = ['chanel', 'louis vuitton', 'lv ', 'prada',
                         'gucci', 'balenciaga', 'saint laurent', 'ysl',
-                        'van cleef', 'bvlgari', 'tiffany', 'dior', 'bottega veneta',
+                        'dior', 'bottega veneta',
                         'issey miyake', 'thierry mugler', 'mugler', 'jil sander',
                         'maison margiela', 'margiela', 'craig green', 'kiko kostadinov']
 
@@ -218,13 +229,13 @@ def _get_comp_thresholds(query: str):
     """Get comp thresholds based on item type."""
     if _is_archive_query(query):
         return {
-            'min_comps': 5,  # Lower threshold for archive items (was 10)
-            'max_age_days': 365,  # 1 year for archive items
+            'min_comps': 5,
+            'max_age_days': 90,  # 90 days — archive markets shift, stale comps = bad pricing
         }
     elif _is_luxury_query(query):
         return {
-            'min_comps': 3,  # Very low threshold for luxury (hard to find comps)
-            'max_age_days': 730,  # 2 years for luxury items
+            'min_comps': 3,
+            'max_age_days': 180,  # 6 months for luxury (was 2 years — too stale)
         }
     return {
         'min_comps': MIN_SOLD_COMPS,  # Default 8
@@ -243,8 +254,17 @@ PLATFORM_PRICE_DISCOUNT = {
     "mercari": 0.70,      # Mercari ~30% below
     "depop": 0.80,        # Depop ~20% below
     "vinted": 0.65,       # Vinted ~35% below (buyer pays fees)
-    # shopgoodwill removed
+    "therealreal": 0.90,  # TRR prices near Grailed, pre-authenticated
+    "fashionphile": 0.95, # Fashionphile premium for luxury accessories
+    "2ndstreet": 0.70,    # Japan source, structural discount + JPY weakness
 }
+# ── Bag filter — ALL bags/wallets/purses rejected from alerts ──
+_BAG_KEYWORDS = {"bag", "handbag", "purse", "tote", "clutch", "shoulder bag", "crossbody",
+                 "satchel", "backpack", "duffle", "weekender", "briefcase", "messenger bag",
+                 "wallet", "card holder", "card case", "coin purse",
+                 "flap bag", "bucket bag", "hobo bag", "belt bag", "bum bag", "fanny pack",
+                 "keepall", "neverfull", "speedy", "pochette"}
+
 BLOCKLIST_FILE = os.path.join(os.path.dirname(__file__), "data", "seller_blocklist.json")
 IMAGE_HASHES_FILE = os.path.join(os.path.dirname(__file__), "data", "image_hashes.json")
 
@@ -288,19 +308,21 @@ DEPOP_SKIP_BRANDS: set[str] = {
 REP_PRICE_CEILINGS = {
     "chrome hearts": {
         "trucker hat": 350,
-        "cross pendant": 300,
-        "dagger pendant": 300,
-        "floral cross": 350,
-        "cross ring": 250,
-        "ring": 200,
+        "cross pendant": 350,
+        "dagger pendant": 400,
+        "floral cross": 400,
+        "cross ring": 300,
+        "ring": 250,         # minimum for ANY CH ring
         "bracelet": 400,
-        "necklace": 250,
-        "chain": 300,
+        "necklace": 300,
+        "chain": 350,
+        "pendant": 300,
         "leather jacket": 2500,
         "denim jacket": 1000,
-        "eyewear": 300,
-        "hoodie": 400,
-        "cemetery": 500,
+        "eyewear": 350,
+        "hoodie": 450,
+        "cemetery": 600,
+        "tee": 250,          # CH tees never sell under $250 authentic
     },
     "rick owens": {
         "geobasket": 300,
@@ -321,21 +343,34 @@ REP_PRICE_CEILINGS = {
         "peter saville": 250,
     },
     "enfants riches deprimes": {
-        "hoodie": 450,
-        "jacket": 500,
-        "tee": 200,
-        "t-shirt": 200,
-        "jeans": 300,
-        "pants": 300,
-        "sweater": 350,
-        "hat": 150,
-        "cap": 150,
+        "hoodie": 500,
+        "jacket": 1500,
+        "leather jacket": 1500,
+        "denim jacket": 800,
+        "bomber": 1200,
+        "tee": 400,
+        "t-shirt": 400,
+        "long sleeve": 300,
+        "jeans": 500,
+        "pants": 400,
+        "sweater": 600,
+        "flannel": 400,
+        "shirt": 400,
+        "hat": 200,
+        "cap": 200,
+        "belt": 500,
     },
     "erd": {
-        "hoodie": 450,
-        "jacket": 500,
-        "tee": 200,
-        "t-shirt": 200,
+        "hoodie": 500,
+        "jacket": 1500,
+        "leather jacket": 1500,
+        "denim jacket": 800,
+        "tee": 400,
+        "t-shirt": 400,
+        "long sleeve": 300,
+        "jeans": 500,
+        "hat": 200,
+        "belt": 500,
     },
     "dior": {
         "boots": 200,
@@ -364,8 +399,6 @@ REP_PRICE_CEILINGS = {
         "earring": 40,
         "bracelet": 60,
         "choker": 80,
-        "bag": 100,
-        "wallet": 80,
     },
     "number nine": {
         "skull": 300,
@@ -402,23 +435,33 @@ REP_PRICE_CEILINGS = {
         "speed": 100,
         "cargo": 100,
         "leather jacket": 400,
+        "paris sneaker": 200,
     },
     "saint laurent": {
         "wyatt": 200,
         "leather jacket": 300,
+        "leather boots": 200,
         "teddy": 300,
         "court classic": 100,
     },
     "prada": {
         "americas cup": 100,
         "cloudbust": 100,
-        "nylon bag": 80,
         "linea rossa": 80,
+        "chocolate loafers": 300,
+        "leather loafers": 200,
     },
     "bottega veneta": {
         "puddle": 100,
         "tire boots": 150,
-        "cassette": 150,
+        "chelsea boots": 200,
+    },
+    "louis vuitton": {
+        "murakami": 500,
+        "trainer": 300,
+    },
+    "chanel": {
+        "espadrilles": 300,
     },
     "supreme": {
         "box logo": 200,      # Heavily repped
@@ -459,6 +502,78 @@ REP_PRICE_CEILINGS = {
         "chest rig": 40,
         "rollercoaster belt": 30,
     },
+    # ── New brands ──
+    "celine": {
+        "leather jacket": 800,
+        "teddy jacket": 600,
+        "varsity jacket": 700,
+        "boots": 200,
+        "western boots": 300,
+        "belt": 150,
+    },
+    "haider ackermann": {
+        "leather jacket": 400,
+        "blazer": 150,
+        "silk bomber": 250,
+        "coat": 250,
+    },
+    "dries van noten": {
+        "embroidered jacket": 200,
+        "velvet blazer": 150,
+        "leather jacket": 250,
+        "coat": 200,
+    },
+    "sacai": {
+        "leather jacket": 300,
+        "bomber": 200,
+        "blazer": 150,
+    },
+    "guidi": {
+        "boots": 200,
+        "back zip": 250,
+        "jacket": 300,
+        "horse leather": 250,
+    },
+    "lemaire": {
+        "jacket": 150,
+        "leather jacket": 250,
+        "coat": 200,
+        "boots": 120,
+    },
+    "acne studios": {
+        "leather jacket": 200,
+        "velocite": 300,
+        "shearling": 250,
+        "boots": 100,
+    },
+    "simone rocha": {
+        "dress": 150,
+        "jacket": 150,
+        "pearl": 100,
+    },
+    "brunello cucinelli": {
+        "cashmere jacket": 250,
+        "leather jacket": 400,
+        "cashmere sweater": 120,
+        "coat": 250,
+    },
+    "soloist": {
+        "jacket": 250,
+        "leather jacket": 400,
+        "boots": 200,
+    },
+    "takahiromiyashita": {
+        "jacket": 250,
+        "leather jacket": 400,
+        "boots": 200,
+    },
+    "hysteric glamour": {
+        "leather jacket": 300,
+        "denim jacket": 150,
+        "jeans": 100,
+        "tee": 80,
+        "knit": 100,
+    },
 }
 
 
@@ -481,6 +596,7 @@ class SoldData:
     haircut_pct: float = 0.15
     comp_titles: list = None  # Titles of sold comps (for validation engine)
     comp_sizes: list = None   # Sizes of sold comps (for size parity check)
+    comp_confidence_penalty: int = 0  # Points to subtract from quality score (from comp_validator)
 
 
 @dataclass
@@ -497,6 +613,7 @@ class GapDeal:
     authenticated_comps: int = 0
     comp_auth_confidence: float = 0.0
     hyper_pricing: bool = False
+    comp_confidence_penalty: int = 0  # Penalty from comp_validator
     liquidation_anchor: float = 0.0
     downside_anchor: float = 0.0
     expected_net_profit: float = 0.0
@@ -925,7 +1042,7 @@ class GapHunter:
 
         try:
             async with GrailedScraper() as scraper:
-                sold = await scraper.search_sold(query, max_results=30)  # Fetch more to account for filtering
+                sold = await scraper.search_sold(query, max_results=40)  # Fetch more to account for filtering
 
             # ── Temporal filtering: only use comps from last max_age_days ──
             from datetime import datetime as _dt, timedelta, timezone
@@ -951,13 +1068,20 @@ class GapHunter:
             if stale_count > 0:
                 logger.debug(f"  Filtered out {stale_count} stale comps (>{max_age_days}d) for '{query}'")
 
-            # ── eBay sold fallback: kick in when Grailed doesn't have enough comps ──
+            # ── eBay sold fallback: only when Grailed has < 3 comps ──
+            # eBay prices run 5-10% below Grailed; mixing freely dilutes accuracy.
+            # Only fall back to eBay when Grailed data is truly insufficient.
             ebay_fallback_used = False
-            if len(fresh_sold) < min_comps:
+            if len(fresh_sold) < 3:
                 try:
                     async with EbaySoldScraper() as ebay_scraper:
                         ebay_sold = await ebay_scraper.search_sold(query, max_results=50)
                     ebay_fresh, _ = _filter_fresh(ebay_sold or [])
+                    # eBay "Best Offer Accepted" shows listing price, not actual sale price.
+                    # Apply 12% haircut to eBay comps to approximate real transaction prices.
+                    for eb in ebay_fresh:
+                        if eb.price and eb.price > 0:
+                            eb.price = eb.price * 0.88
                     combined = fresh_sold + ebay_fresh
                     if len(combined) >= min_comps:
                         logger.info(f"  📦 eBay sold fallback: {len(ebay_fresh)} comps for '{query}' "
@@ -995,6 +1119,74 @@ class GapHunter:
             if len(prices) < min_comps:
                 return None
 
+            comp_confidence_penalty = 0  # May be set by comp_validator below
+            query_brand = self._detect_brand(query) or ""
+
+            # ── Product fingerprint + item-type filtering ──
+            # Two-pass filter:
+            #   1. Require exact item-type word in comp title (ring must have "ring")
+            #   2. Exact dimension matching via comp_matcher
+            try:
+                if query_brand:
+                    query_fp = parse_title_to_fingerprint(query_brand, query)
+
+                    # Pass 1: Exact item-type keyword filter
+                    # If the query fingerprint has a specific item_type, require that
+                    # word to appear in the comp title. This prevents ring/pendant mixing.
+                    ITEM_TYPE_KEYWORDS = {
+                        "rings": ["ring", "band", "signet"],
+                        "necklaces": ["necklace", "pendant", "chain"],
+                        "bracelets": ["bracelet", "cuff", "bangle"],
+                        "earrings": ["earring", "stud", "hoop"],
+                        "belts": ["belt"],
+                        "hats": ["hat", "cap", "beanie", "trucker"],
+                        "eyewear": ["sunglasses", "glasses", "frames", "eyewear"],
+                        "wallets": ["wallet", "card holder", "card case"],
+                        "bags": ["bag", "handbag", "tote", "clutch", "purse", "crossbody", "satchel"],
+                        "footwear": ["shoes", "sneakers", "boots", "boot", "loafers", "derbies", "sandals", "mules"],
+                    }
+                    type_keywords = ITEM_TYPE_KEYWORDS.get(query_fp.item_type, [])
+                    if type_keywords and len(sold) >= 3:
+                        type_filtered = []
+                        for s in sold:
+                            comp_title_lower = (s.title or "").lower()
+                            if any(kw in comp_title_lower for kw in type_keywords):
+                                type_filtered.append(s)
+                        if len(type_filtered) >= min_comps:
+                            removed = len(sold) - len(type_filtered)
+                            if removed > 0:
+                                logger.info(f"  🔍 Item-type filter ({query_fp.item_type}): kept {len(type_filtered)}/{len(sold)} comps (removed {removed} wrong-category comps)")
+                            sold = type_filtered
+                            prices = sorted([i.price for i in sold if i.price and i.price > 0])
+                        elif len(type_filtered) >= 3:
+                            logger.info(f"  🔍 Item-type filter: {len(type_filtered)} matches (below {min_comps}, using anyway)")
+                            sold = type_filtered
+                            prices = sorted([i.price for i in sold if i.price and i.price > 0])
+
+                    # Pass 2: Exact dimension matching (hard gate)
+                    from scrapers.comp_matcher import parse_title as cm_parse_title, is_exact_match, match_quality as cm_match_quality
+                    listing_parsed = cm_parse_title(query_brand, query)
+                    if listing_parsed.brand and len(sold) >= 3:
+                        matched_sold = []
+                        for s in sold:
+                            comp_brand = self._detect_brand(s.title) or query_brand
+                            comp_parsed = cm_parse_title(comp_brand, s.title)
+                            if is_exact_match(listing_parsed, comp_parsed):
+                                s._match_quality = cm_match_quality(listing_parsed, comp_parsed, getattr(s, 'sold_date', ''))
+                                matched_sold.append(s)
+                        if len(matched_sold) >= min_comps:
+                            removed = len(sold) - len(matched_sold)
+                            if removed > 0:
+                                logger.info(f"  🎯 Exact match filter: {len(matched_sold)}/{len(sold)} comps matched")
+                            # Sort by match quality (best comps first for weighted median)
+                            matched_sold.sort(key=lambda s: getattr(s, '_match_quality', 0), reverse=True)
+                            sold = matched_sold
+                            prices = sorted([i.price for i in sold if i.price and i.price > 0])
+                        elif len(matched_sold) > 0:
+                            logger.info(f"  ⚠️ Exact match: only {len(matched_sold)} comps (below min {min_comps}), keeping original set")
+            except Exception as e:
+                logger.debug(f"  Fingerprint filtering error: {e}")
+
             # ── Filter out suspiciously low sold comps (likely reps) ──
             if len(prices) >= 3:
                 initial_median = prices[len(prices) // 2]
@@ -1005,10 +1197,50 @@ class GapHunter:
                         logger.debug(f"  Filtered out {len(prices) - len(filtered_prices)} suspiciously low sold comps for '{query}'")
                     prices = filtered_prices
 
-            # ── Remove outliers (top/bottom 10%) ──
-            if len(prices) > 5:
-                trim = max(1, len(prices) // 10)
-                prices = prices[trim:-trim]
+            # ── Remove outliers using IQR method ──
+            if len(prices) >= 5:
+                q1_idx = len(prices) // 4
+                q3_idx = (3 * len(prices)) // 4
+                q1 = prices[q1_idx]
+                q3 = prices[q3_idx]
+                iqr = q3 - q1
+                lower_bound = q1 - 1.5 * iqr
+                upper_bound = q3 + 1.5 * iqr
+                iqr_filtered = [p for p in prices if lower_bound <= p <= upper_bound]
+                if len(iqr_filtered) >= min_comps:
+                    removed = len(prices) - len(iqr_filtered)
+                    if removed > 0:
+                        logger.debug(f"  IQR outlier removal: {removed} comps removed (range ${lower_bound:.0f}-${upper_bound:.0f})")
+                    prices = iqr_filtered
+
+            # ── Comp validation safety net ──
+            from core.comp_validator import validate_comps
+            if len(sold) >= 3:
+                validation = validate_comps(
+                    listing_title=query,
+                    listing_brand=query_brand,
+                    comp_titles=[s.title for s in sold],
+                    comp_prices=[s.price for s in sold if s.price and s.price > 0],
+                    comp_sold_dates=[getattr(s, 'sold_date', None) for s in sold],
+                )
+                if validation.surviving_count >= 3:
+                    sold = [sold[i] for i in validation.surviving_indices]
+                    prices = sorted([s.price for s in sold if s.price and s.price > 0])
+                    comp_confidence_penalty = validation.score_penalty
+                elif validation.surviving_count == 0:
+                    logger.info(f"  ❌ Comp validator rejected all comps for '{query[:50]}'")
+                    return None
+                # 1-2 survive: keep original set, note low confidence
+
+            # ── Detect bimodal distribution (p75 > 2.5x p25 = likely mixed products) ──
+            if len(prices) >= 5:
+                p25 = prices[len(prices) // 4]
+                p75 = prices[(3 * len(prices)) // 4]
+                if p25 > 0 and p75 > p25 * 2.5:
+                    logger.warning(f"  ⚠️ Bimodal price distribution detected for '{query}': p25=${p25:.0f}, p75=${p75:.0f} (ratio {p75/p25:.1f}x)")
+                    # Use only lower half — more conservative
+                    prices = prices[:len(prices) // 2]
+                    logger.info(f"  📉 Using lower half of comps ({len(prices)} items) for conservative estimate")
 
             # ── Calculate average days-to-sell from sold comps ──
             days_to_sell_list = []
@@ -1031,8 +1263,8 @@ class GapHunter:
             comp_titles = [s.title for s in sold if s.title]
             comp_sizes = [s.size for s in sold if getattr(s, 'size', None)]
 
-            # ── Comp confidence based on count (minimum is now 20, so low tier is gone) ──
-            comp_confidence = "high" if len(prices) >= 20 else "medium"
+            # ── Comp confidence based on count ──
+            comp_confidence = "high" if len(prices) >= 12 else "medium" if len(prices) >= 5 else "low"
 
             liquidation = compute_liquidation_metrics(
                 sold_prices=prices,
@@ -1061,6 +1293,7 @@ class GapHunter:
                 haircut_pct=liquidation.haircut_pct,
                 comp_titles=comp_titles,
                 comp_sizes=comp_sizes,
+                comp_confidence_penalty=comp_confidence_penalty,
             )
             # Store confidence and source metadata on SoldData
             data._confidence = comp_confidence
@@ -1121,7 +1354,7 @@ class GapHunter:
             # Build Comp objects from sold items
             # We need to re-fetch the sold items to get full details
             async with GrailedScraper() as scraper:
-                sold_items = await scraper.search_sold(query, max_results=30)
+                sold_items = await scraper.search_sold(query, max_results=40)
             
             if not sold_items or len(sold_items) < 3:
                 # Not enough comps for hyper-pricing, use standard
@@ -1286,7 +1519,6 @@ class GapHunter:
             try:
                 if not hasattr(self, '_mercari'):
                     self._mercari = MercariScraper()
-                # Note: Mercari searches US, JP, and TW domains sequentially
                 return await asyncio.wait_for(self._mercari.search(query, max_results=10), timeout=45.0)
             except asyncio.TimeoutError:
                 logger.warning(f"    ⚠️ Mercari timed out for '{query}'")
@@ -1295,19 +1527,59 @@ class GapHunter:
                 logger.warning(f"    ⚠️ Mercari search failed for '{query}': {e}")
                 return []
 
+        async def _therealreal():
+            try:
+                async with TheRealRealScraper() as scraper:
+                    return await asyncio.wait_for(scraper.search(query, max_results=15), timeout=20.0)
+            except asyncio.TimeoutError:
+                logger.debug(f"    TheRealReal timed out for '{query}'")
+                return []
+            except Exception as e:
+                logger.debug(f"    TheRealReal search failed: {e}")
+                return []
+
+        async def _fashionphile():
+            try:
+                async with FashionphileScraper() as scraper:
+                    return await asyncio.wait_for(scraper.search(query, max_results=15), timeout=20.0)
+            except asyncio.TimeoutError:
+                logger.debug(f"    Fashionphile timed out for '{query}'")
+                return []
+            except Exception as e:
+                logger.debug(f"    Fashionphile search failed: {e}")
+                return []
+
+        async def _secondstreet():
+            try:
+                async with SecondStreetScraper(use_proxies=False) as scraper:
+                    return await asyncio.wait_for(scraper.search(query, max_results=15), timeout=20.0)
+            except asyncio.TimeoutError:
+                logger.debug(f"    2ndSTREET timed out for '{query}'")
+                return []
+            except Exception as e:
+                logger.debug(f"    2ndSTREET search failed: {e}")
+                return []
+
         # ── Chrome Hearts: Multi-platform with extended window ──
         # CH is luxury, not hype — use 72hr window and seller trust instead of platform-only.
         is_chrome_hearts = "chrome hearts" in query.lower()
 
         if is_chrome_hearts:
-            # Search Grailed + Poshmark + eBay + Mercari (skip Depop/Vinted for CH)
-            grailed_items, poshmark_items, _, _, ebay_items, mercari_items = await asyncio.gather(
-                _grailed(), _poshmark(), _depop(), _vinted(), _ebay(), _mercari()
+            # Search all platforms for CH (skip Depop/Vinted)
+            results_list = await asyncio.gather(
+                _grailed(), _poshmark(), _depop(), _vinted(), _ebay(), _mercari(),
+                _therealreal(), _fashionphile(), _secondstreet(),
             )
-            results_list = [grailed_items, poshmark_items, [], [], ebay_items, mercari_items]
-            logger.info(f"  [CH] Multi-platform: {len(grailed_items)} Grailed, {len(poshmark_items)} Poshmark, {len(ebay_items)} eBay, {len(mercari_items)} Mercari")
+            logger.info(
+                f"  [CH] Multi-platform: Grailed={len(results_list[0])}, Poshmark={len(results_list[1])}, "
+                f"eBay={len(results_list[4])}, Mercari={len(results_list[5])}, "
+                f"TRR={len(results_list[6])}, Fashionphile={len(results_list[7])}, 2ndST={len(results_list[8])}"
+            )
         else:
-            results_list = await asyncio.gather(_grailed(), _poshmark(), _depop(), _vinted(), _ebay(), _mercari())
+            results_list = await asyncio.gather(
+                _grailed(), _poshmark(), _depop(), _vinted(), _ebay(), _mercari(),
+                _therealreal(), _fashionphile(), _secondstreet(),
+            )
 
         all_items = [item for sublist in results_list for item in sublist]
         query_metrics = {
@@ -1356,6 +1628,9 @@ class GapHunter:
             if not item.price or item.price <= 0:
                 continue
 
+            # ── Detect brand early (needed for bag filter, Depop filter, etc.) ──
+            detected_brand = self._detect_brand(item.title)
+
             # ── Depop: skip commonly-faked brands (no authentication) ──
             if item.source == "depop":
                 _title_lower = (item.title or "").lower()
@@ -1364,6 +1639,15 @@ class GapHunter:
                     logger.debug(f"    🚫 Depop skip (commonly faked brand): {item.title[:60]}")
                     self.stats["depop_fake_brand_skipped"] = self.stats.get("depop_fake_brand_skipped", 0) + 1
                     continue
+
+            # ── Bag filter — ALL bags eliminated ──
+            # Bags have high counterfeit risk and inaccurate comp matching.
+            # Reject any listing that appears to be a bag/wallet/purse.
+            title_lower = (item.title or "").lower()
+            if any(kw in title_lower for kw in _BAG_KEYWORDS):
+                logger.debug(f"    🚫 Bag listing rejected: {item.title[:60]}")
+                self.stats["bag_skipped"] = self.stats.get("bag_skipped", 0) + 1
+                continue
 
             # ── Currency conversion → USD (live rates, cached 1h) ──
             item_currency = getattr(item, 'currency', 'USD')
@@ -1394,11 +1678,17 @@ class GapHunter:
 
             # ── Seller trust filter (Fix 1) ──
             seller_sales = getattr(item, "seller_sales", None)
-            if item.source == "grailed" and seller_sales is not None and seller_sales < 5:
-                logger.info(f"    ⚠️ Low-trust seller '{item.seller}' ({seller_sales} sales) - skipping: {item.title[:50]}")
-                self.stats["low_trust_skipped"] += 1
-                query_metrics["low_trust_skips"] += 1
-                continue
+            if item.source == "grailed" and seller_sales is not None:
+                min_sales_required = 3
+                if item.price >= 1000:
+                    min_sales_required = 10
+                elif item.price >= 500:
+                    min_sales_required = 5
+                if seller_sales < min_sales_required:
+                    logger.info(f"    ⚠️ Low-trust seller '{item.seller}' ({seller_sales} sales, need {min_sales_required} for ${item.price:.0f}): {item.title[:50]}")
+                    self.stats["low_trust_skipped"] += 1
+                    query_metrics["low_trust_skips"] += 1
+                    continue
             # Penalty for unknown seller_sales handled in process_deal auth scoring
 
             # ── High-rep collab filter: Rick Owens x Vans ──
@@ -1420,7 +1710,7 @@ class GapHunter:
 
             # ── Rep price ceiling check (Fix 3) ──
             # Skip for Grailed — all items are purchase-verified
-            if item.source != "grailed" and self._check_rep_price_ceiling(query, item.price, item.title):
+            if item.source not in {"grailed", "therealreal", "fashionphile"} and self._check_rep_price_ceiling(query, item.price, item.title):
                 logger.info(f"    🚫 Below rep price ceiling — likely fake: ${item.price:.0f} for '{query}' — {item.title[:60]}")
                 self.stats["rep_ceiling_skipped"] += 1
                 query_metrics["rep_ceiling_skips"] += 1
@@ -1525,6 +1815,20 @@ class GapHunter:
                 logger.debug(f"    Skipped poor match: only {matching_words}/{min_matching_words}+ words match for '{query}' - {item.title[:50]}")
                 continue
 
+            # ── Product fingerprint category mismatch check ──
+            # Prevent cross-category alerts (e.g., bag listing for a shoe query)
+            try:
+                if detected_brand:
+                    from scrapers.comp_matcher import parse_title as cm_parse_title
+                    query_parsed = cm_parse_title(detected_brand, query)
+                    item_parsed = cm_parse_title(detected_brand, item.title)
+                    if query_parsed.item_type and item_parsed.item_type and query_parsed.item_type != item_parsed.item_type:
+                        logger.info(f"    🔍 Category mismatch: query={query_parsed.item_type}, item={item_parsed.item_type} — {item.title[:50]}")
+                        query_metrics["category_mismatch_skips"] += 1
+                        continue
+            except Exception:
+                pass
+
             # Add minimum title similarity check - at least 40% of query words should match
             # For Japanese Mercari, use lower threshold since titles are in Japanese
             min_similarity = 0.25 if is_jp_mercari else 0.40
@@ -1567,7 +1871,7 @@ class GapHunter:
             if item.listed_at:
                 from datetime import timezone
                 listing_age_days = (datetime.now(timezone.utc) - item.listed_at).days
-                if listing_age_days > 10:
+                if listing_age_days > 14:
                     logger.debug(f"    Skipped stale listing ({listing_age_days}d old): {item.title[:50]}")
                     self.stats.setdefault("stale_skipped", 0)
                     self.stats["stale_skipped"] += 1
@@ -1586,35 +1890,46 @@ class GapHunter:
             # ── Low photo count check ──
             # Legitimate sellers of real archive pieces take detailed photos
             photo_count = (item.raw_data or {}).get("photo_count", 0)
-            if photo_count > 0 and photo_count < 4:
+            if photo_count > 0 and photo_count < 2:
                 logger.debug(f"    Skipped low photos ({photo_count}): {item.title[:50]}")
                 continue
+
+            # ── Gender mismatch filter ──
+            # Women's items have different pricing than men's. If listing is
+            # explicitly women's but query/comps are men's, skip to avoid inflated profits.
+            _WOMENS_KEYWORDS = {"women's", "womens", "woman's", "ladies", "femme", "donna"}
+            if any(kw in title_lower for kw in _WOMENS_KEYWORDS):
+                query_lower_check = query.lower()
+                if not any(kw in query_lower_check for kw in _WOMENS_KEYWORDS):
+                    logger.info(f"    🚫 Women's item matched to men's query: {item.title[:50]}")
+                    self.stats.setdefault("gender_mismatch_skipped", 0)
+                    self.stats["gender_mismatch_skipped"] += 1
+                    continue
 
             # ── Brand whitelist ──
             # Only allow items from brands we actually track. Prevents random
             # Poshmark results (Lululemon, Harley Davidson, etc.) from leaking through.
-            detected_brand = self._detect_brand(item.title)
+            # (detected_brand already set above, before bag/depop filters)
             if not detected_brand:
                 logger.debug(f"    Skipped unknown brand: {item.title[:50]}")
                 continue
 
-            # Calculate gap with platform price adjustment
-            # Use conservative liquidation anchors instead of flattering market estimates.
+            # Calculate gap against Grailed resale value (no platform discount).
+            # We buy on any platform and resell on Grailed — the reference is what
+            # the item sells for on Grailed, not what it would sell for on the source platform.
             reference_price = sold_data.liquidation_anchor or (
                 getattr(sold_data, '_hyper_pricing', False) and sold_data.avg_price or sold_data.median_price
             )
             downside_reference = sold_data.downside_anchor or (reference_price * 0.85)
 
-            platform_discount = PLATFORM_PRICE_DISCOUNT.get(item.source, 0.80)
-            adjusted_reference = reference_price * platform_discount
-            adjusted_downside_reference = downside_reference * platform_discount
-            gap = adjusted_reference - item.price
-            gap_percent = gap / adjusted_reference if adjusted_reference > 0 else 0
+            gap = reference_price - item.price
+            gap_percent = gap / reference_price if reference_price > 0 else 0
 
-            # Profit estimate: conservative expected and downside liquidation after fees + shipping
-            expected_sell_price = reference_price * 0.88
-            downside_sell_price = downside_reference * 0.88
-            shipping_est = estimate_shipping(item)
+            # Profit estimate: resell on Grailed at reference price minus ~14% fees + shipping
+            # Grailed takes 12% commission + ~2.2% payment processing = 14.2% total
+            expected_sell_price = reference_price * 0.858
+            downside_sell_price = downside_reference * 0.858
+            shipping_est = estimate_shipping(item) * 1.20  # 20% buffer for shipping variance
             profit = expected_sell_price - item.price - shipping_est
             downside_profit = downside_sell_price - item.price - shipping_est
             real_margin = profit / item.price if item.price > 0 else 0
@@ -1659,6 +1974,7 @@ class GapHunter:
                     authenticated_comps=getattr(sold_data, '_authenticated_comps', 0),
                     comp_auth_confidence=getattr(sold_data, '_auth_confidence', 0.0),
                     hyper_pricing=getattr(sold_data, '_hyper_pricing', False),
+                    comp_confidence_penalty=getattr(sold_data, 'comp_confidence_penalty', 0),
                     liquidation_anchor=reference_price,
                     downside_anchor=downside_reference,
                     expected_net_profit=profit,
@@ -1793,33 +2109,54 @@ class GapHunter:
                 bids = japan_data.bids
                 end_time = japan_data.end_time
             
+            # Apply 5% forex risk buffer to Japan profit estimates
+            net_profit = net_profit * 0.95
+            margin_percent = margin_percent * 0.95
+
             logger.info(f"    🗾 Processing Japan deal: {brand} {title}...")
 
-            # Skip auth check for Japan deals (proxy services authenticate)
+            # Japan deals use pre-authenticated proxy services — set auth confidence to 0.80
             auth_result = None
+            auth_conf = 0.80
 
-            # Create Japan-specific signals
-            from core.deal_quality import DealSignals
-            signals = DealSignals(
-                fire_level=3 if recommendation == 'STRONG_BUY' else 2,
+            # Calculate quality score using the same pipeline as non-Japan deals
+            quality_score, signals = calculate_deal_quality(
+                item=item,
+                brand=brand,
+                sold_data=deal,
                 gap_percent=margin_percent / 100,
-                profit_estimate=net_profit,
-                line_name='Japan Import',
-                season_name=category,
-                condition_tier='NEW',
-                detected_size='',
-                liquidity_score=8,
+                profit=net_profit,
+                auth_confidence=auth_conf,
             )
+            # Apply comp confidence penalty from validation
+            comp_confidence_penalty = getattr(deal, 'comp_confidence_penalty', 0)
+            quality_score = max(0, quality_score - comp_confidence_penalty)
+            if comp_confidence_penalty > 0:
+                logger.info(f"  📉 Comp confidence penalty: -{comp_confidence_penalty} pts")
+            # Override line_name for Japan deals
+            signals.line_name = 'Japan Import'
+
+            # Apply the SAME quality gates as non-Japan deals
+            min_fire = int(os.getenv("GAP_MIN_FIRE_LEVEL", "2"))
+            if signals.fire_level < min_fire:
+                logger.info(f"    ⏭ Japan deal below quality threshold (fire={signals.fire_level} < {min_fire}): {title}")
+                self.stats["quality_filtered"] += 1
+                return False
+
+            public_min_quality = int(os.getenv("DISCORD_MIN_QUALITY_SCORE", "55"))
+            if quality_score < public_min_quality:
+                logger.info(f"    ⏭ Japan deal below quality score ({quality_score:.0f} < {public_min_quality}): {title}")
+                self.stats["public_quality_filtered"] += 1
+                return False
 
             # Build Japan-specific message
-            header = "🗾 JAPAN ARBITRAGE"
-            # Handle title_jp for both dict and dataclass
+            header = format_quality_header(signals)
             if isinstance(japan_data, dict):
                 title_jp = japan_data.get('title_jp', '')
             else:
                 title_jp = japan_data.title_jp
             message = (
-                f"{header}\n\n"
+                f"{header}\n🗾 JAPAN ARBITRAGE\n\n"
                 f"<b>{title_jp}</b>\n"
                 f"{title}\n\n"
                 f"💵 <b>Japan Price:</b> ¥{item_price_jpy:,} (${item_price_usd:,.0f})\n"
@@ -1834,82 +2171,48 @@ class GapHunter:
                 f"<a href='{auction_url}'>🔗 Bid on Buyee</a>"
             )
 
-            # Send alerts
-            alerts_sent = False
+        # ── Seller trust re-check (scales with item price) ──
+        if not is_japan_deal:
+            seller_sales = getattr(item, "seller_sales", None)
+            if seller_sales is not None and item.source == "grailed":
+                # Higher-value items require more seller history
+                min_sales = 3
+                if item.price >= 1000:
+                    min_sales = 10
+                elif item.price >= 500:
+                    min_sales = 5
+                if seller_sales < min_sales:
+                    logger.info(f"    🚫 Low-trust seller ({seller_sales} sales, need {min_sales} for ${item.price:.0f} item): {item.title[:50]}")
+                    self.stats["low_trust_skipped"] += 1
+                    return False
 
+        # Auth check (skip for Japan deals — already handled above)
+        if not is_japan_deal:
             try:
-                # Discord
-                if DISCORD_ENABLED:
-                    decision = classify_discord_tiers(item, net_profit, margin_percent / 100, signals=signals, auth_result=None)
-                    if decision.channel_tiers:
-                        discord_sent = await send_discord_alert(
-                            item=item,
-                            message=message,
-                            fire_level=signals.fire_level,
-                            signals=signals,
-                            auth_result=None,
-                            tier=decision.minimum_tier or "beginner",
-                            tiers=decision.channel_tiers,
-                        )
-                        if discord_sent:
-                            logger.info(f"    ✅ Discord alert sent ({decision.minimum_tier} -> {decision.channel_tiers})")
-                            alerts_sent = True
-                        else:
-                            logger.warning(f"    ❌ Discord alert failed")
-                    else:
-                        logger.info(f"    ⏭ Japan deal did not match a Discord tier policy")
-            except Exception as e:
-                logger.error(f"    ❌ Discord error: {e}")
-            
-            # Telegram
-            try:
-                import telegram_bot
-                if telegram_bot.BOT_TOKEN and telegram_bot.TELEGRAM_CHANNEL_ID:
-                    await telegram_bot.send_message(
-                        chat_id=int(telegram_bot.TELEGRAM_CHANNEL_ID),
-                        text=message,
-                        parse_mode="HTML",
-                        disable_preview=False
-                    )
-                    logger.info(f"    ✅ Telegram channel alert sent")
-                    alerts_sent = True
-            except Exception as e:
-                logger.error(f"    ❌ Telegram error: {e}")
-            
-            if alerts_sent:
-                self.stats['deals_sent'] = self.stats.get('deals_sent', 0) + 1
-                return True
-            else:
-                logger.warning(f"    ⚠️ No alerts sent for Japan deal")
-                return False
+                auth_result = await asyncio.wait_for(
+                    self.auth.check(
+                        title=item.title,
+                        description=item.description or "",
+                        price=item.price,
+                        brand=brand,
+                        category=category,
+                        seller_name=item.seller or "",
+                        seller_sales=getattr(item, "seller_sales", 0) or 0,
+                        seller_rating=getattr(item, "seller_rating", None),
+                        images=item.images,
+                        source=item.source,
+                    ),
+                    timeout=20.0,
+                )
 
-        # Auth check
-        try:
-            auth_result = await asyncio.wait_for(
-                self.auth.check(
-                    title=item.title,
-                    description=item.description or "",
-                    price=item.price,
-                    brand=brand,
-                    category=category,
-                    seller_name=item.seller or "",
-                    seller_sales=getattr(item, "seller_sales", 0) or 0,
-                    seller_rating=getattr(item, "seller_rating", None),
-                    images=item.images,
-                    source=item.source,
-                ),
-                timeout=20.0,
-            )
+                if auth_result.action == "block" or auth_result.confidence < MIN_AUTH_SCORE:
+                    self.stats["auth_blocked"] += 1
+                    self._record_auth_block(item.seller)
+                    return False
+            except Exception:
+                auth_result = None
 
-            if auth_result.action == "block" or auth_result.confidence < MIN_AUTH_SCORE:
-                self.stats["auth_blocked"] += 1
-                self._record_auth_block(item.seller)
-                return False
-        except Exception:
-            auth_result = None
-
-        # ── Validation engine circuit breaker ──
-        # Check for mismatched comps (diffusion lines, size parity) before scoring.
+        # ── Validation engine — runs for ALL deals (Japan + non-Japan) ──
         sold_data_for_deal = self.sold_cache.get(deal.query)
         v_comp_titles = getattr(sold_data_for_deal, 'comp_titles', None) if sold_data_for_deal else None
         v_comp_sizes = getattr(sold_data_for_deal, 'comp_sizes', None) if sold_data_for_deal else None
@@ -1932,60 +2235,66 @@ class GapHunter:
                 self.stats["validation_engine_blocked"] = self.stats.get("validation_engine_blocked", 0) + 1
                 return False
 
-        # ── Calculate deal quality score ──
-        auth_conf = auth_result.confidence if auth_result else 0.5
-        quality_score, signals = calculate_deal_quality(
-            item=item,
-            brand=brand,
-            sold_data=deal,
-            gap_percent=deal.gap_percent,
-            profit=deal.profit_estimate,
-            auth_confidence=auth_conf,
-        )
-
-        # Quality gate: only send 🔥🔥+ deals (score >= 50)
-        min_fire = int(os.getenv("GAP_MIN_FIRE_LEVEL", "2"))
-        if signals.fire_level < min_fire:
-            logger.info(
-                f"    ⏭ Below quality threshold ({quality_score:.0f}/100, fire={signals.fire_level} < {min_fire}): {item.title[:50]}"
+        # ── Non-Japan only: quality scoring and remaining gates ──
+        # Japan deals already ran quality gates above.
+        if not is_japan_deal:
+            # Calculate deal quality score
+            if auth_result:
+                auth_conf = auth_result.confidence
+            elif item.source in {"grailed", "therealreal", "fashionphile"}:
+                auth_conf = 0.80
+            else:
+                auth_conf = 0.5
+            quality_score, signals = calculate_deal_quality(
+                item=item,
+                brand=brand,
+                sold_data=deal,
+                gap_percent=deal.gap_percent,
+                profit=deal.profit_estimate,
+                auth_confidence=auth_conf,
             )
-            self.stats["quality_filtered"] += 1
-            return False
+            # Apply comp confidence penalty from validation
+            comp_confidence_penalty = getattr(deal, 'comp_confidence_penalty', 0)
+            quality_score = max(0, quality_score - comp_confidence_penalty)
+            if comp_confidence_penalty > 0:
+                logger.info(f"  📉 Comp confidence penalty: -{comp_confidence_penalty} pts")
 
-        # Public alert gate: keep candidate detection broad, but require a cleaner
-        # comp/auth profile before we broadcast a deal.
-        public_min_quality = int(os.getenv("DISCORD_MIN_QUALITY_SCORE", "55"))
-        public_min_auth = float(os.getenv("DISCORD_MIN_AUTH_CONFIDENCE", "0.72"))
-        public_max_cv = float(os.getenv("DISCORD_MAX_COMP_CV", "0.90"))
-        public_min_downside_profit = float(os.getenv("DISCORD_MIN_DOWNSIDE_PROFIT", "25"))
-        public_min_mos = float(os.getenv("DISCORD_MIN_MOS_SCORE", "35"))
-        allow_medium_comp = os.getenv("DISCORD_ALLOW_MEDIUM_COMP_CONFIDENCE", "0") == "1"
+            # Fire level gate
+            min_fire = int(os.getenv("GAP_MIN_FIRE_LEVEL", "2"))
+            if signals.fire_level < min_fire:
+                logger.info(
+                    f"    ⏭ Below quality threshold ({quality_score:.0f}/100, fire={signals.fire_level} < {min_fire}): {item.title[:50]}"
+                )
+                self.stats["quality_filtered"] += 1
+                return False
 
-        deal_comp_conf = getattr(deal, "comp_confidence_level", None) or getattr(deal, "comp_confidence", "medium")
-        deal_comp_cv = getattr(deal, "comp_cv", None)
-        deal_auth_comps = getattr(deal, "authenticated_comps", 0)
-        deal_auth_conf = getattr(deal, "comp_auth_confidence", 0.0)
+            # Quality score gate
+            public_min_quality = int(os.getenv("DISCORD_MIN_QUALITY_SCORE", "55"))
+            public_min_auth = float(os.getenv("DISCORD_MIN_AUTH_CONFIDENCE", "0.72"))
+            public_max_cv = float(os.getenv("DISCORD_MAX_COMP_CV", "0.90"))
+            public_min_downside_profit = float(os.getenv("DISCORD_MIN_DOWNSIDE_PROFIT", "25"))
+            allow_medium_comp = os.getenv("DISCORD_ALLOW_MEDIUM_COMP_CONFIDENCE", "0") == "1"
 
-        if quality_score < public_min_quality:
-            logger.info(f"    ⏭ Public-send gate: score {quality_score:.0f} < {public_min_quality} — {item.title[:50]}")
-            self.stats["public_quality_filtered"] += 1
-            return False
+            deal_comp_conf = getattr(deal, "comp_confidence_level", None) or getattr(deal, "comp_confidence", "medium")
+            deal_comp_cv = getattr(deal, "comp_cv", None)
+            deal_auth_comps = getattr(deal, "authenticated_comps", 0)
+            deal_auth_conf = getattr(deal, "comp_auth_confidence", 0.0)
 
-        if deal.downside_net_profit < public_min_downside_profit:
-            logger.info(
-                f"    ⏭ Public-send gate: downside profit ${deal.downside_net_profit:.0f} < ${public_min_downside_profit:.0f} — {item.title[:50]}"
-            )
-            self.stats["public_quality_filtered"] += 1
-            return False
+            if quality_score < public_min_quality:
+                logger.info(f"    ⏭ Public-send gate: score {quality_score:.0f} < {public_min_quality} — {item.title[:50]}")
+                self.stats["public_quality_filtered"] += 1
+                return False
 
-        if deal.margin_of_safety_score < public_min_mos:
-            logger.info(
-                f"    ⏭ Public-send gate: MOS {deal.margin_of_safety_score:.0f} < {public_min_mos:.0f} — {item.title[:50]}"
-            )
-            self.stats["public_quality_filtered"] += 1
-            return False
+            if deal.downside_net_profit < public_min_downside_profit:
+                logger.info(
+                    f"    ⏭ Public-send gate: downside profit ${deal.downside_net_profit:.0f} < ${public_min_downside_profit:.0f} — {item.title[:50]}"
+                )
+                self.stats["public_quality_filtered"] += 1
+                return False
 
-        if auth_result and auth_result.confidence < public_min_auth and item.source != "grailed":
+        # Skip auth gate for pre-authenticated platforms (Grailed, TheRealReal, Fashionphile)
+        pre_auth_sources = {"grailed", "therealreal", "fashionphile"}
+        if auth_result and auth_result.confidence < public_min_auth and item.source not in pre_auth_sources:
             logger.info(
                 f"    ⏭ Public-send gate: auth {auth_result.confidence:.0%} < {public_min_auth:.0%} on {item.source} — {item.title[:50]}"
             )
@@ -2011,7 +2320,7 @@ class GapHunter:
             self.stats["public_comp_filtered"] += 1
             return False
 
-        if deal_auth_comps < 3 and deal_auth_conf < 0.75 and signals.fire_level < 3:
+        if deal_auth_comps < 2 and deal_auth_conf < 0.65 and signals.fire_level < 2:
             logger.info(
                 f"    ⏭ Public-send gate: weak sold-comp auth ({deal_auth_comps} authenticated, {deal_auth_conf:.0%} confidence) — {item.title[:50]}"
             )
@@ -2236,7 +2545,7 @@ class GapHunter:
             trend_engine = _get_trend_engine()
             if trend_engine:
                 try:
-                    dynamic = await trend_engine.get_cycle_targets(n=20)
+                    dynamic = await trend_engine.get_cycle_targets(n=25)
                     if dynamic:
                         targets = dynamic
                         logger.info(f"🔥 {len(targets)} targets this cycle (varied rotation)")
@@ -2368,6 +2677,7 @@ class GapHunter:
                             class MockItem:
                                 def __init__(self, japan_deal):
                                     self.title = f"{japan_deal.brand} {japan_deal.title}"
+                                    self.description = getattr(japan_deal, 'description', '') or ''
                                     self.price = japan_deal.total_landed_cost
                                     self.source = 'japan_buyee'
                                     self.url = japan_deal.auction_url
@@ -2645,17 +2955,20 @@ class GapHunter:
             "jean paul gaultier", "gaultier",
             "vivienne westwood", "maison margiela", "margiela",
             "dior homme", "dior men", "christian dior", "thierry mugler", "mugler",
-            "enfants riches deprimes", "erd", "hysteric glamour",
-            "yohji yamamoto", "comme des garcons", "cdg",
+            "enfants riches deprimes", "erd",
+            "hysteric glamour",
+            "comme des garcons", "cdg",
             "issey miyake", "kapital", "carol christian poell",
             "boris bidjan saberi", "julius", "ann demeulemeester",
             "alexander mcqueen", "celine",
             "neighborhood", "wtaps", "human made", "sacai",
             "roen", "soloist", "takahiromiyashita", "bape",
-            "visvim", "junya watanabe", "wacko maria",
+            "visvim", "wacko maria",
             "givenchy", "gucci", "versace", "dries van noten",
             "mihara yasuhiro", "burberry", "y-3",
             "balenciaga", "saint laurent", "prada", "bottega veneta",
+            "haider ackermann", "guidi", "lemaire", "acne studios",
+            "simone rocha", "brunello cucinelli",
         ]
         for brand in brands:
             if brand in title_lower:
@@ -2709,14 +3022,16 @@ if __name__ == "__main__":
                           "number nine", "undercover", "jean paul gaultier", "gaultier",
                           "vivienne westwood", "maison margiela", "margiela", "dior",
                           "thierry mugler", "enfants riches deprimes", "hysteric glamour",
-                          "yohji yamamoto", "y-3", "comme des garcons", "cdg", "issey miyake",
+                          "comme des garcons", "cdg", "issey miyake",
                           "kapital", "carol christian poell", "boris bidjan saberi", "julius",
                           "ann demeulemeester", "celine",
                           "balenciaga", "saint laurent", "prada", "bottega veneta",
                           "givenchy", "gucci", "versace", "dries van noten",
                           "stone island", "needles", "visvim", "mihara yasuhiro",
                           "neighborhood", "wtaps", "human made", "sacai", "roen",
-                          "soloist", "bape", "junya watanabe", "wacko maria", "burberry"]:
+                          "soloist", "bape", "wacko maria", "burberry",
+                          "haider ackermann", "guidi", "lemaire", "acne studios",
+                          "simone rocha", "brunello cucinelli"]:
                 if brand in t.lower() and brand not in seen:
                     seen.append(brand)
         for b in seen:
