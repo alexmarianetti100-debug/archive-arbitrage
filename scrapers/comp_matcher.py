@@ -62,6 +62,19 @@ MATERIALS = [
     "rubber", "mesh", "knit", "waxed", "coated", "distressed", "raw",
 ]
 
+# Hybrid model type aliases — models that span multiple item type categories.
+# Used by is_exact_match() to allow valid cross-type comp matching.
+# Includes both current ("shoes") and post-split ("sneakers", "loafers") names
+# so aliases work before and after the item_type split in Task 3.
+TYPE_ALIASES: dict[str, set[str]] = {
+    "geobasket": {"boots", "shoes", "sneakers"},
+    "geo basket": {"boots", "shoes", "sneakers"},
+    "kiss boot": {"boots", "shoes", "sneakers"},
+    "tractor": {"boots", "shoes", "sneakers"},
+    "ramones": {"boots", "shoes", "sneakers"},
+    "tabi": {"boots", "shoes", "loafers", "sneakers"},
+}
+
 # Model/style names that are specific enough to search for
 MODEL_PATTERNS = [
     # Rick Owens
@@ -339,6 +352,54 @@ def score_comp_similarity(source_parsed: ParsedTitle, comp_title: str) -> float:
         return 0.0
     
     return min(score / factors, 1.0)
+
+
+def is_exact_match(listing: ParsedTitle, comp: ParsedTitle) -> bool:
+    """Hard dimension gate — ALL checks must pass for a comp to be valid.
+
+    Dimensions checked:
+        1. Brand: must match exactly
+        2. Model: must match if detected on both sides
+        3. Item type: must match (broad category level)
+        4. Line tier: mainline/diffusion must agree
+        5. Material: must match if detectable in both titles
+    """
+    # 1. Brand — always required
+    if listing.brand != comp.brand:
+        return False
+
+    # 2. Model — reject only if BOTH detected and different
+    if listing.model and comp.model:
+        if listing.model.lower() != comp.model.lower():
+            return False
+
+    # 3. Item type — reject if both detected and different
+    if listing.item_type and comp.item_type:
+        if listing.item_type != comp.item_type:
+            # Check type aliases for hybrid models (e.g., geobasket = boots OR sneakers)
+            listing_model = (listing.model or "").lower()
+            comp_model = (comp.model or "").lower()
+            listing_types = TYPE_ALIASES.get(listing_model, {listing.item_type})
+            comp_types = TYPE_ALIASES.get(comp_model, {comp.item_type})
+            if not listing_types & comp_types:
+                return False
+
+    # 4. Line tier — mainline vs diffusion must agree
+    listing_is_diffusion = bool(listing.sub_brand)
+    comp_is_diffusion = bool(comp.sub_brand)
+    if listing_is_diffusion != comp_is_diffusion:
+        return False
+    # If both are diffusion, must be SAME diffusion line
+    if listing_is_diffusion and comp_is_diffusion:
+        if listing.sub_brand.lower() != comp.sub_brand.lower():
+            return False
+
+    # 5. Material — reject only if BOTH detected and different
+    if listing.material and comp.material:
+        if listing.material.lower() != comp.material.lower():
+            return False
+
+    return True
 
 
 # ══════════════════════════════════════════════════════════════
