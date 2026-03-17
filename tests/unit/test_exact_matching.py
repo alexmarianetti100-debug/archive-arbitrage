@@ -110,3 +110,27 @@ class TestMatchQuality:
         comp = parse_title("rick owens", "Rick Owens Geobasket")
         score = match_quality(listing, comp)
         assert score > 0.0
+
+
+class TestFootwearSubTypes:
+    """Sneakers and boots should be separate item types."""
+
+    def test_sneakers_vs_boots_rejects(self):
+        listing = parse_title("balenciaga", "Balenciaga Triple S Sneakers White")
+        comp = parse_title("balenciaga", "Balenciaga Santiago Leather Boots Black")
+        assert is_exact_match(listing, comp) is False
+
+    def test_sneakers_vs_sneakers_passes(self):
+        listing = parse_title("balenciaga", "Balenciaga Triple S Sneakers")
+        comp = parse_title("balenciaga", "Balenciaga Triple S Trainers White")
+        assert is_exact_match(listing, comp) is True
+
+    def test_loafers_vs_sneakers_rejects(self):
+        listing = parse_title("prada", "Prada Leather Loafers")
+        comp = parse_title("prada", "Prada Americas Cup Sneakers")
+        assert is_exact_match(listing, comp) is False
+
+    def test_boots_vs_boots_passes(self):
+        listing = parse_title("ann demeulemeester", "Ann Demeulemeester Leather Boots")
+        comp = parse_title("ann demeulemeester", "Ann Demeulemeester Lace Up Boots Black")
+        assert is_exact_match(listing, comp) is True
