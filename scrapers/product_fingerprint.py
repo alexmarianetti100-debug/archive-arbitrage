@@ -42,21 +42,42 @@ SUB_BRANDS = {
 }
 
 # === ITEM TYPE HIERARCHY ===
+# ORDER MATTERS — more specific categories MUST come before generic ones.
+# "trucker hat" must match "hats" before "trucker" matches "outerwear".
+# "chain bracelet" must match "bracelets" before "chain" matches "necklaces".
+# We use OrderedDict semantics (Python 3.7+ dicts preserve insertion order).
 ITEM_TYPES = {
-    "outerwear": ["jacket", "blazer", "coat", "bomber", "parka", "varsity", "windbreaker", "anorak",
-                  "leather jacket", "denim jacket", "trucker", "overshirt", "harrington", "trench"],
-    "pants": ["pants", "trousers", "jeans", "denim", "cargo", "jogger", "sweatpants", "track pants",
-              "chinos", "slacks", "cargos", "wide leg", "flare", "slim", "straight"],
-    "shorts": ["shorts", "short", "swim trunks"],
-    "shirts": ["shirt", "button up", "button down", "flannel", "camp collar", "hawaiian", "oxford", "dress shirt"],
-    "t-shirts": ["t-shirt", "tee", "tshirt", "t shirt"],
-    "sweaters": ["sweater", "knit", "cardigan", "jumper", "crewneck", "crew neck", "turtleneck", "mohair", "cable knit"],
-    "hoodies": ["hoodie", "hooded", "sweatshirt", "pullover", "zip up", "zip-up"],
+    # Jewelry/accessories — check FIRST (most specific, easily confused)
+    "rings": ["ring", "band", "signet", "signet ring", "pinky ring", "spinner ring",
+              "forever ring", "cross ring", "scroll ring", "keeper ring"],
+    "bracelets": ["bracelet", "cuff", "bangle", "chain bracelet", "paper chain bracelet",
+                  "rollercoaster bracelet", "id bracelet"],
+    "necklaces": ["necklace", "pendant", "choker", "paper chain", "cross pendant",
+                  "baby fat", "dagger pendant", "dog tag", "chain"],
+    "earrings": ["earring", "earrings", "stud", "hoop", "drop earring", "huggie"],
+    "eyewear": ["sunglasses", "glasses", "frames", "optical", "eyewear", "aviator"],
+    "hats": ["trucker hat", "trucker cap", "bucket hat", "snapback", "beanie", "hat", "cap"],
+    "belts": ["belt", "leather belt", "studded belt"],
+    "wallets": ["wallet", "card holder", "card case", "coin purse", "zip wallet",
+                "bifold", "trifold", "long wallet", "continental wallet"],
+    "scarves": ["scarf", "shawl", "stole", "bandana"],
+    # Bags — before clothing (clutch/pouch could overlap)
+    "bags": ["bag", "handbag", "purse", "tote", "clutch", "shoulder bag", "crossbody",
+             "satchel", "backpack", "duffle", "keepall", "weekender", "pouch",
+             "briefcase", "messenger bag", "belt bag", "bum bag", "fanny pack"],
+    # Footwear
     "footwear": ["shoes", "sneakers", "runners", "trainers", "loafers", "derbies", "oxford shoes",
                  "slides", "sandals", "mules", "slip on", "boots", "boot", "combat boots", "chelsea", "side zip"],
-    "bags": ["bag", "backpack", "tote", "messenger", "duffle", "crossbody", "pouch", "clutch", "wallet"],
-    "accessories": ["hat", "cap", "beanie", "bucket hat", "trucker hat", "snapback", "belt", "chain", 
-                    "jewelry", "necklace", "ring", "bracelet", "scarf", "gloves", "sunglasses"],
+    # Clothing — check LAST (most generic keywords)
+    "outerwear": ["leather jacket", "denim jacket", "trucker jacket", "jacket", "blazer", "coat",
+                  "bomber", "parka", "varsity", "windbreaker", "anorak", "overshirt", "harrington", "trench"],
+    "hoodies": ["hoodie", "hooded", "sweatshirt", "pullover", "zip up", "zip-up"],
+    "sweaters": ["sweater", "knit", "cardigan", "jumper", "crewneck", "crew neck", "turtleneck", "mohair", "cable knit"],
+    "shirts": ["shirt", "button up", "button down", "flannel", "camp collar", "hawaiian", "oxford", "dress shirt"],
+    "t-shirts": ["t-shirt", "tee", "tshirt", "t shirt"],
+    "pants": ["pants", "trousers", "jeans", "denim", "cargo", "jogger", "sweatpants", "track pants",
+              "chinos", "slacks", "cargos", "wide leg", "flare"],
+    "shorts": ["shorts", "short", "swim trunks"],
 }
 
 # === MODEL DATABASE ===
@@ -117,6 +138,40 @@ MODELS = {
     "track": ["balenciaga"],
     "speed": ["balenciaga"],
     "defender": ["balenciaga"],
+    "le city": ["balenciaga"],
+    "hourglass": ["balenciaga"],
+    "le cagole": ["balenciaga"],
+    "arena": ["balenciaga"],
+
+    # Gucci
+    "marmont": ["gucci"],
+    "dionysus": ["gucci"],
+    "jackie": ["gucci"],
+    "bamboo": ["gucci"],
+    "ophidia": ["gucci"],
+    "horsebit": ["gucci"],
+    "jordaan": ["gucci"],
+    "ace": ["gucci"],
+    "rhyton": ["gucci"],
+
+    # Louis Vuitton
+    "keepall": ["louis vuitton"],
+    "neverfull": ["louis vuitton"],
+    "speedy": ["louis vuitton"],
+    "alma": ["louis vuitton"],
+    "murakami": ["louis vuitton"],
+
+    # Chanel
+    "classic flap": ["chanel"],
+    "boy bag": ["chanel"],
+    "2.55": ["chanel"],
+    "timeless": ["chanel"],
+
+    # Bottega Veneta
+    "cassette": ["bottega veneta"],
+    "padded cassette": ["bottega veneta"],
+    "intrecciato": ["bottega veneta"],
+    "pouch": ["bottega veneta"],
     
     # Nike/Adidas models
     "air force 1": ["nike", "supreme", "off-white"],
@@ -237,39 +292,6 @@ class ProductFingerprint:
         """Check if this fingerprint has enough data to be useful."""
         return bool(self.brand and (self.model or self.item_type))
     
-    def similarity_score(self, other: "ProductFingerprint") -> float:
-        """Calculate similarity between two fingerprints (0.0 to 1.0)."""
-        if self.brand != other.brand:
-            return 0.0
-        
-        score = 0.0
-        factors = 1  # brand match
-        
-        # Sub-brand (heavy weight - DRKSHDW vs mainline matters)
-        if self.sub_brand and other.sub_brand:
-            factors += 2
-            if self.sub_brand.lower() == other.sub_brand.lower():
-                score += 2.0
-        
-        # Model (highest weight - exact product match)
-        if self.model and other.model:
-            factors += 4
-            if self.model.lower() == other.model.lower():
-                score += 4.0
-        
-        # Item type
-        if self.item_type and other.item_type:
-            factors += 1
-            if self.item_type.lower() == other.item_type.lower():
-                score += 1.0
-        
-        # Material
-        if self.material and other.material:
-            factors += 0.5
-            if self.material.lower() == other.material.lower():
-                score += 0.5
-        
-        return score / factors
 
 
 def parse_title_to_fingerprint(brand: str, title: str) -> ProductFingerprint:
