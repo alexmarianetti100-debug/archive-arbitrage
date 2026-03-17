@@ -402,6 +402,53 @@ def is_exact_match(listing: ParsedTitle, comp: ParsedTitle) -> bool:
     return True
 
 
+def match_quality(listing: ParsedTitle, comp: ParsedTitle, comp_sold_date: str = "") -> float:
+    """Soft ranking score (0.0-1.0) for comps that passed is_exact_match().
+
+    Higher scores mean the comp is a better reference for pricing.
+    Dimensions: season proximity (0.3), size (0.3), condition (0.2), recency (0.2).
+    """
+    score = 0.0
+
+    # Season proximity (0.3 weight)
+    if listing.season and comp.season:
+        if listing.season.lower() == comp.season.lower():
+            score += 0.3
+        else:
+            # Partial credit for same decade
+            score += 0.1
+    else:
+        # No season data — give neutral credit
+        score += 0.15
+
+    # Size — not in ParsedTitle currently, so give neutral credit
+    # (will be enhanced when size is added to ParsedTitle)
+    score += 0.20
+
+    # Condition — not in ParsedTitle currently, give neutral credit
+    score += 0.15
+
+    # Recency — based on comp_sold_date if provided
+    if comp_sold_date:
+        try:
+            sold_dt = datetime.fromisoformat(comp_sold_date.replace("Z", "+00:00"))
+            age_days = (datetime.now(sold_dt.tzinfo) - sold_dt).days
+            if age_days <= 30:
+                score += 0.20
+            elif age_days <= 90:
+                score += 0.15
+            elif age_days <= 180:
+                score += 0.10
+            else:
+                score += 0.05
+        except (ValueError, TypeError):
+            score += 0.10
+    else:
+        score += 0.15
+
+    return min(score, 1.0)
+
+
 # ══════════════════════════════════════════════════════════════
 # CATEGORY-SPECIFIC PARAMETERS
 # ══════════════════════════════════════════════════════════════

@@ -1,7 +1,7 @@
 """Tests for exact comp matching — hard dimension gates."""
 
 import pytest
-from scrapers.comp_matcher import parse_title, is_exact_match
+from scrapers.comp_matcher import parse_title, is_exact_match, match_quality
 
 
 class TestIsExactMatch:
@@ -81,3 +81,32 @@ class TestIsExactMatch:
         listing = parse_title("maison margiela", "Maison Margiela Tabi Boots")
         comp = parse_title("maison margiela", "Maison Margiela Tabi Loafers")
         assert is_exact_match(listing, comp) is True
+
+
+class TestMatchQuality:
+    """Soft ranking: season, size, condition, recency."""
+
+    def test_identical_item_scores_high(self):
+        listing = parse_title("rick owens", "Rick Owens Geobasket Leather Black SS24")
+        comp = parse_title("rick owens", "Rick Owens Geobasket Leather Black SS24")
+        score = match_quality(listing, comp)
+        assert score >= 0.8
+
+    def test_different_season_scores_lower(self):
+        listing = parse_title("rick owens", "Rick Owens Geobasket Leather SS24")
+        comp_same = parse_title("rick owens", "Rick Owens Geobasket Leather SS24")
+        comp_diff = parse_title("rick owens", "Rick Owens Geobasket Leather FW18")
+        assert match_quality(listing, comp_same) > match_quality(listing, comp_diff)
+
+    def test_returns_0_to_1_range(self):
+        listing = parse_title("rick owens", "Rick Owens Geobasket Leather")
+        comp = parse_title("rick owens", "Rick Owens Geobasket Leather")
+        score = match_quality(listing, comp)
+        assert 0.0 <= score <= 1.0
+
+    def test_no_shared_soft_dimensions_still_returns_positive(self):
+        """Even with no soft dimension overlap, score should be > 0."""
+        listing = parse_title("rick owens", "Rick Owens Geobasket")
+        comp = parse_title("rick owens", "Rick Owens Geobasket")
+        score = match_quality(listing, comp)
+        assert score > 0.0
