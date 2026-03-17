@@ -23,13 +23,13 @@ logger = logging.getLogger("deal_quality")
 # SCORE COMPONENT WEIGHTS (must sum to 100)
 # ══════════════════════════════════════════════════════════════════════
 
-WEIGHT_GAP = 25        # How far below market (bigger gap = better)
-WEIGHT_LINE = 18       # Mainline > diffusion
-WEIGHT_CONDITION = 12  # Better condition = more upside
+WEIGHT_GAP = 40        # How far below market — dominant signal with exact comp matching
+WEIGHT_LINE = 12       # Mainline > diffusion (reduced — most items are mainline)
+WEIGHT_CONDITION = 10  # Better condition = more upside (parsing imprecise, reduced)
 WEIGHT_SEASON = 12     # Archive/grail seasons worth more
-WEIGHT_SIZE = 8        # Popular sizes = faster flip
+WEIGHT_SIZE = 6        # Popular sizes = faster flip (minor signal)
 WEIGHT_AUTH = 10       # Higher auth score = safer bet
-WEIGHT_LIQUIDITY = 15  # Proven liquidity signals (followers, days-to-sell, photo count)
+WEIGHT_LIQUIDITY = 10  # Proven liquidity signals (reduced — shouldn't kill strong gap deals)
 
 # ══════════════════════════════════════════════════════════════════════
 # THRESHOLDS
@@ -37,8 +37,8 @@ WEIGHT_LIQUIDITY = 15  # Proven liquidity signals (followers, days-to-sell, phot
 
 THRESHOLD_FIRE_3 = 70   # 🔥🔥🔥 FIRE deal, send immediately
 THRESHOLD_FIRE_2 = 50   # 🔥🔥 Good deal, send
-THRESHOLD_FIRE_1 = 35   # 🔥 Decent deal, send
-# Below 35: Don't send
+THRESHOLD_FIRE_1 = 30   # 🔥 Decent deal, send
+# Below 30: Don't send
 
 
 @dataclass
@@ -158,8 +158,8 @@ def calculate_deal_quality(
     # ══════════════════════════════════════════════════════════════
 
     # Gap value (0-30): How far below market
-    # 30% gap = 0 points, 50% gap = 15 points, 70%+ gap = 30 points
-    gap_normalized = min(1.0, max(0.0, (gap_percent - 0.30) / 0.40))
+    # 25% gap = 0 points, 37.5% gap = 15 points, 50%+ gap = 30 points
+    gap_normalized = min(1.0, max(0.0, (gap_percent - 0.25) / 0.25))
     gap_score = gap_normalized * WEIGHT_GAP
 
     # Line value (0-20): Mainline = full points, diffusion = proportional
