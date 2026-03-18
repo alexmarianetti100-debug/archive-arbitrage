@@ -1956,7 +1956,7 @@ class GapHunter:
             downside_reference = sold_data.downside_anchor or (reference_price * 0.85)
 
             # ── Condition adjustment: if source is worse condition than comps, haircut reference ──
-            source_condition, _, _ = parse_condition(item.title, brand=brand)
+            source_condition, _, _ = parse_condition(item.title, brand=detected_brand or "")
             from core.condition_parser import CONDITION_TIERS
             source_mult = CONDITION_TIERS.get(source_condition, 0.70)  # Default GENTLY_USED
             # Comps are mostly GENTLY_USED on Grailed; if source is worse, reduce reference
@@ -1968,7 +1968,6 @@ class GapHunter:
                 logger.debug(f"    Condition adjustment: {source_condition} ({source_mult}) vs comps ({comp_assumed_mult}) → {condition_ratio:.2f}x")
 
             # ── Seasonal pricing: haircut for off-season items ──
-            import calendar
             current_month = datetime.now().month
             title_lower = item.title.lower() if item.title else ""
             cat_lower = (item.category or "").lower()
