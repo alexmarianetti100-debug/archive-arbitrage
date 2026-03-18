@@ -10,23 +10,29 @@ This replaces fuzzy comp matching with:
 """
 
 import asyncio
+import sqlite3
 from decimal import Decimal
 from typing import Optional, List
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 
 from scrapers.product_fingerprint import (
-    parse_title_to_fingerprint, 
+    parse_title_to_fingerprint,
     ProductFingerprint,
 )
+from scrapers.comp_matcher import parse_title, score_comp_similarity
 from db.sqlite_models import (
     get_product_by_fingerprint,
     get_product_price_stats,
     find_matching_products,
     update_item_product_match,
+    save_item_comps,
     Item,
 )
 from api.services.pricing import PricingService
+
+_DB_PATH = Path(__file__).parent.parent.parent / "data" / "archive.db"
 
 
 @dataclass
@@ -197,7 +203,10 @@ class ExactProductQualifier:
             price_low=price_low,
             price_high=price_high,
         )
-        
+
+        # Persist individual comp assignments for feedback tracking
+        self._persist_comp_assignments(item.id, product.id)
+
         return ExactProductQualification(
             grade=grade,
             grade_reasoning=grade_reasoning,
@@ -221,6 +230,105 @@ class ExactProductQualifier:
             qualified_at=now,
         )
     
+    def _persist_comp_assignments(self, item_id: int, product_id: int):
+        """Find and persist the individual comps used for this product match.
+
+        Joins product_prices with sold_comps to identify the actual comps,
+        scores each by similarity to the item title, then saves via
+        save_item_comps for later feedback tracking.
+        """
+        conn = sqlite3.connect(_DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        # Get item brand and title for similarity scoring
+        cursor.execute("SELECT brand, title FROM items WHERE id = ?", (item_id,))
+        item_row = cursor.fetchone()
+        if not item_row:
+            conn.close()
+            return
+        item_brand = item_row["brand"] or ""
+        item_title = item_row["title"] or ""
+        parsed = parse_title(item_brand, item_title)
+
+        # Primary: join product_prices with sold_comps
+        cursor.execute("""
+            SELECT pp.price, pp.size, pp.source, pp.source_id, pp.url, pp.sold_date,
+                   sc.id as sold_comp_id, sc.title, sc.condition, sc.sold_url,
+                   sc.sold_date as sc_sold_date, sc.source as sc_source
+            FROM product_prices pp
+            LEFT JOIN sold_comps sc ON pp.source_id = sc.source_id AND pp.source = sc.source
+            WHERE pp.product_id = ?
+            ORDER BY pp.sold_date DESC
+            LIMIT 20
+        """, (product_id,))
+        rows = cursor.fetchall()
+
+        comp_map = {}  # sold_comp_id -> entry dict (dedup by highest score)
+
+        for row in rows:
+            sold_comp_id = row["sold_comp_id"]
+            if sold_comp_id is None:
+                continue
+            comp_title = row["title"] or ""
+            sim = score_comp_similarity(parsed, comp_title)
+            if sold_comp_id in comp_map and comp_map[sold_comp_id]["similarity_score"] >= round(sim, 4):
+                continue
+            comp_map[sold_comp_id] = {
+                "sold_comp_id": sold_comp_id,
+                "similarity_score": round(sim, 4),
+                "snapshot_title": comp_title,
+                "snapshot_price": row["price"],
+                "snapshot_condition": row["condition"],
+                "snapshot_source": row["sc_source"] or row["source"],
+                "snapshot_sold_date": row["sc_sold_date"] or row["sold_date"],
+                "snapshot_url": row["sold_url"] or row["url"],
+            }
+
+        # Fallback: if fewer than 3 joined comps, search sold_comps by brand
+        if len(comp_map) < 3:
+            cursor.execute("""
+                SELECT id as sold_comp_id, title, sold_price as price, condition,
+                       sold_url, sold_date, source, source_id, size
+                FROM sold_comps
+                WHERE brand = ? COLLATE NOCASE
+                ORDER BY fetched_at DESC
+                LIMIT 20
+            """, (item_brand,))
+            fallback_rows = cursor.fetchall()
+
+            for row in fallback_rows:
+                sold_comp_id = row["sold_comp_id"]
+                if sold_comp_id in comp_map:
+                    continue
+                comp_title = row["title"] or ""
+                sim = score_comp_similarity(parsed, comp_title)
+                if sim < 0.3:
+                    continue
+                comp_map[sold_comp_id] = {
+                    "sold_comp_id": sold_comp_id,
+                    "similarity_score": round(sim, 4),
+                    "snapshot_title": comp_title,
+                    "snapshot_price": row["price"],
+                    "snapshot_condition": row["condition"],
+                    "snapshot_source": row["source"],
+                    "snapshot_sold_date": row["sold_date"],
+                    "snapshot_url": row["sold_url"],
+                }
+
+        conn.close()
+
+        if not comp_map:
+            return
+
+        # Sort by score descending and assign rank
+        sorted_comps = sorted(comp_map.values(), key=lambda c: c["similarity_score"], reverse=True)
+        for rank, entry in enumerate(sorted_comps, start=1):
+            entry["rank"] = rank
+
+        # Persist top 15
+        save_item_comps(item_id, sorted_comps[:15])
+
     async def _qualify_with_similar(
         self,
         item: Item,
