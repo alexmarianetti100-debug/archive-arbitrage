@@ -340,6 +340,13 @@ def init_db():
         ("items", "price_confidence", "REAL"),
         ("items", "price_low", "REAL"),
         ("items", "price_high", "REAL"),
+        # Comp feedback system columns
+        ("items", "needs_review", "INTEGER DEFAULT 0"),
+        ("sold_comps", "times_matched", "INTEGER DEFAULT 0"),
+        ("sold_comps", "times_rejected", "INTEGER DEFAULT 0"),
+        ("sold_comps", "rejection_reasons", "TEXT DEFAULT '{}'"),
+        ("sold_comps", "quality_score", "REAL DEFAULT 1.0"),
+        ("sold_comps", "last_rejected_at", "TEXT"),
     ]
     for table, col, col_type in migrations:
         _add_column_if_missing(c, table, col, col_type)
@@ -385,6 +392,47 @@ def init_db():
         )
     """)
 
+    # --- item_comps (comp feedback system) ---
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS item_comps (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            item_id INTEGER NOT NULL REFERENCES items(id),
+            sold_comp_id INTEGER NOT NULL REFERENCES sold_comps(id),
+            similarity_score REAL,
+            rank INTEGER,
+            feedback_status TEXT DEFAULT 'pending',
+            rejected_at TEXT,
+            rejection_reason TEXT,
+            snapshot_title TEXT,
+            snapshot_price REAL,
+            snapshot_condition TEXT,
+            snapshot_source TEXT,
+            snapshot_sold_date TEXT,
+            snapshot_url TEXT,
+            created_at TEXT DEFAULT (datetime('now'))
+        )
+    """)
+
+    # --- regrade_log (tracks re-grading events) ---
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS regrade_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            item_id INTEGER NOT NULL REFERENCES items(id),
+            trigger TEXT NOT NULL,
+            comps_before INTEGER,
+            comps_after INTEGER,
+            grade_before TEXT,
+            grade_after TEXT,
+            price_before REAL,
+            price_after REAL,
+            margin_before REAL,
+            margin_after REAL,
+            comp_pool_health REAL,
+            rejected_comp_id INTEGER,
+            created_at TEXT DEFAULT (datetime('now'))
+        )
+    """)
+
     # --- product_prices (sale records per product) ---
     c.execute("""
         CREATE TABLE IF NOT EXISTS product_prices (
@@ -426,6 +474,10 @@ def init_db():
         "CREATE INDEX IF NOT EXISTS idx_products_fingerprint ON products(fingerprint_hash)",
         "CREATE INDEX IF NOT EXISTS idx_products_brand ON products(brand)",
         "CREATE INDEX IF NOT EXISTS idx_product_prices_product ON product_prices(product_id)",
+        "CREATE INDEX IF NOT EXISTS idx_item_comps_item_id ON item_comps(item_id)",
+        "CREATE INDEX IF NOT EXISTS idx_item_comps_sold_comp_id ON item_comps(sold_comp_id)",
+        "CREATE INDEX IF NOT EXISTS idx_item_comps_feedback_status ON item_comps(feedback_status)",
+        "CREATE INDEX IF NOT EXISTS idx_regrade_log_item_id ON regrade_log(item_id)",
     ]:
         c.execute(stmt)
 
@@ -501,6 +553,7 @@ def save_item(item: Item) -> int:
 def get_items(
     status: Optional[str] = None,
     brand: Optional[str] = None,
+    category: Optional[str] = None,
     limit: int = 100,
     offset: int = 0,
     authenticated: Optional[bool] = None,
@@ -512,6 +565,7 @@ def get_items(
     year_min: Optional[int] = None,
     year_max: Optional[int] = None,
     sort: str = "newest",
+    created_after: Optional[str] = None,
 ) -> List[Item]:
     """Retrieve items with optional filtering."""
     conn = _get_conn()
@@ -524,6 +578,9 @@ def get_items(
     if brand:
         clauses.append("LOWER(brand) = LOWER(?)")
         params.append(brand)
+    if category:
+        clauses.append("LOWER(category) = LOWER(?)")
+        params.append(category)
     if authenticated:
         clauses.append("auth_status = 'authentic'")
     if min_price is not None:
@@ -535,6 +592,21 @@ def get_items(
     if min_sold_count is not None:
         clauses.append("comp_count >= ?")
         params.append(min_sold_count)
+    if created_after is not None:
+        clauses.append("created_at >= ?")
+        params.append(created_after)
+    if season is not None:
+        clauses.append("UPPER(exact_season) = UPPER(?)")
+        params.append(season)
+    if year is not None:
+        clauses.append("exact_year = ?")
+        params.append(year)
+    if year_min is not None:
+        clauses.append("exact_year >= ?")
+        params.append(year_min)
+    if year_max is not None:
+        clauses.append("exact_year <= ?")
+        params.append(year_max)
 
     where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
 
@@ -542,7 +614,7 @@ def get_items(
     order_map = {
         "newest": "id DESC",
         "grade_asc": "grade ASC, demand_score DESC",
-        "profit_desc": "(our_price - source_price) DESC",
+        "profit_desc": "COALESCE(exact_profit, our_price - source_price) DESC",
         "margin_desc": "margin_percent DESC",
         "sellthrough_desc": "demand_score DESC",
         "days_asc": "sell_through_days ASC",
@@ -811,6 +883,217 @@ def get_sold_comps_stats(brand: Optional[str] = None) -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# Item Comps (comp feedback system)
+# ---------------------------------------------------------------------------
+
+def save_item_comps(item_id: int, comps: List[Dict[str, Any]]):
+    """Delete existing item_comps for this item, then insert new ones.
+
+    Each comp dict has: sold_comp_id, similarity_score, rank,
+    snapshot_title, snapshot_price, snapshot_condition, snapshot_source,
+    snapshot_sold_date, snapshot_url.
+
+    Also increments times_matched on each sold_comp and recalculates quality_score.
+    """
+    conn = _get_conn()
+    c = conn.cursor()
+
+    # Delete existing comps for this item
+    c.execute("DELETE FROM item_comps WHERE item_id = ?", (item_id,))
+
+    # Insert new comps
+    for comp in comps:
+        c.execute("""
+            INSERT INTO item_comps (
+                item_id, sold_comp_id, similarity_score, rank,
+                snapshot_title, snapshot_price, snapshot_condition,
+                snapshot_source, snapshot_sold_date, snapshot_url
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            item_id,
+            comp.get("sold_comp_id"),
+            comp.get("similarity_score"),
+            comp.get("rank"),
+            comp.get("snapshot_title"),
+            comp.get("snapshot_price"),
+            comp.get("snapshot_condition"),
+            comp.get("snapshot_source"),
+            comp.get("snapshot_sold_date"),
+            comp.get("snapshot_url"),
+        ))
+
+        # Increment times_matched on sold_comp and recalculate quality_score
+        sold_comp_id = comp.get("sold_comp_id")
+        if sold_comp_id is not None:
+            c.execute("""
+                UPDATE sold_comps
+                SET times_matched = COALESCE(times_matched, 0) + 1
+                WHERE id = ?
+            """, (sold_comp_id,))
+            # Recalculate quality_score = 1 - (times_rejected / times_matched)
+            c.execute("""
+                UPDATE sold_comps
+                SET quality_score = 1.0 - (CAST(COALESCE(times_rejected, 0) AS REAL) / MAX(times_matched, 1))
+                WHERE id = ?
+            """, (sold_comp_id,))
+
+    conn.commit()
+    conn.close()
+
+
+def get_item_comps(item_id: int) -> List[Dict[str, Any]]:
+    """Get all item_comps for an item ordered by rank ASC."""
+    conn = _get_conn()
+    c = conn.cursor()
+    c.execute(
+        "SELECT * FROM item_comps WHERE item_id = ? ORDER BY rank ASC",
+        (item_id,),
+    )
+    comps = [dict(row) for row in c.fetchall()]
+    conn.close()
+    return comps
+
+
+def get_active_item_comps(item_id: int) -> List[Dict[str, Any]]:
+    """Get item_comps for an item excluding rejected ones, ordered by rank ASC."""
+    conn = _get_conn()
+    c = conn.cursor()
+    c.execute(
+        "SELECT * FROM item_comps WHERE item_id = ? AND feedback_status != 'rejected' ORDER BY rank ASC",
+        (item_id,),
+    )
+    comps = [dict(row) for row in c.fetchall()]
+    conn.close()
+    return comps
+
+
+def update_item_comp_feedback(item_comp_id: int, status: str, reason: str = None) -> Optional[Dict[str, Any]]:
+    """Update feedback_status, rejected_at (if rejected), rejection_reason.
+
+    Returns updated row as dict, or None if not found.
+    """
+    conn = _get_conn()
+    c = conn.cursor()
+    now = datetime.utcnow().isoformat()
+
+    if status == "rejected":
+        c.execute("""
+            UPDATE item_comps
+            SET feedback_status = ?, rejected_at = ?, rejection_reason = ?
+            WHERE id = ?
+        """, (status, now, reason, item_comp_id))
+    else:
+        c.execute("""
+            UPDATE item_comps
+            SET feedback_status = ?, rejection_reason = ?
+            WHERE id = ?
+        """, (status, reason, item_comp_id))
+
+    conn.commit()
+
+    # Fetch and return the updated row
+    c.execute("SELECT * FROM item_comps WHERE id = ?", (item_comp_id,))
+    row = c.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def update_sold_comp_rejection(sold_comp_id: int, reason: str):
+    """Increment times_rejected, update rejection_reasons JSON frequency map,
+    recalculate quality_score, and set last_rejected_at.
+    """
+    conn = _get_conn()
+    c = conn.cursor()
+    now = datetime.utcnow().isoformat()
+
+    # Get current rejection_reasons JSON
+    c.execute("SELECT rejection_reasons, times_rejected, times_matched FROM sold_comps WHERE id = ?", (sold_comp_id,))
+    row = c.fetchone()
+    if not row:
+        conn.close()
+        return
+
+    # Parse existing rejection_reasons frequency map
+    raw = row["rejection_reasons"]
+    try:
+        reasons_map = json.loads(raw) if raw else {}
+    except (json.JSONDecodeError, TypeError):
+        reasons_map = {}
+
+    # Increment the count for this reason
+    reasons_map[reason] = reasons_map.get(reason, 0) + 1
+
+    times_rejected = (row["times_rejected"] or 0) + 1
+    times_matched = max(row["times_matched"] or 1, 1)
+    quality_score = 1.0 - (times_rejected / times_matched)
+
+    c.execute("""
+        UPDATE sold_comps
+        SET times_rejected = ?,
+            rejection_reasons = ?,
+            quality_score = ?,
+            last_rejected_at = ?
+        WHERE id = ?
+    """, (
+        times_rejected,
+        json.dumps(reasons_map),
+        quality_score,
+        now,
+        sold_comp_id,
+    ))
+    conn.commit()
+    conn.close()
+
+
+# ---------------------------------------------------------------------------
+# Regrade Log
+# ---------------------------------------------------------------------------
+
+def insert_regrade_log(log: Dict[str, Any]):
+    """Insert a regrade_log entry from a dict."""
+    conn = _get_conn()
+    c = conn.cursor()
+    c.execute("""
+        INSERT INTO regrade_log (
+            item_id, trigger, comps_before, comps_after,
+            grade_before, grade_after, price_before, price_after,
+            margin_before, margin_after, comp_pool_health, rejected_comp_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        log.get("item_id"),
+        log.get("trigger"),
+        log.get("comps_before"),
+        log.get("comps_after"),
+        log.get("grade_before"),
+        log.get("grade_after"),
+        log.get("price_before"),
+        log.get("price_after"),
+        log.get("margin_before"),
+        log.get("margin_after"),
+        log.get("comp_pool_health"),
+        log.get("rejected_comp_id"),
+    ))
+    conn.commit()
+    conn.close()
+
+
+# ---------------------------------------------------------------------------
+# Item Needs Review
+# ---------------------------------------------------------------------------
+
+def set_item_needs_review(item_id: int, needs_review: int):
+    """Set or clear the needs_review flag on an item."""
+    conn = _get_conn()
+    c = conn.cursor()
+    c.execute(
+        "UPDATE items SET needs_review = ?, updated_at = ? WHERE id = ?",
+        (needs_review, datetime.utcnow().isoformat(), item_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+# ---------------------------------------------------------------------------
 # Price History
 # ---------------------------------------------------------------------------
 
@@ -830,32 +1113,39 @@ def get_price_history(item_id: int) -> List[Dict[str, Any]]:
 # Stats
 # ---------------------------------------------------------------------------
 
-def get_stats() -> Dict[str, Any]:
-    """Get overall database statistics."""
+def get_stats(created_after: str = None) -> Dict[str, Any]:
+    """Get overall database statistics, optionally filtered by created_after."""
     conn = _get_conn()
     c = conn.cursor()
 
     stats = {}
 
-    c.execute("SELECT COUNT(*) FROM items")
+    # Build optional date clause for item queries
+    date_clause = ""
+    date_params: list = []
+    if created_after:
+        date_clause = " AND created_at >= ?"
+        date_params = [created_after]
+
+    c.execute("SELECT COUNT(*) FROM items WHERE 1=1" + date_clause, date_params)
     stats["total_items"] = c.fetchone()[0]
 
-    c.execute("SELECT COUNT(*) FROM items WHERE status = 'active'")
+    c.execute("SELECT COUNT(*) FROM items WHERE status = 'active'" + date_clause, date_params)
     stats["active_items"] = c.fetchone()[0]
 
-    c.execute("SELECT COUNT(DISTINCT brand) FROM items WHERE brand IS NOT NULL")
+    c.execute("SELECT COUNT(DISTINCT brand) FROM items WHERE brand IS NOT NULL" + date_clause, date_params)
     stats["total_brands"] = c.fetchone()[0]
     stats["unique_brands"] = stats["total_brands"]  # alias
 
-    c.execute("SELECT AVG(margin_percent) FROM items WHERE margin_percent IS NOT NULL")
+    c.execute("SELECT AVG(margin_percent) FROM items WHERE margin_percent IS NOT NULL" + date_clause, date_params)
     row = c.fetchone()
     stats["avg_margin"] = round(row[0], 1) if row[0] else 0
 
-    c.execute("SELECT COUNT(*) FROM items WHERE grade IS NOT NULL")
+    c.execute("SELECT COUNT(*) FROM items WHERE grade IS NOT NULL" + date_clause, date_params)
     stats["qualified_items"] = c.fetchone()[0]
 
     for g in ("A", "B", "C", "D"):
-        c.execute("SELECT COUNT(*) FROM items WHERE grade = ?", (g,))
+        c.execute("SELECT COUNT(*) FROM items WHERE grade = ?" + date_clause, [g] + date_params)
         stats[f"grade_{g.lower()}_count"] = c.fetchone()[0]
 
     c.execute("SELECT COUNT(*) FROM sold_comps")
