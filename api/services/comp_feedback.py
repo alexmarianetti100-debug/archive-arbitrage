@@ -22,6 +22,8 @@ from db.sqlite_models import (
     update_sold_comp_rejection,
 )
 
+import threading
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -29,6 +31,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 MIN_COMPS_FOR_REGRADE = 3
+_feedback_lock = threading.Lock()
 MIN_MARGIN_FLOOR = 0.35  # Enforce minimum 35% margin on re-grade
 
 
@@ -51,29 +54,18 @@ def process_comp_feedback(
     Returns a result dict describing what happened.  See module docstring
     for response shapes.
     """
-    # Acquire exclusive lock to prevent concurrent feedback races
-    lock_conn = _get_conn()
-    try:
-        lock_conn.execute("BEGIN IMMEDIATE")
-    except Exception:
-        lock_conn.close()
-        raise
-
-    try:
+    # Serialize feedback processing to prevent concurrent re-grade races
+    with _feedback_lock:
         # ------------------------------------------------------------------
         # 1. Validate item and item_comp exist
         # ------------------------------------------------------------------
         item = get_item_by_id(item_id)
         if item is None:
-            lock_conn.rollback()
-            lock_conn.close()
             return {"error": "Item not found"}
 
         # Update the item_comp feedback row — validates it exists AND belongs to this item.
         updated_comp = update_item_comp_feedback(item_comp_id, status, reason, expected_item_id=item_id)
         if updated_comp is None:
-            lock_conn.rollback()
-            lock_conn.close()
             return {"error": "Item comp not found or does not belong to this item"}
 
         # ------------------------------------------------------------------
@@ -100,8 +92,6 @@ def process_comp_feedback(
         # 4. If acceptance — nothing more to do
         # ------------------------------------------------------------------
         if status == "accepted":
-            lock_conn.commit()
-            lock_conn.close()
             return {
                 "updated": True,
                 "regrade": {
@@ -144,8 +134,6 @@ def process_comp_feedback(
             # Clear needs_review since we successfully re-graded
             set_item_needs_review(item_id, 0)
 
-            lock_conn.commit()
-            lock_conn.close()
             return {
                 "updated": True,
                 "regrade": {
@@ -181,8 +169,6 @@ def process_comp_feedback(
             "rejected_comp_id": item_comp_id,
         })
 
-        lock_conn.commit()
-        lock_conn.close()
         return {
             "updated": True,
             "regrade": {
@@ -192,11 +178,6 @@ def process_comp_feedback(
                 "flagged_for_review": True,
             },
         }
-
-    except Exception:
-        lock_conn.rollback()
-        lock_conn.close()
-        raise
 
 
 # ---------------------------------------------------------------------------
