@@ -397,7 +397,7 @@ def init_db():
         CREATE TABLE IF NOT EXISTS item_comps (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
-            sold_comp_id INTEGER NOT NULL REFERENCES sold_comps(id) ON DELETE CASCADE,
+            sold_comp_id INTEGER REFERENCES sold_comps(id) ON DELETE CASCADE,
             similarity_score REAL,
             rank INTEGER,
             feedback_status TEXT DEFAULT 'pending',
@@ -480,6 +480,43 @@ def init_db():
         "CREATE INDEX IF NOT EXISTS idx_regrade_log_item_id ON regrade_log(item_id)",
     ]:
         c.execute(stmt)
+
+    # ── Migration: make sold_comp_id nullable in existing DBs ──
+    # SQLite can't ALTER COLUMN, so recreate the table if it has NOT NULL constraint
+    try:
+        c.execute("PRAGMA table_info(item_comps)")
+        cols = c.fetchall()
+        for col in cols:
+            if col[1] == "sold_comp_id" and col[3] == 1:  # col[3] = notnull flag
+                c.execute("ALTER TABLE item_comps RENAME TO item_comps_old")
+                c.execute("""
+                    CREATE TABLE item_comps (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+                        sold_comp_id INTEGER REFERENCES sold_comps(id) ON DELETE CASCADE,
+                        similarity_score REAL,
+                        rank INTEGER,
+                        feedback_status TEXT DEFAULT 'pending',
+                        rejected_at TEXT,
+                        rejection_reason TEXT,
+                        snapshot_title TEXT,
+                        snapshot_price REAL,
+                        snapshot_condition TEXT,
+                        snapshot_source TEXT,
+                        snapshot_sold_date TEXT,
+                        snapshot_url TEXT,
+                        created_at TEXT DEFAULT (datetime('now'))
+                    )
+                """)
+                c.execute("INSERT INTO item_comps SELECT * FROM item_comps_old")
+                c.execute("DROP TABLE item_comps_old")
+                # Recreate indexes
+                c.execute("CREATE INDEX IF NOT EXISTS idx_item_comps_item_id ON item_comps(item_id)")
+                c.execute("CREATE INDEX IF NOT EXISTS idx_item_comps_sold_comp_id ON item_comps(sold_comp_id)")
+                c.execute("CREATE INDEX IF NOT EXISTS idx_item_comps_feedback_status ON item_comps(feedback_status)")
+                break
+    except Exception:
+        pass  # Table might not exist yet (fresh DB)
 
     # Transaction committed automatically by context manager
 

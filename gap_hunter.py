@@ -618,6 +618,8 @@ class SoldData:
     haircut_pct: float = 0.15
     comp_titles: list = None  # Titles of sold comps (for validation engine)
     comp_sizes: list = None   # Sizes of sold comps (for size parity check)
+    comp_prices: list = None  # Individual comp prices (for item_comps persistence)
+    comp_urls: list = None    # Individual comp URLs
     comp_confidence_penalty: int = 0  # Points to subtract from quality score (from comp_validator)
 
 
@@ -1292,9 +1294,11 @@ class GapHunter:
                         pass
             avg_days = sum(days_to_sell_list) / len(days_to_sell_list) if days_to_sell_list else 0.0
 
-            # ── Capture comp titles and sizes for validation engine ──
+            # ── Capture comp data for validation engine + frontend display ──
             comp_titles = [s.title for s in sold if s.title]
             comp_sizes = [s.size for s in sold if getattr(s, 'size', None)]
+            comp_prices = [s.price for s in sold if s.price and s.price > 0]
+            comp_urls = [getattr(s, 'url', None) for s in sold]
 
             # ── Comp confidence based on count ──
             comp_confidence = "high" if len(prices) >= 12 else "medium" if len(prices) >= 5 else "low"
@@ -1326,6 +1330,8 @@ class GapHunter:
                 haircut_pct=liquidation.haircut_pct,
                 comp_titles=comp_titles,
                 comp_sizes=comp_sizes,
+                comp_prices=comp_prices,
+                comp_urls=comp_urls,
                 comp_confidence_penalty=comp_confidence_penalty,
             )
             # Store confidence and source metadata on SoldData
@@ -2619,7 +2625,31 @@ class GapHunter:
                 finally:
                     conn.close()
 
-                logger.info(f"    💾 Persisted to DB: item #{persisted_id}, grade {grade}")
+                # Persist comp assignments for frontend display
+                sold_data_obj = self.sold_cache.get(deal.query)
+                comp_count_saved = 0
+                if sold_data_obj and getattr(sold_data_obj, 'comp_titles', None):
+                    from db.sqlite_models import save_item_comps
+                    titles = sold_data_obj.comp_titles or []
+                    prices_list = getattr(sold_data_obj, 'comp_prices', None) or []
+                    urls_list = getattr(sold_data_obj, 'comp_urls', None) or []
+                    comp_entries = []
+                    for rank, title in enumerate(titles[:15], start=1):
+                        comp_entries.append({
+                            "sold_comp_id": None,
+                            "similarity_score": max(0.5, 1.0 - rank * 0.03),
+                            "rank": rank,
+                            "snapshot_title": title,
+                            "snapshot_price": prices_list[rank - 1] if rank - 1 < len(prices_list) else sold_data_obj.avg_price,
+                            "snapshot_condition": None,
+                            "snapshot_source": "grailed",
+                            "snapshot_sold_date": None,
+                            "snapshot_url": urls_list[rank - 1] if rank - 1 < len(urls_list) else None,
+                        })
+                    save_item_comps(persisted_id, comp_entries)
+                    comp_count_saved = len(comp_entries)
+
+                logger.info(f"    💾 Persisted to DB: item #{persisted_id}, grade {grade}, {comp_count_saved} comps")
             except Exception as e:
                 logger.warning(f"    ⚠️ DB persist failed: {e}")
 
