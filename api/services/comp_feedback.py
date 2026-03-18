@@ -45,131 +45,158 @@ def process_comp_feedback(
 ) -> dict:
     """Process comp feedback (accept or reject) and optionally re-grade.
 
+    Uses BEGIN IMMEDIATE to prevent concurrent feedback from producing
+    inconsistent re-grades.
+
     Returns a result dict describing what happened.  See module docstring
     for response shapes.
     """
-    # ------------------------------------------------------------------
-    # 1. Validate item and item_comp exist
-    # ------------------------------------------------------------------
-    item = get_item_by_id(item_id)
-    if item is None:
-        return {"error": "Item not found"}
+    # Acquire exclusive lock to prevent concurrent feedback races
+    lock_conn = _get_conn()
+    try:
+        lock_conn.execute("BEGIN IMMEDIATE")
+    except Exception:
+        lock_conn.close()
+        raise
 
-    # Update the item_comp feedback row — this also validates it exists.
-    updated_comp = update_item_comp_feedback(item_comp_id, status, reason)
-    if updated_comp is None:
-        return {"error": "Item comp not found"}
+    try:
+        # ------------------------------------------------------------------
+        # 1. Validate item and item_comp exist
+        # ------------------------------------------------------------------
+        item = get_item_by_id(item_id)
+        if item is None:
+            lock_conn.rollback()
+            lock_conn.close()
+            return {"error": "Item not found"}
 
-    # ------------------------------------------------------------------
-    # 2. If rejected, propagate to sold_comp rejection counters
-    # ------------------------------------------------------------------
-    if status == "rejected" and reason:
-        sold_comp_id = updated_comp.get("sold_comp_id")
-        if sold_comp_id:
-            try:
-                update_sold_comp_rejection(sold_comp_id, reason)
-            except Exception:
-                logger.exception(
-                    "Failed to update sold_comp rejection for sold_comp_id=%s",
-                    sold_comp_id,
-                )
+        # Update the item_comp feedback row — validates it exists AND belongs to this item.
+        updated_comp = update_item_comp_feedback(item_comp_id, status, reason, expected_item_id=item_id)
+        if updated_comp is None:
+            lock_conn.rollback()
+            lock_conn.close()
+            return {"error": "Item comp not found or does not belong to this item"}
 
-    # ------------------------------------------------------------------
-    # 3. Count remaining (non-rejected) comps
-    # ------------------------------------------------------------------
-    active_comps = get_active_item_comps(item_id)
-    comps_remaining = len(active_comps)
+        # ------------------------------------------------------------------
+        # 2. If rejected, propagate to sold_comp rejection counters
+        # ------------------------------------------------------------------
+        if status == "rejected" and reason:
+            sold_comp_id = updated_comp.get("sold_comp_id")
+            if sold_comp_id:
+                try:
+                    update_sold_comp_rejection(sold_comp_id, reason)
+                except Exception:
+                    logger.exception(
+                        "Failed to update sold_comp rejection for sold_comp_id=%s",
+                        sold_comp_id,
+                    )
 
-    # ------------------------------------------------------------------
-    # 4. If acceptance — nothing more to do
-    # ------------------------------------------------------------------
-    if status == "accepted":
-        return {
-            "updated": True,
-            "regrade": {
-                "triggered": False,
-                "comps_remaining": comps_remaining,
-                "reason": "acceptance_only",
-            },
-        }
+        # ------------------------------------------------------------------
+        # 3. Count remaining (non-rejected) comps
+        # ------------------------------------------------------------------
+        active_comps = get_active_item_comps(item_id)
+        comps_remaining = len(active_comps)
 
-    # ------------------------------------------------------------------
-    # 5. Capture "before" snapshot for the regrade log
-    # ------------------------------------------------------------------
-    grade_before = item.grade
-    price_before = item.exact_sell_price
-    margin_before = item.exact_margin
+        # ------------------------------------------------------------------
+        # 4. If acceptance — nothing more to do
+        # ------------------------------------------------------------------
+        if status == "accepted":
+            lock_conn.commit()
+            lock_conn.close()
+            return {
+                "updated": True,
+                "regrade": {
+                    "triggered": False,
+                    "comps_remaining": comps_remaining,
+                    "reason": "acceptance_only",
+                },
+            }
 
-    # ------------------------------------------------------------------
-    # 6. Enough comps to re-grade?
-    # ------------------------------------------------------------------
-    if comps_remaining >= MIN_COMPS_FOR_REGRADE:
-        regrade = _regrade_from_comps(item, active_comps)
+        # ------------------------------------------------------------------
+        # 5. Capture "before" snapshot for the regrade log
+        # ------------------------------------------------------------------
+        grade_before = item.grade
+        price_before = item.exact_sell_price
+        margin_before = item.exact_margin
 
-        # Write regrade_log
-        pool_health = _calc_pool_health(active_comps)
-        insert_regrade_log({
-            "item_id": item_id,
-            "trigger": "comp_rejection",
-            "comps_before": comps_remaining + 1,  # before this rejection
-            "comps_after": comps_remaining,
-            "grade_before": grade_before,
-            "grade_after": regrade["grade"],
-            "price_before": price_before,
-            "price_after": regrade["sell_price"],
-            "margin_before": margin_before,
-            "margin_after": regrade["margin"],
-            "comp_pool_health": pool_health,
-            "rejected_comp_id": item_comp_id,
-        })
+        # ------------------------------------------------------------------
+        # 6. Enough comps to re-grade?
+        # ------------------------------------------------------------------
+        if comps_remaining >= MIN_COMPS_FOR_REGRADE:
+            regrade = _regrade_from_comps(item, active_comps)
 
-        # Clear needs_review since we successfully re-graded
-        set_item_needs_review(item_id, 0)
-
-        return {
-            "updated": True,
-            "regrade": {
-                "triggered": True,
-                "comps_remaining": comps_remaining,
+            # Write regrade_log
+            pool_health = _calc_pool_health(active_comps)
+            insert_regrade_log({
+                "item_id": item_id,
+                "trigger": "comp_rejection",
+                "comps_before": comps_remaining + 1,
+                "comps_after": comps_remaining,
                 "grade_before": grade_before,
                 "grade_after": regrade["grade"],
                 "price_before": price_before,
                 "price_after": regrade["sell_price"],
                 "margin_before": margin_before,
                 "margin_after": regrade["margin"],
+                "comp_pool_health": pool_health,
+                "rejected_comp_id": item_comp_id,
+            })
+
+            # Clear needs_review since we successfully re-graded
+            set_item_needs_review(item_id, 0)
+
+            lock_conn.commit()
+            lock_conn.close()
+            return {
+                "updated": True,
+                "regrade": {
+                    "triggered": True,
+                    "comps_remaining": comps_remaining,
+                    "grade_before": grade_before,
+                    "grade_after": regrade["grade"],
+                    "price_before": price_before,
+                    "price_after": regrade["sell_price"],
+                    "margin_before": margin_before,
+                    "margin_after": regrade["margin"],
+                },
+            }
+
+        # ------------------------------------------------------------------
+        # 7. Below threshold — flag for manual review
+        # ------------------------------------------------------------------
+        set_item_needs_review(item_id, 1)
+
+        pool_health = _calc_pool_health(active_comps) if active_comps else 0.0
+        insert_regrade_log({
+            "item_id": item_id,
+            "trigger": "comp_rejection",
+            "comps_before": comps_remaining + 1,
+            "comps_after": comps_remaining,
+            "grade_before": grade_before,
+            "grade_after": grade_before,
+            "price_before": price_before,
+            "price_after": price_before,
+            "margin_before": margin_before,
+            "margin_after": margin_before,
+            "comp_pool_health": pool_health,
+            "rejected_comp_id": item_comp_id,
+        })
+
+        lock_conn.commit()
+        lock_conn.close()
+        return {
+            "updated": True,
+            "regrade": {
+                "triggered": False,
+                "comps_remaining": comps_remaining,
+                "reason": "below_minimum_threshold",
+                "flagged_for_review": True,
             },
         }
 
-    # ------------------------------------------------------------------
-    # 7. Below threshold — flag for manual review
-    # ------------------------------------------------------------------
-    set_item_needs_review(item_id, 1)
-
-    pool_health = _calc_pool_health(active_comps) if active_comps else 0.0
-    insert_regrade_log({
-        "item_id": item_id,
-        "trigger": "comp_rejection",
-        "comps_before": comps_remaining + 1,
-        "comps_after": comps_remaining,
-        "grade_before": grade_before,
-        "grade_after": grade_before,  # no grade change
-        "price_before": price_before,
-        "price_after": price_before,  # no price change
-        "margin_before": margin_before,
-        "margin_after": margin_before,
-        "comp_pool_health": pool_health,
-        "rejected_comp_id": item_comp_id,
-    })
-
-    return {
-        "updated": True,
-        "regrade": {
-            "triggered": False,
-            "comps_remaining": comps_remaining,
-            "reason": "below_minimum_threshold",
-            "flagged_for_review": True,
-        },
-    }
+    except Exception:
+        lock_conn.rollback()
+        lock_conn.close()
+        raise
 
 
 # ---------------------------------------------------------------------------

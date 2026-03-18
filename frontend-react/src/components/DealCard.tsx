@@ -40,7 +40,7 @@ export function DealCard({ item, view, onClick }: DealCardProps) {
           {/* Image */}
           <div className="w-12 h-12 rounded bg-void flex-shrink-0 overflow-hidden">
             {item.images?.[0] ? (
-              <img src={item.images[0]} alt="" className="w-full h-full object-cover" loading="lazy" />
+              <img src={item.images[0]} alt="" className="w-full h-full object-cover" loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
                 <Package className="w-4 h-4 text-text-muted" />
@@ -117,6 +117,7 @@ export function DealCard({ item, view, onClick }: DealCardProps) {
             alt={item.title}
             className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500"
             loading="lazy"
+            onError={(e) => { e.currentTarget.style.display = 'none'; }}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
@@ -197,7 +198,7 @@ export function DealCard({ item, view, onClick }: DealCardProps) {
 
         {/* Meta */}
         <div className="flex items-center gap-3 font-mono text-[10px] text-text-muted pt-2.5 border-t border-border">
-          {item.est_days_to_sell ? (
+          {item.est_days_to_sell && item.est_days_to_sell < 365 ? (
             <div className="flex items-center gap-1">
               <Clock className="w-2.5 h-2.5" />
               <span>~{item.est_days_to_sell.toFixed(0)}d</span>

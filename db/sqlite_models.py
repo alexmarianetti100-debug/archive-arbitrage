@@ -396,8 +396,8 @@ def init_db():
     c.execute("""
         CREATE TABLE IF NOT EXISTS item_comps (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            item_id INTEGER NOT NULL REFERENCES items(id),
-            sold_comp_id INTEGER NOT NULL REFERENCES sold_comps(id),
+            item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+            sold_comp_id INTEGER NOT NULL REFERENCES sold_comps(id) ON DELETE CASCADE,
             similarity_score REAL,
             rank INTEGER,
             feedback_status TEXT DEFAULT 'pending',
@@ -559,7 +559,7 @@ def get_items(
     authenticated: Optional[bool] = None,
     min_price: Optional[float] = None,
     max_price: Optional[float] = None,
-    min_sold_count: Optional[int] = None,
+    min_sold_count: Optional[int] = 3,
     season: Optional[str] = None,
     year: Optional[int] = None,
     year_min: Optional[int] = None,
@@ -613,14 +613,14 @@ def get_items(
     # Sort mapping
     order_map = {
         "newest": "id DESC",
-        "grade_asc": "grade ASC, demand_score DESC",
-        "profit_desc": "COALESCE(exact_profit, our_price - source_price) DESC",
-        "margin_desc": "margin_percent DESC",
-        "sellthrough_desc": "demand_score DESC",
-        "days_asc": "sell_through_days ASC",
-        "price_asc": "our_price ASC",
-        "price_desc": "our_price DESC",
-        "sold_count_desc": "comp_count DESC",
+        "grade_asc": "grade ASC NULLS LAST, demand_score DESC NULLS LAST",
+        "profit_desc": "COALESCE(exact_profit, our_price - source_price) DESC NULLS LAST",
+        "margin_desc": "margin_percent DESC NULLS LAST",
+        "sellthrough_desc": "demand_score DESC NULLS LAST",
+        "days_asc": "sell_through_days ASC NULLS LAST",
+        "price_asc": "our_price ASC NULLS LAST",
+        "price_desc": "our_price DESC NULLS LAST",
+        "sold_count_desc": "comp_count DESC NULLS LAST",
     }
     order = order_map.get(sort, "id DESC")
 
@@ -631,6 +631,66 @@ def get_items(
     items = [_row_to_item(row) for row in c.fetchall()]
     conn.close()
     return items
+
+
+def count_items(
+    status: Optional[str] = None,
+    brand: Optional[str] = None,
+    category: Optional[str] = None,
+    min_price: Optional[float] = None,
+    max_price: Optional[float] = None,
+    min_sold_count: Optional[int] = 3,
+    season: Optional[str] = None,
+    year: Optional[int] = None,
+    year_min: Optional[int] = None,
+    year_max: Optional[int] = None,
+    created_after: Optional[str] = None,
+) -> int:
+    """Count items matching filters using SQL COUNT(*)."""
+    conn = _get_conn()
+    c = conn.cursor()
+    clauses: List[str] = []
+    params: list = []
+
+    if status:
+        clauses.append("status = ?")
+        params.append(status)
+    if brand:
+        clauses.append("LOWER(brand) = LOWER(?)")
+        params.append(brand)
+    if category:
+        clauses.append("LOWER(category) = LOWER(?)")
+        params.append(category)
+    if min_price is not None:
+        clauses.append("our_price >= ?")
+        params.append(min_price)
+    if max_price is not None:
+        clauses.append("our_price <= ?")
+        params.append(max_price)
+    if min_sold_count is not None:
+        clauses.append("comp_count >= ?")
+        params.append(min_sold_count)
+    if season:
+        clauses.append("UPPER(exact_season) = UPPER(?)")
+        params.append(season)
+    if year is not None:
+        clauses.append("exact_year = ?")
+        params.append(year)
+    if year_min is not None:
+        clauses.append("exact_year >= ?")
+        params.append(year_min)
+    if year_max is not None:
+        clauses.append("exact_year <= ?")
+        params.append(year_max)
+    if created_after:
+        clauses.append("created_at >= ?")
+        params.append(created_after)
+
+    where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
+    c.execute(f"SELECT COUNT(*) FROM items {where}", params)
+    count = c.fetchone()[0]
+    conn.close()
+    return count
 
 
 def get_item_by_id(item_id: int) -> Optional[Item]:
@@ -967,13 +1027,22 @@ def get_active_item_comps(item_id: int) -> List[Dict[str, Any]]:
     return comps
 
 
-def update_item_comp_feedback(item_comp_id: int, status: str, reason: str = None) -> Optional[Dict[str, Any]]:
+def update_item_comp_feedback(item_comp_id: int, status: str, reason: str = None, expected_item_id: int = None) -> Optional[Dict[str, Any]]:
     """Update feedback_status, rejected_at (if rejected), rejection_reason.
 
-    Returns updated row as dict, or None if not found.
+    Returns updated row as dict, or None if not found or ownership check fails.
     """
     conn = _get_conn()
     c = conn.cursor()
+
+    # Validate comp belongs to expected item
+    if expected_item_id is not None:
+        c.execute("SELECT item_id FROM item_comps WHERE id = ?", (item_comp_id,))
+        row = c.fetchone()
+        if not row or row["item_id"] != expected_item_id:
+            conn.close()
+            return None
+
     now = datetime.utcnow().isoformat()
 
     if status == "rejected":

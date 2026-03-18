@@ -18,7 +18,7 @@ from pydantic import BaseModel
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import asyncio
-from db.sqlite_models import init_db, get_items, get_item_by_id, get_stats, get_price_history, get_sold_comps, get_sold_comps_stats, save_sold_comp, get_qualified_items, Item
+from db.sqlite_models import init_db, get_items, get_item_by_id, get_stats, get_price_history, get_sold_comps, get_sold_comps_stats, save_sold_comp, get_qualified_items, count_items, Item
 from scrapers import GrailedScraper
 
 
@@ -82,7 +82,7 @@ class ItemResponse(BaseModel):
             price=item.our_price or 0,
             original_price=item.source_price,
             market_price=item.market_price,
-            margin_percent=item.margin_percent,
+            margin_percent=(item.margin_percent / 100) if item.margin_percent and item.margin_percent > 1 else (item.margin_percent or 0),
             images=item.images or [],
             source=item.source,
             source_url=item.source_url,
@@ -98,7 +98,7 @@ class ItemResponse(BaseModel):
             active_count=item.active_count,
             exact_sell_price=item.exact_sell_price,
             exact_profit=item.exact_profit,
-            exact_margin=item.exact_margin,
+            exact_margin=(item.exact_margin / 100) if item.exact_margin and item.exact_margin > 1 else (item.exact_margin or 0),
             sell_through_rate=item.sell_through_rate,
             est_days_to_sell=item.est_days_to_sell,
             qualified_at=item.qualified_at,
@@ -200,13 +200,16 @@ async def list_items(
     """List items available for purchase."""
     offset = (page - 1) * page_size
 
+    # When client doesn't specify min_sold_count, omit it so get_items() uses its default (3)
+    sold_count_kwarg = {} if min_sold_count is None else {"min_sold_count": min_sold_count}
+
     items = get_items(
         status="active",
         brand=brand,
         category=category,
         min_price=min_price,
         max_price=max_price,
-        min_sold_count=min_sold_count,
+        **sold_count_kwarg,
         season=season,
         year=year,
         year_min=year_min,
@@ -224,14 +227,13 @@ async def list_items(
         else:
             items = [i for i in items if not getattr(i, 'needs_review', 0)]
 
-    # Get total count (simplified - would need separate count query for pagination)
-    all_items = get_items(status="active", brand=brand, category=category, min_price=min_price, max_price=max_price, min_sold_count=min_sold_count, season=season, year=year, year_min=year_min, year_max=year_max, sort=sort, limit=1000, created_after=created_after)
-    if needs_review is not None:
-        if needs_review:
-            all_items = [i for i in all_items if getattr(i, 'needs_review', 0)]
-        else:
-            all_items = [i for i in all_items if not getattr(i, 'needs_review', 0)]
-    total = len(all_items)
+    # Get total count using efficient SQL COUNT(*)
+    total = count_items(
+        status="active", brand=brand, category=category,
+        min_price=min_price, max_price=max_price, **sold_count_kwarg,
+        season=season, year=year, year_min=year_min, year_max=year_max,
+        created_after=created_after,
+    )
 
     return ItemListResponse(
         items=[ItemResponse.from_db(item) for item in items],
@@ -384,10 +386,11 @@ async def submit_comp_feedback(item_id: int, item_comp_id: int, req: CompFeedbac
     """Submit feedback on a comp assignment. Triggers re-grade on rejection."""
     if req.status not in ("accepted", "rejected"):
         raise HTTPException(status_code=400, detail="status must be 'accepted' or 'rejected'")
-    if req.status == "rejected" and req.reason not in (
-        "wrong_model", "wrong_condition", "wrong_brand", "outlier", "other", None
-    ):
-        raise HTTPException(status_code=400, detail="Invalid rejection reason")
+    if req.status == "rejected":
+        if req.reason is None or req.reason not in (
+            "wrong_model", "wrong_condition", "wrong_brand", "outlier", "other"
+        ):
+            raise HTTPException(status_code=400, detail="Rejection requires a valid reason: wrong_model, wrong_condition, wrong_brand, outlier, other")
 
     from api.services.comp_feedback import process_comp_feedback
     result = process_comp_feedback(item_id, item_comp_id, req.status, req.reason)
@@ -978,4 +981,4 @@ async def telegram_webhook(request: Request):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8001)

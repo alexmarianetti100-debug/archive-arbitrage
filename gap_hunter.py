@@ -92,6 +92,7 @@ from core.liquidation_pricing import compute_liquidation_metrics
 from core.condition_parser import parse_condition
 from core.size_scorer import score_size
 from core.deal_tracker import DealPrediction, record_prediction
+from db.sqlite_models import save_item as db_save_item, update_item_qualification, Item as DbItem
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(name)s] %(message)s')
 logging.getLogger("vinted").setLevel(logging.CRITICAL)         # suppress proxy 403/502 noise
@@ -116,6 +117,19 @@ def _get_trend_engine():
 MIN_GAP_PERCENT = float(os.getenv("GAP_MIN_PERCENT", "0.30"))  # 30% below sold avg
 MIN_PROFIT_DOLLARS = float(os.getenv("GAP_MIN_PROFIT", "75"))   # At least $75 profit
 MIN_SOLD_COMPS = int(os.getenv("GAP_MIN_COMPS", "8"))            # Need 8+ sold comps (was 20, too high for niche items)
+
+# Platform fee rates (commission + payment processing)
+PLATFORM_FEES = {
+    "grailed": 0.142,       # 12% commission + 2.2% payment
+    "poshmark": 0.20,       # 20% flat
+    "ebay": 0.13,           # ~12.9% FVF + varies
+    "depop": 0.10,          # 10% + processor
+    "therealreal": 0.15,    # Consignment varies, ~15% avg
+    "vinted": 0.05,         # 5% seller fee
+    "mercari": 0.10,        # 10% flat
+}
+DEFAULT_SELL_PLATFORM = os.getenv("DEFAULT_SELL_PLATFORM", "grailed")
+DEFAULT_SELL_FEE = PLATFORM_FEES.get(DEFAULT_SELL_PLATFORM, 0.142)
 
 # ── Pricing Engine (centralized cache) ──
 _pricing_engine = None
@@ -161,10 +175,10 @@ COLLAB_MODEL_WORDS: dict[str, set[str]] = {
 IMPLAUSIBLE_GAP_CAP = 0.90          # reject if gap exceeds this
 IMPLAUSIBLE_GAP_MIN_MARKET = 200.0  # only apply when market median is meaningful
 
-def estimate_shipping(item: "ScrapedItem") -> float:
+def estimate_shipping(item: "ScrapedItem", reference_price: float = 0.0) -> float:
     """
     Category-aware shipping estimate for profit calculations.
-    Replaces the old flat $15 estimate.
+    Includes insurance for high-value items (>$500).
     """
     title_lower = (item.title or "").lower()
     category_lower = (item.category or "").lower()
@@ -173,26 +187,34 @@ def estimate_shipping(item: "ScrapedItem") -> float:
     # Shipping estimates updated for 2026 rates (USPS +7.8%, UPS/FedEx +6%)
     # Heavy outerwear (2-5 lbs)
     if any(k in combined for k in ("jacket", "coat", "parka", "anorak", "bomber", "leather", "hoodie")):
-        return 32.0
+        base = 32.0
     # Footwear (3-6 lbs with box)
-    if any(k in combined for k in ("boot", "shoe", "sneaker", "geobasket", "ramone", "creeper", "tabi",
+    elif any(k in combined for k in ("boot", "shoe", "sneaker", "geobasket", "ramone", "creeper", "tabi",
                                     "loafer", "sandal", "heel", "pump", "mule", "clog")):
-        return 22.0
+        base = 22.0
     # Small accessories / jewelry (First Class or small Priority)
-    if any(k in combined for k in ("ring", "pendant", "necklace", "bracelet", "earring", "chain",
+    elif any(k in combined for k in ("ring", "pendant", "necklace", "bracelet", "earring", "chain",
                                     "charm", "pin", "brooch")):
-        return 8.0
+        base = 8.0
     # Bottoms / pants / denim (1-2 lbs)
-    if any(k in combined for k in ("pant", "jean", "denim", "cargo", "trouser", "short")):
-        return 15.0
+    elif any(k in combined for k in ("pant", "jean", "denim", "cargo", "trouser", "short")):
+        base = 15.0
     # Eyewear (small but fragile — needs box)
-    if any(k in combined for k in ("sunglasses", "glasses", "eyewear", "frames")):
-        return 12.0
+    elif any(k in combined for k in ("sunglasses", "glasses", "eyewear", "frames")):
+        base = 12.0
     # Belts (flat, lightweight)
-    if any(k in combined for k in ("belt",)):
-        return 10.0
+    elif any(k in combined for k in ("belt",)):
+        base = 10.0
     # Default (tops, shirts, tees, knitwear — 1-2 lbs)
-    return 16.0
+    else:
+        base = 16.0
+
+    # Insurance for high-value items (~$4 per $100 of declared value)
+    if reference_price > 500:
+        insurance = max(3.0, reference_price * 0.04)
+        base += insurance
+
+    return base
 
 STATE_FILE = os.path.join(os.path.dirname(__file__), "data", "gap_state.json")
 SOLD_CACHE_FILE = os.path.join(os.path.dirname(__file__), "data", "sold_cache.json")
@@ -620,6 +642,17 @@ class GapDeal:
     downside_net_profit: float = 0.0
     margin_of_safety_score: float = 0.0
     discovered_at: Optional[datetime] = None
+
+
+def _map_grade(fire_level: int, quality_score: float) -> str:
+    """Map gap_hunter quality signals to A/B/C/D grade."""
+    if fire_level >= 3 and quality_score >= 80:
+        return "A"
+    if fire_level >= 2 and quality_score >= 65:
+        return "B"
+    if fire_level >= 1 and quality_score >= 50:
+        return "C"
+    return "D"
 
 
 class GapHunter:
@@ -1227,10 +1260,9 @@ class GapHunter:
                     sold = [sold[i] for i in validation.surviving_indices]
                     prices = sorted([s.price for s in sold if s.price and s.price > 0])
                     comp_confidence_penalty = validation.score_penalty
-                elif validation.surviving_count == 0:
-                    logger.info(f"  ❌ Comp validator rejected all comps for '{query[:50]}'")
+                elif validation.surviving_count < 3:
+                    logger.info(f"  ❌ Comp validator: only {validation.surviving_count} comps survived for '{query[:50]}' (need 3)")
                     return None
-                # 1-2 survive: keep original set, note low confidence
 
             # ── Detect bimodal distribution (p75 > 2.5x p25 = likely mixed products) ──
             if len(prices) >= 5:
@@ -1240,7 +1272,8 @@ class GapHunter:
                     logger.warning(f"  ⚠️ Bimodal price distribution detected for '{query}': p25=${p25:.0f}, p75=${p75:.0f} (ratio {p75/p25:.1f}x)")
                     # Use only lower half — more conservative
                     prices = prices[:len(prices) // 2]
-                    logger.info(f"  📉 Using lower half of comps ({len(prices)} items) for conservative estimate")
+                    comp_confidence_penalty = max(comp_confidence_penalty, 15)
+                    logger.info(f"  📉 Using lower half of comps ({len(prices)} items), +{comp_confidence_penalty}pt penalty")
 
             # ── Calculate average days-to-sell from sold comps ──
             days_to_sell_list = []
@@ -1922,14 +1955,45 @@ class GapHunter:
             )
             downside_reference = sold_data.downside_anchor or (reference_price * 0.85)
 
+            # ── Condition adjustment: if source is worse condition than comps, haircut reference ──
+            source_condition, _, _ = parse_condition(item.title, brand=brand)
+            from core.condition_parser import CONDITION_TIERS
+            source_mult = CONDITION_TIERS.get(source_condition, 0.70)  # Default GENTLY_USED
+            # Comps are mostly GENTLY_USED on Grailed; if source is worse, reduce reference
+            comp_assumed_mult = 0.70  # Grailed comps average condition
+            if source_mult < comp_assumed_mult and comp_assumed_mult > 0:
+                condition_ratio = source_mult / comp_assumed_mult
+                reference_price *= condition_ratio
+                downside_reference *= condition_ratio
+                logger.debug(f"    Condition adjustment: {source_condition} ({source_mult}) vs comps ({comp_assumed_mult}) → {condition_ratio:.2f}x")
+
+            # ── Seasonal pricing: haircut for off-season items ──
+            import calendar
+            current_month = datetime.now().month
+            title_lower = item.title.lower() if item.title else ""
+            cat_lower = (item.category or "").lower()
+            combined_text = title_lower + " " + cat_lower
+            # Winter items (outerwear, heavy knits) are off-season April-August
+            winter_keywords = ("jacket", "coat", "parka", "anorak", "puffer", "down vest", "heavy knit", "sherpa")
+            # Summer items are off-season October-February
+            summer_keywords = ("swim", "tank top", "linen short", "sandal")
+            is_winter_item = any(k in combined_text for k in winter_keywords)
+            is_summer_item = any(k in combined_text for k in summer_keywords)
+            off_season = (is_winter_item and 4 <= current_month <= 8) or (is_summer_item and (current_month >= 10 or current_month <= 2))
+            if off_season:
+                reference_price *= 0.85
+                downside_reference *= 0.85
+                logger.debug(f"    Seasonal haircut: -15% (off-season {'winter' if is_winter_item else 'summer'} item)")
+
             gap = reference_price - item.price
             gap_percent = gap / reference_price if reference_price > 0 else 0
 
-            # Profit estimate: resell on Grailed at reference price minus ~14% fees + shipping
-            # Grailed takes 12% commission + ~2.2% payment processing = 14.2% total
-            expected_sell_price = reference_price * 0.858
-            downside_sell_price = downside_reference * 0.858
-            shipping_est = estimate_shipping(item) * 1.20  # 20% buffer for shipping variance
+            # Profit estimate: resell at reference price minus platform fees + shipping
+            sell_fee_rate = DEFAULT_SELL_FEE
+            sell_multiplier = 1.0 - sell_fee_rate
+            expected_sell_price = reference_price * sell_multiplier
+            downside_sell_price = downside_reference * sell_multiplier
+            shipping_est = estimate_shipping(item, reference_price=reference_price) * 1.20  # 20% buffer
             profit = expected_sell_price - item.price - shipping_est
             downside_profit = downside_sell_price - item.price - shipping_est
             real_margin = profit / item.price if item.price > 0 else 0
@@ -1948,12 +2012,20 @@ class GapHunter:
                 query_metrics["implausible_gap_skips"] += 1
                 continue
 
-            # Confidence-gated thresholds: medium (20-19 comps) slightly stricter than high (20+)
+            # 3-tier confidence-gated thresholds
             comp_confidence = getattr(sold_data, '_confidence', 'medium')
-            effective_min_gap = MIN_GAP_PERCENT
+            comp_cv = getattr(sold_data, '_cv', None)
             effective_min_profit = MIN_PROFIT_DOLLARS
-            if comp_confidence == "medium":
-                effective_min_gap = MIN_GAP_PERCENT * 1.17  # ~35% instead of 30%
+            if comp_confidence == "high" and (comp_cv is None or comp_cv < 0.5):
+                effective_min_gap = MIN_GAP_PERCENT * 0.83  # ~25% for high confidence
+            elif comp_confidence == "low":
+                effective_min_gap = MIN_GAP_PERCENT * 1.33  # ~40% for low confidence
+            else:
+                effective_min_gap = MIN_GAP_PERCENT * 1.07  # ~32% for medium
+
+            # Lower profit threshold for liquid items (high comp count + safe downside)
+            if sold_data.count >= 12 and downside_profit > 30:
+                effective_min_profit = 50.0
 
             if gap_percent >= effective_min_gap and profit >= effective_min_profit:
                 pricing_conf = (sold_data.pricing_confidence or getattr(sold_data, '_confidence', 'medium')).lower()
@@ -2235,6 +2307,14 @@ class GapHunter:
                 self.stats["validation_engine_blocked"] = self.stats.get("validation_engine_blocked", 0) + 1
                 return False
 
+        # ── Defaults for gate variables (overridden in non-Japan block) ──
+        deal_comp_conf = getattr(deal, "comp_confidence_level", None) or getattr(deal, "comp_confidence", "medium")
+        deal_comp_cv = getattr(deal, "comp_cv", None)
+        deal_auth_comps = getattr(deal, "authenticated_comps", 0)
+        deal_auth_conf = getattr(deal, "comp_auth_confidence", 0.0)
+        public_min_auth = float(os.getenv("DISCORD_MIN_AUTH_CONFIDENCE", "0.72"))
+        public_max_cv = float(os.getenv("DISCORD_MAX_COMP_CV", "0.90"))
+
         # ── Non-Japan only: quality scoring and remaining gates ──
         # Japan deals already ran quality gates above.
         if not is_japan_deal:
@@ -2472,7 +2552,78 @@ class GapHunter:
                 logger.error(f"Whop alert failed: {e}")
 
             self.stats["deals_sent"] += 1
-            
+
+            # Persist deal to DB for frontend display
+            try:
+                import hashlib
+                url_hash = hashlib.md5(item.url.encode()).hexdigest()[:12] if item.url else ""
+                source_id = f"gap_{url_hash}"
+
+                db_item = DbItem(
+                    source=item.source,
+                    source_id=source_id,
+                    source_url=item.url,
+                    title=item.title,
+                    brand=brand,
+                    category=category,
+                    size=getattr(item, 'size', None),
+                    condition=getattr(item, 'condition', None),
+                    source_price=item.price,
+                    source_shipping=0.0,
+                    market_price=deal.sold_avg,
+                    our_price=deal.sold_avg,
+                    margin_percent=deal.gap_percent * 100,
+                    images=item.images or [],
+                    is_auction=getattr(item, 'is_auction', False),
+                    status="active",
+                )
+                persisted_id = db_save_item(db_item)
+
+                grade = _map_grade(signals.fire_level, quality_score)
+                grade_reasoning = (
+                    f"Gap Hunter: {signals.fire_level} fire, "
+                    f"score {quality_score:.0f}/100, "
+                    f"{deal.sold_count} comps, "
+                    f"${deal.profit_estimate:.0f} profit"
+                )
+
+                update_item_qualification(
+                    item_id=persisted_id,
+                    grade=grade,
+                    grade_reasoning=grade_reasoning,
+                    demand_score=getattr(signals, 'liquidity_score', 5) / 10,
+                    sell_through_days=getattr(signals, 'avg_days_to_sell', 0) or 0,
+                    comp_count=deal.sold_count,
+                    our_price=deal.sold_avg,
+                    margin_percent=deal.gap_percent * 100,
+                )
+
+                # Set exact pricing fields
+                from db.sqlite_models import _get_conn
+                conn = _get_conn()
+                try:
+                    conn.execute(
+                        """UPDATE items SET
+                            exact_sell_price=?, exact_profit=?, exact_margin=?,
+                            demand_level=?, sold_count=?
+                        WHERE id=?""",
+                        (
+                            deal.sold_avg,
+                            deal.expected_net_profit,
+                            deal.gap_percent * 100,
+                            "hot" if signals.fire_level >= 3 else "warm" if signals.fire_level >= 2 else "cold",
+                            deal.sold_count,
+                            persisted_id,
+                        ),
+                    )
+                    conn.commit()
+                finally:
+                    conn.close()
+
+                logger.info(f"    💾 Persisted to DB: item #{persisted_id}, grade {grade}")
+            except Exception as e:
+                logger.warning(f"    ⚠️ DB persist failed: {e}")
+
             # Track deal prediction for accuracy analysis
             try:
                 is_hyper = getattr(deal, '_hyper_pricing', False) or getattr(sold_data, '_hyper_pricing', False)
@@ -2489,6 +2640,11 @@ class GapHunter:
                     cv=cv,
                     confidence_level=confidence,
                     num_comps=deal.sold_count,
+                    buy_price=item.price,
+                    buy_platform=item.source,
+                    sell_platform=DEFAULT_SELL_PLATFORM,
+                    estimated_profit=deal.expected_net_profit,
+                    estimated_fees=deal.sold_avg * DEFAULT_SELL_FEE,
                 )
                 record_prediction(prediction)
                 logger.debug(f"Tracked deal prediction for accuracy analysis")
@@ -2682,16 +2838,37 @@ class GapHunter:
                                     self.source = 'japan_buyee'
                                     self.url = japan_deal.auction_url
                                     self.images = [japan_deal.image_url] if japan_deal.image_url else []
+                                    self.size = getattr(japan_deal, 'size', None)
+                                    self.brand = japan_deal.brand
+                                    self.category = getattr(japan_deal, 'category', '')
+                                    self.seller = None
+                                    self.seller_sales = None
+                                    self.seller_rating = None
+                                    self.raw_data = {}
+                                    self._auction_hours_left = None
                                     self._japan_data = japan_deal
                             
                             # Create mock deal signals
                             class MockDeal:
                                 def __init__(self, japan_deal, item):
                                     self.item = item
+                                    self.query = f"{japan_deal.brand} {japan_deal.title}"
                                     self.sold_avg = japan_deal.us_market_price
                                     self.gap_percent = japan_deal.margin_percent / 100
                                     self.profit_estimate = japan_deal.net_profit
                                     self.sold_count = 10  # Estimated
+                                    self.comp_confidence = "high"
+                                    self.comp_confidence_level = "high"
+                                    self.comp_cv = None
+                                    self.authenticated_comps = 0
+                                    self.comp_auth_confidence = 0.0
+                                    self.comp_confidence_penalty = 0
+                                    self.liquidation_anchor = japan_deal.total_landed_cost
+                                    self.downside_anchor = japan_deal.total_landed_cost
+                                    self.expected_net_profit = japan_deal.net_profit
+                                    self.downside_net_profit = japan_deal.net_profit * 0.7
+                                    self.margin_of_safety_score = japan_deal.margin_percent
+                                    self._hyper_pricing = False
                             
                             item = MockItem(deal)
                             mock_deal = MockDeal(deal, item)

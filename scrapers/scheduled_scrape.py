@@ -33,8 +33,11 @@ from scrapers import (
 from scrapers.trending_analyzer import TrendingAnalyzer, get_trending_queries, save_report
 from api.services.pricing import PricingService
 from db.sqlite_models import init_db, save_item, get
-from alerts import AlertService, alert_if_profitable
-from qualify import run_qualification
+from core.alerts import AlertService, alert_if_profitable
+from core.qualify import run_qualification
+
+import logging
+logger = logging.getLogger("scheduled_scrape")
 
 # Config
 QUERIES_PER_RUN = 15       # Number of trending queries to search per run
@@ -222,11 +225,13 @@ async def run_scheduled_scrape():
             # Skip if not profitable
             if price_info.confidence == "skip" or price_info.recommended_price == 0:
                 skipped_count += 1
+                logger.debug(f"Skipped (no price data): {scraped.title[:50]} — confidence={price_info.confidence}")
                 continue
-            
+
             # Skip if margin is too low (< 25% for this strategy)
             if price_info.margin_percent < 0.25:
                 skipped_count += 1
+                logger.debug(f"Skipped (low margin): {scraped.title[:50]} — {price_info.margin_percent*100:.0f}% < 25%")
                 continue
             
             # Save to database
@@ -301,6 +306,7 @@ async def run_scheduled_scrape():
             )
         except Exception as e:
             print(f"   ⚠ Qualification error: {e}")
+            logger.exception("Pass 2 qualification failed")
 
     # Send daily summary
     if saved_count > 0:

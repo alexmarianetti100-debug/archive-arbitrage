@@ -23,11 +23,12 @@ logger = logging.getLogger("comp_matcher")
 def quality_weight(quality_score: float = None) -> float:
     """
     Convert a sold_comp quality_score (0.0-1.0) to a scoring multiplier.
-    Floor 0.5, ceiling 1.0. New comps with no history get 1.0 (no penalty).
+    Proportional: 0.0 score = 0.0 weight, 1.0 score = 1.0 weight.
+    New comps with no history get 1.0 (no penalty).
     """
     if quality_score is None:
         return 1.0
-    return 0.5 + (max(0.0, min(1.0, quality_score)) * 0.5)
+    return max(0.0, min(1.0, quality_score))
 
 
 # Sub-brands / lines that distinguish pricing tiers
@@ -532,6 +533,7 @@ def time_decay_weight(sold_date: Optional[datetime], half_life_days: int = 45) -
     """
     Exponential decay: a sale from half_life_days ago has half the weight.
     Returns 1.0 for today, 0.5 for half_life_days ago, etc.
+    Comps older than 120 days are capped at 0.25x weight.
     """
     if sold_date is None:
         return 0.5  # Unknown date — assume ~half-life old
@@ -539,7 +541,10 @@ def time_decay_weight(sold_date: Optional[datetime], half_life_days: int = 45) -
     age_days = (datetime.now(tz=None) - sold_date).total_seconds() / 86400
     if age_days < 0:
         age_days = 0
-    return math.exp(-0.693 * age_days / max(half_life_days, 1))
+    weight = math.exp(-0.693 * age_days / max(half_life_days, 1))
+    if age_days > 120:
+        weight = min(weight, 0.25)
+    return weight
 
 
 # ══════════════════════════════════════════════════════════════
