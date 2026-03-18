@@ -20,6 +20,16 @@ from dataclasses import dataclass, field
 logger = logging.getLogger("comp_matcher")
 
 
+def quality_weight(quality_score: float = None) -> float:
+    """
+    Convert a sold_comp quality_score (0.0-1.0) to a scoring multiplier.
+    Floor 0.5, ceiling 1.0. New comps with no history get 1.0 (no penalty).
+    """
+    if quality_score is None:
+        return 1.0
+    return 0.5 + (max(0.0, min(1.0, quality_score)) * 0.5)
+
+
 # Sub-brands / lines that distinguish pricing tiers
 SUB_BRANDS = {
     "rick owens": ["drkshdw", "lilies", "mainline", "hun rick owens", "champion", "converse", "birkenstock", "moncler"],
@@ -288,7 +298,7 @@ def build_search_queries(parsed: ParsedTitle) -> List[Tuple[str, float]]:
     return unique
 
 
-def score_comp_similarity(source_parsed: ParsedTitle, comp_title: str) -> float:
+def score_comp_similarity(source_parsed: ParsedTitle, comp_title: str, comp_quality_score: float = None) -> float:
     """
     Score how similar a sold comp is to our source item.
     Returns 0.0 (totally different) to 1.0 (near identical).
@@ -352,7 +362,8 @@ def score_comp_similarity(source_parsed: ParsedTitle, comp_title: str) -> float:
     if factors == 0:
         return 0.0
     
-    return min(score / factors, 1.0)
+    base_score = min(score / factors, 1.0)
+    return base_score * quality_weight(comp_quality_score)
 
 
 def is_exact_match(listing: ParsedTitle, comp: ParsedTitle) -> bool:
