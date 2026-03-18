@@ -23,6 +23,7 @@ export const fetchItems = async (params: {
   sort?: string;
   page_size?: number;
   page?: number;
+  needs_review?: boolean;
   created_after?: string;
 }): Promise<Item[]> => {
   const apiParams: any = { ...params };
