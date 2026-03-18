@@ -3,6 +3,7 @@ FastAPI application for Archive Arbitrage.
 """
 
 import sys
+import json
 from pathlib import Path
 from contextlib import asynccontextmanager
 from typing import Optional, List
@@ -66,6 +67,8 @@ class ItemResponse(BaseModel):
     # Image fingerprinting (Phase 1.1)
     image_hash: Optional[str] = None
     image_phash: Optional[str] = None
+    # Comp feedback review flag
+    needs_review: bool = False
 
     @classmethod
     def from_db(cls, item: Item) -> "ItemResponse":
@@ -109,6 +112,7 @@ class ItemResponse(BaseModel):
             season_confidence=item.season_confidence,
             image_hash=item.image_hash,
             image_phash=item.image_phash,
+            needs_review=bool(getattr(item, 'needs_review', 0)),
         )
 
 
@@ -124,6 +128,10 @@ class StatsResponse(BaseModel):
     active_items: int
     unique_brands: int
     avg_margin: float
+    grade_a_count: int = 0
+    grade_b_count: int = 0
+    grade_c_count: int = 0
+    grade_d_count: int = 0
 
 
 @asynccontextmanager
@@ -176,7 +184,7 @@ async def list_items(
     page: int = Query(1, ge=1),
     page_size: int = Query(24, ge=1, le=1000),  # Allow up to 1000 for full load
     brand: Optional[str] = None,
-    category: Optional[str] = None,
+    category: Optional[str] = Query(None, description="Filter by category (outerwear, footwear, tops, bottoms, accessories)"),
     size: Optional[str] = None,
     min_price: Optional[float] = None,
     max_price: Optional[float] = None,
@@ -186,13 +194,16 @@ async def list_items(
     year_min: Optional[int] = Query(None, ge=1970, le=2030, description="Minimum year"),
     year_max: Optional[int] = Query(None, ge=1970, le=2030, description="Maximum year"),
     sort: str = Query("newest", pattern="^(newest|grade_asc|profit_desc|margin_desc|sellthrough_desc|days_asc|price_asc|price_desc|sold_count_desc)$"),
+    created_after: Optional[str] = Query(None, description="ISO date string, e.g. 2026-03-13T00:00:00"),
+    needs_review: Optional[bool] = Query(None, description="Filter to items needing manual review"),
 ):
     """List items available for purchase."""
     offset = (page - 1) * page_size
-    
+
     items = get_items(
         status="active",
         brand=brand,
+        category=category,
         min_price=min_price,
         max_price=max_price,
         min_sold_count=min_sold_count,
@@ -203,12 +214,25 @@ async def list_items(
         sort=sort,
         limit=page_size,
         offset=offset,
+        created_after=created_after,
     )
-    
+
+    # Filter by needs_review if specified
+    if needs_review is not None:
+        if needs_review:
+            items = [i for i in items if getattr(i, 'needs_review', 0)]
+        else:
+            items = [i for i in items if not getattr(i, 'needs_review', 0)]
+
     # Get total count (simplified - would need separate count query for pagination)
-    all_items = get_items(status="active", brand=brand, min_price=min_price, max_price=max_price, min_sold_count=min_sold_count, season=season, year=year, year_min=year_min, year_max=year_max, sort=sort, limit=1000)
+    all_items = get_items(status="active", brand=brand, category=category, min_price=min_price, max_price=max_price, min_sold_count=min_sold_count, season=season, year=year, year_min=year_min, year_max=year_max, sort=sort, limit=1000, created_after=created_after)
+    if needs_review is not None:
+        if needs_review:
+            all_items = [i for i in all_items if getattr(i, 'needs_review', 0)]
+        else:
+            all_items = [i for i in all_items if not getattr(i, 'needs_review', 0)]
     total = len(all_items)
-    
+
     return ItemListResponse(
         items=[ItemResponse.from_db(item) for item in items],
         total=total,
@@ -312,6 +336,68 @@ async def get_item_market_data(item_id: int):
         return {"search_key": search_key, "listings": [], "stats": None, "demand_level": "unknown"}
 
 
+@app.get("/api/items/{item_id}/comps")
+async def get_item_comps_endpoint(item_id: int):
+    """Get comp assignments for an item with snapshot data."""
+    item = get_item_by_id(item_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    from db.sqlite_models import get_item_comps
+    comps = get_item_comps(item_id)
+
+    accepted = sum(1 for c in comps if c["feedback_status"] == "accepted")
+    rejected = sum(1 for c in comps if c["feedback_status"] == "rejected")
+    pending = sum(1 for c in comps if c["feedback_status"] == "pending")
+
+    return {
+        "comps": [
+            {
+                "item_comp_id": c["id"],
+                "rank": c["rank"],
+                "similarity_score": c["similarity_score"],
+                "feedback_status": c["feedback_status"],
+                "rejection_reason": c["rejection_reason"],
+                "title": c["snapshot_title"],
+                "sold_price": c["snapshot_price"],
+                "sold_date": c["snapshot_sold_date"],
+                "sold_url": c["snapshot_url"],
+                "source": c["snapshot_source"],
+                "condition": c["snapshot_condition"],
+            }
+            for c in comps
+        ],
+        "total": len(comps),
+        "accepted": accepted,
+        "rejected": rejected,
+        "pending": pending,
+    }
+
+
+class CompFeedbackRequest(BaseModel):
+    status: str  # accepted | rejected
+    reason: Optional[str] = None
+
+
+@app.post("/api/items/{item_id}/comps/{item_comp_id}/feedback")
+async def submit_comp_feedback(item_id: int, item_comp_id: int, req: CompFeedbackRequest):
+    """Submit feedback on a comp assignment. Triggers re-grade on rejection."""
+    if req.status not in ("accepted", "rejected"):
+        raise HTTPException(status_code=400, detail="status must be 'accepted' or 'rejected'")
+    if req.status == "rejected" and req.reason not in (
+        "wrong_model", "wrong_condition", "wrong_brand", "outlier", "other", None
+    ):
+        raise HTTPException(status_code=400, detail="Invalid rejection reason")
+
+    from api.services.comp_feedback import process_comp_feedback
+    result = process_comp_feedback(item_id, item_comp_id, req.status, req.reason)
+
+    if "error" in result:
+        raise HTTPException(status_code=404, detail=result["error"])
+
+    return result
+
+
 @app.get("/api/deals")
 async def list_deals(
     grade: Optional[str] = Query(None, pattern="^[A-D]$"),
@@ -324,9 +410,11 @@ async def list_deals(
 
 
 @app.get("/api/stats", response_model=StatsResponse)
-async def get_statistics():
-    """Get store statistics."""
-    stats = get_stats()
+async def get_statistics(
+    created_after: Optional[str] = Query(None, description="ISO date string, e.g. 2026-03-13T00:00:00"),
+):
+    """Get store statistics, optionally filtered to items created after a date."""
+    stats = get_stats(created_after=created_after)
     return StatsResponse(**stats)
 
 
@@ -403,6 +491,76 @@ async def get_volume_statistics():
             for item in sorted(items, key=lambda x: x.weighted_volume or 0, reverse=True)[:10]
             if item.weighted_volume and item.weighted_volume > 0
         ],
+    }
+
+
+@app.get("/api/volume-timeseries")
+async def get_volume_timeseries(
+    days: int = Query(14, ge=1, le=90),
+):
+    """Get daily item counts for a time-series chart."""
+    import sqlite3 as _sqlite3
+    conn = _sqlite3.connect(Path(__file__).parent.parent / "data" / "archive.db")
+    conn.row_factory = _sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute(
+        """
+        SELECT DATE(created_at) as date, COUNT(*) as volume
+        FROM items
+        WHERE created_at >= DATE('now', ?)
+          AND status = 'active'
+        GROUP BY DATE(created_at)
+        ORDER BY date ASC
+        """,
+        (f'-{days} days',),
+    )
+    rows = cursor.fetchall()
+    conn.close()
+
+    return {
+        "daily_volumes": [
+            {"date": row["date"], "volume": row["volume"]}
+            for row in rows
+        ]
+    }
+
+
+@app.get("/api/stats/compare")
+async def get_stats_comparison():
+    """Compare current period stats vs previous period for trend computation."""
+    from datetime import datetime, timedelta
+
+    now = datetime.utcnow()
+    current_start = (now - timedelta(days=3)).isoformat()
+    previous_start = (now - timedelta(days=6)).isoformat()
+    previous_end = (now - timedelta(days=3)).isoformat()
+
+    current = get_stats(created_after=current_start)
+    previous = get_stats(created_after=previous_start)
+
+    # Compute deltas — avoid division by zero
+    def pct_change(curr, prev):
+        if not prev or prev == 0:
+            return 0 if not curr else 100
+        return round(((curr - prev) / prev) * 100, 1)
+
+    # Filter previous to only items in the previous window (not overlapping with current)
+    # Since get_stats uses >= created_after, previous includes current items too.
+    # We need to subtract current from previous to get the true previous window.
+    prev_active = max(previous.get("active_items", 0) - current.get("active_items", 0), 0)
+    prev_a = max(previous.get("grade_a_count", 0) - current.get("grade_a_count", 0), 0)
+    prev_margin = previous.get("avg_margin", 0)  # Can't subtract averages cleanly
+    prev_brands = max(previous.get("unique_brands", 0) - current.get("unique_brands", 0), 0)
+
+    return {
+        "current": current,
+        "trends": {
+            "active_items": pct_change(current.get("active_items", 0), prev_active),
+            "grade_a_count": pct_change(current.get("grade_a_count", 0), prev_a),
+            "avg_margin": round(current.get("avg_margin", 0) - prev_margin, 1),
+            "unique_brands": pct_change(current.get("unique_brands", 0), prev_brands),
+        },
     }
 
 
@@ -484,6 +642,275 @@ async def list_arbitrage(
         ],
         "total": len(opportunities),
     }
+
+
+# ---------------------------------------------------------------------------
+# Query Management
+# ---------------------------------------------------------------------------
+
+
+@app.get("/api/queries")
+async def list_queries(
+    tier: Optional[str] = Query(None, pattern="^(A|B|trap)$"),
+):
+    """List all queries with tier classification and performance data."""
+    from api.services.query_service import get_all_queries
+
+    queries = get_all_queries()
+    if tier:
+        queries = [q for q in queries if q["tier"] == tier]
+    return {"queries": queries, "total": len(queries)}
+
+
+@app.get("/api/queries/tier-summary")
+async def query_tier_summary():
+    """Get tier distribution summary."""
+    from api.services.query_service import get_tier_summary
+
+    return get_tier_summary()
+
+
+@app.put("/api/queries/{query}/tier")
+async def update_query_tier_endpoint(query: str, action: str = Query(..., pattern="^(promote|demote)$")):
+    """Manually promote or demote a query."""
+    from api.services.query_service import update_query_tier
+
+    # URL-decode the query (spaces become %20 etc)
+    from urllib.parse import unquote
+    decoded_query = unquote(query)
+
+    result = update_query_tier(decoded_query, action)
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+    return result
+
+
+@app.get("/api/queries/japan")
+async def list_japan_targets():
+    """List Japanese search targets with EN mappings and performance."""
+    from api.services.query_service import get_japan_targets
+
+    targets = get_japan_targets()
+    return {"targets": targets, "total": len(targets)}
+
+
+# ---------------------------------------------------------------------------
+# Telemetry
+# ---------------------------------------------------------------------------
+
+
+@app.get("/api/telemetry/query-performance")
+async def telemetry_query_performance(
+    min_runs: int = Query(0, ge=0),
+    sort_by: str = Query("total_runs", pattern="^(total_runs|total_deals|deal_rate|junk_ratio|best_gap)$"),
+    order: str = Query("desc", pattern="^(asc|desc)$"),
+):
+    """Full query performance telemetry data."""
+    from api.services.query_service import get_all_queries
+
+    queries = get_all_queries()
+
+    if min_runs > 0:
+        queries = [q for q in queries if q["total_runs"] >= min_runs]
+
+    reverse = order == "desc"
+    queries.sort(key=lambda q: q.get(sort_by, 0) or 0, reverse=reverse)
+
+    # Compute aggregate stats
+    total = len(queries)
+    total_runs = sum(q["total_runs"] for q in queries)
+    total_deals = sum(q["total_deals"] for q in queries)
+    avg_deal_rate = total_deals / total_runs if total_runs > 0 else 0
+    avg_junk = sum(q["junk_ratio"] for q in queries) / total if total > 0 else 0
+
+    # Skip reason aggregation from raw perf data
+    import json as _json
+    from pathlib import Path as _Path
+    perf_file = _Path(__file__).parent.parent / "data" / "trends" / "query_performance.json"
+    skip_reasons: dict = {}
+    if perf_file.exists():
+        try:
+            raw = _json.loads(perf_file.read_text())
+            for entry in raw.values():
+                for key in ("brand_mismatch_skips", "category_mismatch_skips", "stale_skips",
+                            "rep_ceiling_skips", "implausible_gap_skips", "low_trust_skips",
+                            "validation_failed"):
+                    skip_reasons[key] = skip_reasons.get(key, 0) + (entry.get(key, 0) or 0)
+        except Exception:
+            pass
+
+    return {
+        "queries": queries,
+        "total": total,
+        "aggregates": {
+            "total_runs": total_runs,
+            "total_deals": total_deals,
+            "avg_deal_rate": round(avg_deal_rate, 4),
+            "avg_junk_ratio": round(avg_junk, 4),
+            "skip_reasons": skip_reasons,
+        },
+    }
+
+
+@app.get("/api/telemetry/japan-performance")
+async def telemetry_japan_performance():
+    """Japan pipeline telemetry."""
+    import json as _json
+    from pathlib import Path as _Path
+
+    jp_file = _Path(__file__).parent.parent / "data" / "trends" / "japan_query_performance.json"
+    if not jp_file.exists():
+        return {"queries": [], "total": 0, "aggregates": {}}
+
+    try:
+        raw = _json.loads(jp_file.read_text())
+    except Exception:
+        return {"queries": [], "total": 0, "aggregates": {}}
+
+    queries = []
+    for query, entry in raw.items():
+        total_runs = entry.get("total_runs", 0)
+        total_deals = entry.get("total_deals", 0)
+        queries.append({
+            "query": query,
+            "total_runs": total_runs,
+            "total_deals": total_deals,
+            "deal_rate": round(total_deals / total_runs, 4) if total_runs > 0 else 0,
+            "best_gap": entry.get("best_gap", 0),
+            "last_run": entry.get("last_run"),
+        })
+
+    queries.sort(key=lambda q: q["total_runs"], reverse=True)
+
+    total_runs = sum(q["total_runs"] for q in queries)
+    total_deals = sum(q["total_deals"] for q in queries)
+
+    return {
+        "queries": queries,
+        "total": len(queries),
+        "aggregates": {
+            "total_runs": total_runs,
+            "total_deals": total_deals,
+            "avg_deal_rate": round(total_deals / total_runs, 4) if total_runs > 0 else 0,
+        },
+    }
+
+
+# ---------------------------------------------------------------------------
+# Scrape Control
+# ---------------------------------------------------------------------------
+
+from pydantic import BaseModel as _PydanticBase
+
+
+class ScrapeStartRequest(_PydanticBase):
+    mode: str = "gap_hunter"  # "gap_hunter" or "full_scrape"
+    platforms: Optional[List[str]] = None
+    query_source: str = "trend_engine"
+    custom_queries: Optional[List[str]] = None
+    max_results_per_query: int = 15
+    min_margin: float = 0.25
+    min_profit: float = 50
+    skip_auth: bool = False
+    dry_run: bool = False
+    skip_japan: bool = False
+    max_targets: Optional[int] = None
+
+
+@app.post("/api/scrape/start")
+async def start_scrape_endpoint(req: ScrapeStartRequest):
+    """Start a new scrape run."""
+    from api.services.scrape_orchestrator import start_scrape, get_active_run
+
+    active = get_active_run()
+    if active:
+        raise HTTPException(status_code=409, detail=f"Scrape already running: {active.run_id}")
+
+    try:
+        run = await start_scrape(
+            mode=req.mode,
+            platforms=req.platforms,
+            query_source=req.query_source,
+            custom_queries=req.custom_queries,
+            max_results_per_query=req.max_results_per_query,
+            min_margin=req.min_margin,
+            min_profit=req.min_profit,
+            skip_auth=req.skip_auth,
+            dry_run=req.dry_run,
+            skip_japan=req.skip_japan,
+            max_targets=req.max_targets,
+        )
+        return {"run_id": run.run_id, "status": run.status.value}
+    except RuntimeError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+
+
+@app.get("/api/scrape/status")
+async def scrape_status_endpoint():
+    """Get current scrape status."""
+    from api.services.scrape_orchestrator import get_active_run
+
+    active = get_active_run()
+    if active:
+        return {"running": True, "run": active.to_summary()}
+    return {"running": False, "run": None}
+
+
+@app.get("/api/scrape/history")
+async def scrape_history_endpoint():
+    """Get recent scrape run history."""
+    from api.services.scrape_orchestrator import get_run_history
+
+    return {"runs": get_run_history()}
+
+
+@app.post("/api/scrape/stop")
+async def stop_scrape_endpoint():
+    """Stop the currently running scrape."""
+    from api.services.scrape_orchestrator import get_active_run, cancel_run
+
+    active = get_active_run()
+    if not active:
+        raise HTTPException(status_code=404, detail="No scrape is running")
+
+    success = await cancel_run(active.run_id)
+    return {"cancelled": success, "run_id": active.run_id}
+
+
+@app.get("/api/scrape/stream/{run_id}")
+async def scrape_stream_endpoint(run_id: str):
+    """SSE stream of scrape progress events."""
+    from api.services.scrape_orchestrator import get_run, ScrapeStatus
+    from starlette.responses import StreamingResponse
+
+    run = get_run(run_id)
+    if not run:
+        raise HTTPException(status_code=404, detail=f"Run {run_id} not found")
+
+    async def event_generator():
+        while True:
+            try:
+                event = await asyncio.wait_for(run.events.get(), timeout=30.0)
+                yield f"data: {json.dumps(event.to_dict())}\n\n"
+                # Stop streaming after terminal events
+                if event.type in ("scrape:complete", "scrape:error", "scrape:cancelled"):
+                    break
+            except asyncio.TimeoutError:
+                # Send keepalive
+                yield f": keepalive\n\n"
+                # Check if run is done (in case we missed the terminal event)
+                if run.status in (ScrapeStatus.COMPLETED, ScrapeStatus.FAILED, ScrapeStatus.CANCELLED):
+                    break
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 # ---------------------------------------------------------------------------
