@@ -1111,6 +1111,15 @@ def link_item_to_sold_comps(
     Returns number of comps linked.
     """
     comps = get_sold_comps(search_key=search_key, limit=limit)
+    if not comps and search_key:
+        # Fallback: try brand-only search (handles Japan deals where query differs from search_key)
+        brand_words = search_key.lower().split()
+        if len(brand_words) >= 2:
+            # Try first two words as brand (e.g., "chrome hearts", "rick owens", "maison margiela")
+            brand_guess = " ".join(brand_words[:2])
+            comps = get_sold_comps(brand=brand_guess, limit=limit)
+        if not comps and brand_words:
+            comps = get_sold_comps(brand=brand_words[0], limit=limit)
     if not comps:
         return 0
 

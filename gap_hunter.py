@@ -1447,7 +1447,7 @@ class GapHunter:
                         source_id=getattr(vc, 'source_id', '') or '',
                         size=getattr(vc, 'size', None) or '',
                         condition=getattr(vc, 'condition', None) or '',
-                        sold_url=getattr(vc, 'url', None) or '',
+                        sold_url=getattr(vc, 'url', None) or None,
                         sold_date=str((vc.raw_data or {}).get('sold_at', '')),
                         embedding=emb,
                         platform=getattr(vc, 'source', 'grailed'),
@@ -3203,7 +3203,8 @@ class GapHunter:
                             class MockDeal:
                                 def __init__(self, japan_deal, item):
                                     self.item = item
-                                    self.query = f"{japan_deal.brand} {japan_deal.title}"
+                                    # Use the deal title as query (not brand+title which duplicates brand)
+                                    self.query = japan_deal.title.lower().strip()
                                     self.sold_avg = japan_deal.us_market_price
                                     self.gap_percent = japan_deal.margin_percent / 100
                                     self.profit_estimate = japan_deal.net_profit
