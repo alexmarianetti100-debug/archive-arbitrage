@@ -1771,6 +1771,48 @@ class GapHunter:
                     f"{sold.count if sold else 0} comps (need 3)"
                 )
 
+        # ── Historical DB search via embeddings ──
+        # Even if live search didn't find specific comps, the DB might have
+        # matching comps from previous cycles
+        try:
+            from scrapers.title_matcher import get_title_embedding, search_comps_by_embedding
+            from types import SimpleNamespace
+            listing_emb = get_title_embedding(item.title)
+            if listing_emb is not None:
+                db_comps = search_comps_by_embedding(listing_emb, brand=brand, limit=20)
+                db_comps = [c for c in db_comps if c.get("similarity", 0) >= 0.4]
+                if db_comps:
+                    db_items = []
+                    for dc in db_comps:
+                        db_items.append(SimpleNamespace(
+                            title=dc.get("title", ""),
+                            price=dc.get("sold_price", 0),
+                            source=dc.get("source", dc.get("platform", "grailed")),
+                            source_id=dc.get("source_id", ""),
+                            url=dc.get("url", ""),
+                            size=dc.get("size"),
+                            condition=dc.get("condition"),
+                            raw_data={},
+                        ))
+                    # Deduplicate
+                    seen_ids = set()
+                    merged = []
+                    for c in db_items:
+                        key = f"{c.source}:{c.source_id}"
+                        if key not in seen_ids and c.price > 0:
+                            seen_ids.add(key)
+                            merged.append(c)
+                    if len(merged) >= 3:
+                        weighted = compute_weighted_price(item.title, brand, merged, generic_sold)
+                        if weighted is not None:
+                            logger.info(
+                                f"    🎯 Item comps (DB embeddings): {len(merged)} comps → "
+                                f"${weighted.avg_price:.0f} ({weighted.count} used)"
+                            )
+                            return (weighted, f"[db:{brand}]", True)
+        except Exception as e:
+            logger.debug(f"    ⚠️ DB embedding search failed: {e}")
+
         # None of the specific queries returned enough comps
         logger.debug(f"    ℹ️ No item-specific comps for '{item.title[:50]}', using generic")
         return (generic_sold, "", False)
