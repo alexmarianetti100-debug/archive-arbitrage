@@ -792,6 +792,7 @@ class GapHunter:
         self._fx_cache: Dict[str, tuple] = {}  # currency -> (rate, timestamp)
         self._last_query_metrics: Dict[str, int] = {}
         self._item_comp_cache: Dict[str, Optional[SoldData]] = {}  # per-item comp cache (cleared each cycle)
+        self._raw_items_cache: Dict[str, list] = {}  # raw sold items parallel to sold_cache
 
         # Initialize seller manager (replaces manual blocklist handling)
         from core.seller_manager import SellerManager
@@ -1168,8 +1169,9 @@ class GapHunter:
             SoldData or tuple(SoldData, list) if return_raw=True
         """
         # ── Try PricingEngine first ──
+        # Skip when return_raw=True — PricingEngine has no raw comp data for similarity scoring
         pricing_engine = _get_pricing_engine()
-        if pricing_engine:
+        if pricing_engine and not return_raw:
             cached_entry = pricing_engine.get_price(query)
             if cached_entry and cached_entry.data:
                 # Extract price from cached data
@@ -1192,6 +1194,9 @@ class GapHunter:
         if query in self.sold_cache:
             cached = self.sold_cache[query]
             if time.time() - cached.timestamp < SOLD_CACHE_TTL:
+                if return_raw:
+                    raw = self._raw_items_cache.get(query, [])
+                    return (cached, raw)
                 return cached
 
         # Get dynamic thresholds based on item type
@@ -1502,10 +1507,15 @@ class GapHunter:
                     logger.warning(f"  ⚠️ Failed to store in PricingEngine: {e}")
 
             self.sold_cache[query] = data
+            self._raw_items_cache[query] = list(valid_comps)
+            if return_raw:
+                return (data, list(valid_comps))
             return data
 
         except Exception as e:
             logger.debug(f"Sold data failed for '{query}': {e}")
+            if return_raw:
+                return (None, [])
             return None
 
     async def get_hyper_sold_data(self, query: str, item_title: str = "", item_category: str = "") -> Optional[SoldData]:
@@ -2922,6 +2932,7 @@ class GapHunter:
         self.cycle_count += 1
         self.cycles_since_prune += 1
         self._item_comp_cache.clear()  # Fresh per-item comp cache each cycle
+        self._raw_items_cache.clear()
         cycle_start = time.time()
         
         # ── Periodic data pruning ──
