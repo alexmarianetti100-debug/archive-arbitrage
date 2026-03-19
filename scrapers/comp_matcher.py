@@ -89,9 +89,12 @@ TYPE_ALIASES: dict[str, set[str]] = {
 
 # Model/style names that are specific enough to search for
 MODEL_PATTERNS = [
-    # Rick Owens — pants models FIRST (longer patterns checked before short ones like "dust")
-    r"creatch cargo|bauhaus cargo|berlin sweatpant|drawstring long|drawstring cropped",
-    r"astaires|dietrich|pod shorts|prisoner pants|detroit pants|pusher pants|dropped crotch|hustler",
+    # Rick Owens — pants models FIRST (longer patterns before short ones like "dust", "bela")
+    r"bolan banana|bolan bootcut|dirt bolan|megastrapped bolan|creatch cargo|bauhaus cargo|geth cargo|slim cargo geth|mastodon cargo|mastodon megacargo|stefan cargo|pannier cargo|firbanks cargo|babel cargo",
+    r"drawstring long|drawstring cropped|drawstring slim|berlin drawstring|dietrich drawstring|forever drawstring",
+    r"astaires|new slim astaires|wide astaires|dietrich|bolan|bela pants|wide bela|cargobela|geth belas|heizer bela|tailored wide bela",
+    r"geth jeans|detroit jeans|detroit cut|tyrone jeans|tyrone slashed|memphis jeans|torrance|joris|vega jeans",
+    r"motopants|megastrapped motopants|tecuatl track|mastodon cut|prisoner pants|pusher pants|pod pants|pod shorts|collapse pants|headon|karloff|bias pants|hustler|dropped crotch|pantaloon",
     # Rick Owens — footwear + outerwear
     r"geobasket|geo basket|ramones|ramone|kiss boot|creatch|bauhaus|bela|drkshdw|pods|mega lace",
     r"stooges|intarsia|dust|memphis|babel|sphinx|cyclops|island|sisyphus",
