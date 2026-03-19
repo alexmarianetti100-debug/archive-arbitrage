@@ -1298,10 +1298,12 @@ class GapHunter:
             avg_days = sum(days_to_sell_list) / len(days_to_sell_list) if days_to_sell_list else 0.0
 
             # ── Capture comp data for validation engine + frontend display ──
-            comp_titles = [s.title for s in sold if s.title]
-            comp_sizes = [s.size for s in sold if getattr(s, 'size', None)]
-            comp_prices = [s.price for s in sold if s.price and s.price > 0]
-            comp_urls = [getattr(s, 'url', None) for s in sold]
+            # All lists must use the same filter to keep indices aligned
+            valid_comps = [s for s in sold if s.title and s.price and s.price > 0]
+            comp_titles = [s.title for s in valid_comps]
+            comp_sizes = [getattr(s, 'size', None) for s in valid_comps]
+            comp_prices = [s.price for s in valid_comps]
+            comp_urls = [getattr(s, 'url', None) for s in valid_comps]
 
             # ── Comp confidence based on count ──
             comp_confidence = "high" if len(prices) >= 12 else "medium" if len(prices) >= 5 else "low"
