@@ -312,7 +312,16 @@ def build_search_queries(parsed: ParsedTitle) -> List[Tuple[str, float]]:
     return unique
 
 
-def score_comp_similarity(source_parsed: ParsedTitle, comp_title: str, comp_quality_score: float = None) -> float:
+MODEL_MISMATCH_PENALTY = 0.25
+MODEL_MISMATCH_PENALTY_AMPLIFIED = 0.10  # When rejection_reasons confirm wrong_model
+
+
+def score_comp_similarity(
+    source_parsed: ParsedTitle,
+    comp_title: str,
+    comp_quality_score: float = None,
+    rejection_reasons: dict = None,
+) -> float:
     """
     Score how similar a sold comp is to our source item.
     Returns 0.0 (totally different) to 1.0 (near identical).
@@ -320,24 +329,24 @@ def score_comp_similarity(source_parsed: ParsedTitle, comp_title: str, comp_qual
     comp_lower = comp_title.lower()
     score = 0.0
     factors = 0
-    
+
     # Brand match (should always match since we search by brand)
     if source_parsed.brand in comp_lower:
         score += 1.0
     factors += 1
-    
+
     # Sub-brand match (big deal — DRKSHDW vs mainline is huge)
     if source_parsed.sub_brand:
         factors += 2  # Weight heavily
         if source_parsed.sub_brand.lower() in comp_lower:
             score += 2.0
-    
+
     # Model match (very specific — geobasket, tabi, etc.)
     if source_parsed.model:
         factors += 3  # Weight very heavily
         if source_parsed.model in comp_lower:
             score += 3.0
-    
+
     # Item type match
     if source_parsed.item_type_specific:
         factors += 1.5
@@ -345,25 +354,25 @@ def score_comp_similarity(source_parsed: ParsedTitle, comp_title: str, comp_qual
             score += 1.5
         elif source_parsed.item_type and source_parsed.item_type in comp_lower:
             score += 0.75  # Partial match (category level)
-    
+
     # Material match
     if source_parsed.material:
         factors += 1
         if source_parsed.material in comp_lower:
             score += 1.0
-    
+
     # Color match (minor factor)
     if source_parsed.color:
         factors += 0.3
         if source_parsed.color in comp_lower:
             score += 0.3
-    
+
     # Season match
     if source_parsed.season:
         factors += 1.5
         if source_parsed.season in comp_lower:
             score += 1.5
-    
+
     # Key detail word overlap
     if source_parsed.key_details:
         comp_words = set(re.findall(r'[a-z]+', comp_lower))
@@ -372,11 +381,32 @@ def score_comp_similarity(source_parsed: ParsedTitle, comp_title: str, comp_qual
             overlap = matches / len(source_parsed.key_details)
             factors += 1
             score += overlap
-    
+
     if factors == 0:
         return 0.0
-    
+
     base_score = min(score / factors, 1.0)
+
+    # ── Model-mismatch penalty ──
+    # If listing has a model AND comp has a DIFFERENT model, penalize heavily.
+    # Only penalize when BOTH sides have detected models — sparse comp titles
+    # that don't mention a model should not be punished.
+    if source_parsed.model:
+        comp_parsed = parse_title(source_parsed.brand, comp_title)
+        if comp_parsed.model and comp_parsed.model.lower() != source_parsed.model.lower():
+            # Confirmed model mismatch (e.g., "cemetery cross" vs "spacer")
+            penalty = MODEL_MISMATCH_PENALTY
+            # Amplify if rejection history confirms wrong_model
+            if rejection_reasons and rejection_reasons.get("wrong_model", 0) > 2:
+                penalty = MODEL_MISMATCH_PENALTY_AMPLIFIED
+            base_score *= penalty
+
+    # ── Rejection reason amplification (Gap 3) ──
+    if rejection_reasons:
+        # wrong_condition rejections reduce condition contribution
+        if rejection_reasons.get("wrong_condition", 0) > 2:
+            base_score *= 0.85
+
     return base_score * quality_weight(comp_quality_score)
 
 
