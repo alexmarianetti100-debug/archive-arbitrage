@@ -917,9 +917,17 @@ def _hamming_distance(h1: str, h2: str) -> int:
 # ---------------------------------------------------------------------------
 
 def save_sold_comp(search_key: str, comp: Dict[str, Any]):
-    """Save a sold comp to the database."""
+    """Save a sold comp to the database. Skips duplicates by source+source_id."""
     conn = _get_conn()
     c = conn.cursor()
+    source = comp.get("source")
+    source_id = comp.get("source_id")
+    # Dedup: skip if this exact comp already exists
+    if source and source_id:
+        c.execute("SELECT id FROM sold_comps WHERE source = ? AND source_id = ?", (source, source_id))
+        if c.fetchone():
+            conn.close()
+            return
     c.execute("""
         INSERT INTO sold_comps (search_key, brand, title, sold_price, size, sold_url, source, source_id, condition, sold_date)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -930,8 +938,8 @@ def save_sold_comp(search_key: str, comp: Dict[str, Any]):
         comp.get("sold_price") or comp.get("price"),
         comp.get("size"),
         comp.get("sold_url") or comp.get("url"),
-        comp.get("source"),
-        comp.get("source_id"),
+        source,
+        source_id,
         comp.get("condition"),
         comp.get("sold_date"),
     ))

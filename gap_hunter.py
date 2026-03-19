@@ -1307,6 +1307,24 @@ class GapHunter:
             comp_prices = [s.price for s in valid_comps]
             comp_urls = [getattr(s, 'url', None) for s in valid_comps]
 
+            # ── Persist sold comps to DB for reliable retrieval at item persist time ──
+            from db.sqlite_models import save_sold_comp
+            for vc in valid_comps[:15]:
+                try:
+                    save_sold_comp(query, {
+                        "brand": query_brand,
+                        "title": vc.title,
+                        "sold_price": vc.price,
+                        "size": getattr(vc, 'size', None),
+                        "sold_url": getattr(vc, 'url', None),
+                        "source": getattr(vc, 'source', 'grailed'),
+                        "source_id": getattr(vc, 'source_id', None),
+                        "condition": getattr(vc, 'condition', None),
+                        "sold_date": None,
+                    })
+                except Exception:
+                    pass  # Duplicate or constraint error — skip
+
             # ── Comp confidence based on count ──
             comp_confidence = "high" if len(prices) >= 12 else "medium" if len(prices) >= 5 else "low"
 
@@ -2645,30 +2663,30 @@ class GapHunter:
                 finally:
                     conn.close()
 
-                # Persist comp assignments for frontend display
+                # Persist comp assignments by querying sold_comps table
+                from db.sqlite_models import save_item_comps, get_sold_comps
+                sold_comps_rows = get_sold_comps(search_key=deal.query, limit=15)
                 comp_count_saved = 0
-                snapshots = getattr(deal, 'comp_snapshots', None) or []
-                if snapshots:
-                    from db.sqlite_models import save_item_comps
+                if sold_comps_rows:
                     comp_entries = []
-                    for rank, snap in enumerate(snapshots, start=1):
+                    for rank, sc in enumerate(sold_comps_rows, start=1):
                         comp_entries.append({
-                            "sold_comp_id": None,
+                            "sold_comp_id": sc.get("id"),
                             "similarity_score": max(0.5, 1.0 - rank * 0.03),
                             "rank": rank,
-                            "snapshot_title": snap.get("title"),
-                            "snapshot_price": snap.get("price", deal.sold_avg),
-                            "snapshot_condition": None,
-                            "snapshot_source": "grailed",
-                            "snapshot_sold_date": None,
-                            "snapshot_url": snap.get("url"),
+                            "snapshot_title": sc.get("title"),
+                            "snapshot_price": sc.get("sold_price"),
+                            "snapshot_condition": sc.get("condition"),
+                            "snapshot_source": sc.get("source", "grailed"),
+                            "snapshot_sold_date": sc.get("sold_date"),
+                            "snapshot_url": sc.get("sold_url"),
                         })
                     save_item_comps(persisted_id, comp_entries)
                     comp_count_saved = len(comp_entries)
                 else:
-                    logger.warning(f"    ⚠️ No comp snapshots on deal — comps not saved for item #{persisted_id}")
+                    logger.warning(f"    ⚠️ No sold_comps found for query '{deal.query}' — comps not linked")
 
-                logger.info(f"    💾 Persisted to DB: item #{persisted_id}, grade {grade}, {comp_count_saved} comps")
+                logger.info(f"    💾 Persisted to DB: item #{persisted_id}, grade {grade}, {comp_count_saved} comps [v2-snapshots]")
             except Exception as e:
                 logger.warning(f"    ⚠️ DB persist failed: {e}")
 
