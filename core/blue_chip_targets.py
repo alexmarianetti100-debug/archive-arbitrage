@@ -13,7 +13,7 @@ from typing import List, Optional, Dict
 class BlueChipTarget:
     """Configuration for a blue-chip luxury target."""
     query: str
-    category: str  # 'watch', 'bag', 'jewelry', 'fashion'
+    category: str  # 'jewelry', 'fashion'
     min_margin: float  # Minimum acceptable margin (0.20 = 20%)
     target_margin: float  # Ideal margin (0.30 = 30%)
     min_comps: int  # Minimum number of sold comps needed
@@ -23,225 +23,11 @@ class BlueChipTarget:
     notes: str = ""
 
 
-# BLUE-CHIP WATCHES
-# Highest liquidity, best margins, easiest authentication
-BLUE_CHIP_WATCHES = [
-    # Rolex - The king of resale
-    BlueChipTarget("rolex submariner", "watch", 0.15, 0.25, 10, 15000, "required", 10, "Always liquid, authenticate all"),
-    BlueChipTarget("rolex datejust 36", "watch", 0.12, 0.20, 15, 12000, "required", 10, "Most popular Rolex model"),
-    BlueChipTarget("rolex datejust 41", "watch", 0.12, 0.20, 15, 14000, "required", 10, "Modern classic"),
-    BlueChipTarget("rolex gmt master ii", "watch", 0.18, 0.28, 10, 18000, "required", 9, "Pepsi/Batman highly sought"),
-    BlueChipTarget("rolex daytona", "watch", 0.20, 0.30, 8, 25000, "required", 9, "High demand, low supply"),
-    BlueChipTarget("rolex explorer", "watch", 0.15, 0.22, 10, 10000, "required", 9, "Entry Rolex, fast seller"),
-    BlueChipTarget("rolex oyster perpetual", "watch", 0.10, 0.18, 12, 8000, "required", 9, "New colors popular"),
-    
-    # Cartier - Growing fast, excellent margins
-    BlueChipTarget("cartier tank must", "watch", 0.20, 0.30, 10, 4000, "required", 10, "Trending up in 2024-2025"),
-    BlueChipTarget("cartier tank louis", "watch", 0.18, 0.28, 8, 8000, "required", 9, "Classic dress watch"),
-    BlueChipTarget("cartier santos", "watch", 0.18, 0.25, 10, 6000, "required", 9, "Sports watch gaining traction"),
-    BlueChipTarget("cartier ballon bleu", "watch", 0.15, 0.22, 12, 5000, "required", 9, "Ladies favorite"),
-    BlueChipTarget("cartier ronde", "watch", 0.15, 0.20, 8, 4000, "required", 8, "Underappreciated classic"),
-    
-    # Omega - Strong value, good entry point
-    BlueChipTarget("omega speedmaster", "watch", 0.15, 0.25, 12, 7000, "preferred", 9, "Moonwatch, always in demand"),
-    BlueChipTarget("omega seamaster", "watch", 0.12, 0.20, 15, 5000, "preferred", 9, "Diver watch, James Bond"),
-    BlueChipTarget("omega constellation", "watch", 0.10, 0.18, 10, 4000, "preferred", 8, "Dress watch option"),
-    
-    # Tudor - Rolex alternative, growing
-    BlueChipTarget("tudor black bay", "watch", 0.18, 0.28, 10, 4000, "preferred", 9, "Best value proposition"),
-    BlueChipTarget("tudor pelagos", "watch", 0.15, 0.25, 8, 4500, "preferred", 8, "Titanium diver"),
-    BlueChipTarget("tudor royal", "watch", 0.12, 0.20, 10, 2500, "preferred", 8, "Entry Tudor, integrated bracelet"),
-    BlueChipTarget("tudor ranger", "watch", 0.15, 0.25, 8, 3000, "preferred", 8, "Field watch, vintage aesthetic"),
-    
-    # Tag Heuer - Entry luxury, high volume
-    BlueChipTarget("tag heuer carrera", "watch", 0.20, 0.30, 12, 3500, "preferred", 9, "Racing heritage, strong resale"),
-    BlueChipTarget("tag heuer aquaracer", "watch", 0.18, 0.28, 12, 2500, "preferred", 9, "Diver, entry price point"),
-    BlueChipTarget("tag heuer monaco", "watch", 0.22, 0.32, 8, 4500, "preferred", 8, "Square case, Steve McQueen association"),
-    BlueChipTarget("tag heuer autavia", "watch", 0.18, 0.28, 8, 3500, "preferred", 8, "Pilot watch, vintage reissue"),
-    
-    # Breitling - Aviation heritage
-    BlueChipTarget("breitling navitimer", "watch", 0.18, 0.28, 10, 6000, "preferred", 9, "Iconic pilot watch"),
-    BlueChipTarget("breitling superocean", "watch", 0.18, 0.28, 10, 4000, "preferred", 9, "Diver, bold colors popular"),
-    BlueChipTarget("breitling chronomat", "watch", 0.15, 0.25, 10, 5000, "preferred", 8, "Rouleaux bracelet trending"),
-    BlueChipTarget("breitling premier", "watch", 0.15, 0.25, 8, 4500, "preferred", 8, "Dress watch, elegant"),
-    
-    # Grand Seiko - Japanese luxury, exceptional value
-    BlueChipTarget("grand seiko snowflake", "watch", 0.15, 0.25, 8, 5500, "preferred", 9, "Spring Drive, titanium case"),
-    BlueChipTarget("grand seiko sbga", "watch", 0.12, 0.22, 10, 4500, "preferred", 9, "Spring Drive models"),
-    BlueChipTarget("grand seiko diver", "watch", 0.15, 0.25, 8, 5000, "preferred", 8, "Hi-Beat movement"),
-    BlueChipTarget("grand seiko elegance", "watch", 0.12, 0.20, 10, 3500, "preferred", 8, "Dress watch, Zaratsu polish"),
-    
-    # IWC - Pilot watches
-    BlueChipTarget("iwc pilot", "watch", 0.15, 0.25, 10, 4500, "preferred", 9, "Aviation heritage"),
-    BlueChipTarget("iwc portugieser", "watch", 0.15, 0.25, 8, 6000, "preferred", 8, "Dress watch, clean dial"),
-    BlueChipTarget("iwc portofino", "watch", 0.12, 0.20, 10, 4000, "preferred", 8, "Entry IWC"),
-    BlueChipTarget("iwc mark", "watch", 0.15, 0.25, 8, 4000, "preferred", 8, "Mark XVIII/XX, tool watch"),
-    
-    # Jaeger-LeCoultre - Watchmaker's watchmaker
-    BlueChipTarget("jaeger lecoultre reverso", "watch", 0.18, 0.28, 8, 7000, "required", 9, "Art Deco classic, dual sided"),
-    BlueChipTarget("jaeger lecoultre master", "watch", 0.15, 0.25, 8, 6000, "required", 8, "Dress watch, in-house movement"),
-    BlueChipTarget("jaeger lecoultre polaris", "watch", 0.15, 0.25, 6, 8000, "required", 7, "Sport elegant, vintage reissue"),
-    
-    # High-end (Expert tier only)
-    BlueChipTarget("patek philippe nautilus", "watch", 0.25, 0.40, 5, 100000, "required", 7, "Holy grail, high capital"),
-    BlueChipTarget("patek philippe aquanaut", "watch", 0.22, 0.35, 6, 50000, "required", 8, "Modern Patek"),
-    BlueChipTarget("audemars piguet royal oak", "watch", 0.20, 0.35, 6, 40000, "required", 7, "Iconic design"),
-    BlueChipTarget("vacheron constantin overseas", "watch", 0.18, 0.30, 5, 35000, "required", 7, "Undervalued vs RO/Nautilus"),
-]
+# BLUE-CHIP WATCHES — removed (no resources to authenticate/value)
+BLUE_CHIP_WATCHES: list[BlueChipTarget] = []
 
-# BLUE-CHIP BAGS
-# High margins, strong authentication markers
-BLUE_CHIP_BAGS = [
-    # Hermès - The ultimate luxury bag
-    BlueChipTarget("hermes birkin 25", "bag", 0.30, 0.50, 5, 15000, "required", 8, "Holy grail, quota bag"),
-    BlueChipTarget("hermes birkin 30", "bag", 0.28, 0.45, 6, 18000, "required", 8, "Most popular size"),
-    BlueChipTarget("hermes kelly 25", "bag", 0.28, 0.45, 6, 12000, "required", 8, "Elegant alternative to Birkin"),
-    BlueChipTarget("hermes kelly 28", "bag", 0.25, 0.40, 7, 14000, "required", 8, "Classic size"),
-    BlueChipTarget("hermes constance", "bag", 0.25, 0.40, 6, 10000, "required", 8, "H logo highly recognizable"),
-    BlueChipTarget("hermes evelyne", "bag", 0.20, 0.35, 8, 3000, "required", 9, "Entry Hermès, fast seller"),
-    BlueChipTarget("hermes picotin", "bag", 0.22, 0.35, 8, 2500, "required", 9, "Casual Hermès"),
-    
-    # Chanel - Always liquid
-    BlueChipTarget("chanel classic flap small", "bag", 0.20, 0.35, 10, 8000, "required", 10, "Most iconic bag"),
-    BlueChipTarget("chanel classic flap medium", "bag", 0.18, 0.30, 12, 9000, "required", 10, "Best resale size"),
-    BlueChipTarget("chanel 19", "bag", 0.22, 0.35, 10, 6000, "required", 9, "New classic"),
-    BlueChipTarget("chanel boy bag", "bag", 0.18, 0.30, 10, 5500, "required", 9, "Modern classic"),
-    BlueChipTarget("chanel wallet on chain", "bag", 0.15, 0.25, 15, 3000, "required", 10, "Entry Chanel, fast seller"),
-    BlueChipTarget("chanel gabrielle", "bag", 0.18, 0.28, 8, 4500, "required", 8, "Trendy option"),
-    
-    # Louis Vuitton - Volume play
-    BlueChipTarget("louis vuitton speedy 25", "bag", 0.25, 0.40, 15, 2000, "preferred", 10, "Entry luxury, very liquid"),
-    BlueChipTarget("louis vuitton speedy 30", "bag", 0.22, 0.35, 15, 2200, "preferred", 10, "Classic size"),
-    BlueChipTarget("louis vuitton neverfull mm", "bag", 0.22, 0.35, 20, 1800, "preferred", 10, "Most popular LV"),
-    BlueChipTarget("louis vuitton pochette metis", "bag", 0.20, 0.30, 12, 2500, "preferred", 9, "Trendy, good margins"),
-    BlueChipTarget("louis vuitton keepall 45", "bag", 0.18, 0.28, 10, 2200, "preferred", 9, "Travel bag"),
-    BlueChipTarget("louis vuitton palm springs", "bag", 0.20, 0.30, 10, 2500, "preferred", 9, "Backpack style"),
-    
-    # Other luxury
-    BlueChipTarget("dior saddle bag", "bag", 0.20, 0.35, 12, 3500, "required", 9, "Resurgent popularity"),
-    BlueChipTarget("dior lady dior", "bag", 0.18, 0.30, 10, 4500, "required", 8, "Classic"),
-    BlueChipTarget("dior book tote", "bag", 0.15, 0.25, 8, 3000, "required", 8, "Trendy"),
-    BlueChipTarget("gucci marmont", "bag", 0.20, 0.30, 15, 2500, "preferred", 9, "Logo bag"),
-    BlueChipTarget("gucci dionysus", "bag", 0.18, 0.28, 10, 2800, "preferred", 8, "Statement piece"),
-    BlueChipTarget("saint laurent kate", "bag", 0.20, 0.30, 12, 2200, "preferred", 9, "Evening bag"),
-    BlueChipTarget("saint laurent lou lou", "bag", 0.18, 0.28, 10, 2500, "preferred", 9, "Soft leather"),
-    BlueChipTarget("celine triomphe", "bag", 0.20, 0.30, 8, 3500, "required", 8, "Hedi Slimane design"),
-    BlueChipTarget("bottega veneta jodie", "bag", 0.22, 0.35, 8, 3500, "required", 8, "Woven leather"),
-    BlueChipTarget("bottega veneta cassette", "bag", 0.20, 0.30, 10, 2800, "required", 9, "Intrecciato pattern"),
-    BlueChipTarget("prada re-edition", "bag", 0.18, 0.28, 15, 1800, "preferred", 9, "Nylon comeback"),
-    
-    # Goyard - Ultra-exclusive, no online sales
-    BlueChipTarget("goyard saint louis", "bag", 0.25, 0.40, 6, 1800, "required", 8, "Tote, signature chevron"),
-    BlueChipTarget("goyard anjou", "bag", 0.22, 0.35, 5, 2200, "required", 8, "Reversible, leather/canvas"),
-    BlueChipTarget("goyard artois", "bag", 0.20, 0.32, 5, 2000, "required", 7, "Structured tote, zip top"),
-    BlueChipTarget("goyard cap vert", "bag", 0.22, 0.35, 5, 1600, "required", 8, "Camera bag, crossbody"),
-    
-    # Loewe - Spanish craft, art world favorite
-    BlueChipTarget("loewe puzzle", "bag", 0.22, 0.35, 10, 2800, "required", 9, "Geometric panels, iconic"),
-    BlueChipTarget("loewe gate", "bag", 0.20, 0.32, 8, 2200, "required", 8, "Saddle bag, knot detail"),
-    BlueChipTarget("loewe hammock", "bag", 0.18, 0.28, 8, 2400, "required", 8, "Versatile shape"),
-    BlueChipTarget("loewe flamenco", "bag", 0.18, 0.28, 6, 2000, "required", 7, "Soft leather, drawstring"),
-    BlueChipTarget("loewe amazona", "bag", 0.20, 0.30, 6, 2500, "required", 7, "Vintage revival"),
-    
-    # The Row - Quiet luxury, extremely high resale
-    BlueChipTarget("the row margaux", "bag", 0.20, 0.30, 4, 4000, "required", 7, "Oversized tote, stealth wealth"),
-    BlueChipTarget("the row park", "bag", 0.18, 0.28, 5, 3500, "required", 7, "Top handle, minimal branding"),
-    BlueChipTarget("the row half moon", "bag", 0.18, 0.28, 5, 2800, "required", 7, "Shoulder bag, soft leather"),
-    BlueChipTarget("the row banana", "bag", 0.15, 0.25, 6, 2200, "required", 7, "Hobo shape"),
-    
-    # Miu Miu - Y2K revival, trending hard
-    BlueChipTarget("miu miu wander", "bag", 0.20, 0.32, 8, 2800, "required", 9, "Matelassé hobo, IT bag 2024"),
-    BlueChipTarget("miu miu arcadie", "bag", 0.18, 0.28, 6, 3200, "required", 8, "Top handle, logo plaque"),
-    BlueChipTarget("miu miu pocket", "bag", 0.15, 0.25, 8, 2400, "required", 8, "Multiple pockets, utilitarian"),
-    
-    # Alaïa - Architectural bags, fashion insider favorite
-    BlueChipTarget("alaia le teckel", "bag", 0.20, 0.32, 5, 2200, "required", 8, "Elongated shape, trending"),
-    BlueChipTarget("alaia heart", "bag", 0.18, 0.28, 6, 1800, "required", 7, "Heart-shaped clutch"),
-    BlueChipTarget("alaia demi lune", "bag", 0.18, 0.28, 5, 2500, "required", 7, "Half-moon shape"),
-    
-    # Ferragamo - Heritage revival
-    BlueChipTarget("ferragamo hug", "bag", 0.18, 0.28, 6, 2800, "required", 7, "New design, trending"),
-    BlueChipTarget("ferragamo gancini", "bag", 0.15, 0.25, 8, 2200, "required", 8, "Classic hardware"),
-    
-    # More Chanel variants
-    BlueChipTarget("chanel 22 bag", "bag", 0.20, 0.32, 8, 5500, "required", 9, "New classic, leather"),
-    BlueChipTarget("chanel 22 mini", "bag", 0.18, 0.30, 10, 4500, "required", 9, "Smaller size, high demand"),
-    BlueChipTarget("chanel trendy cc", "bag", 0.18, 0.28, 8, 6000, "required", 8, "Top handle, CC clasp"),
-    BlueChipTarget("chanel coco handle", "bag", 0.18, 0.28, 8, 5500, "required", 8, "Structured, top handle"),
-    
-    # More Hermès entry points
-    BlueChipTarget("hermes garden party", "bag", 0.18, 0.30, 8, 3500, "required", 9, "Casual tote, canvas/leather"),
-    BlueChipTarget("hermes herbag", "bag", 0.20, 0.32, 8, 2800, "required", 9, "Canvas, Kelly-like shape"),
-    BlueChipTarget("hermes lindy", "bag", 0.22, 0.35, 6, 7500, "required", 8, "Slouchy, unique shape"),
-    BlueChipTarget("hermes bolide", "bag", 0.18, 0.28, 6, 6000, "required", 8, "Vintage, structured"),
-    
-    # More LV classics
-    BlueChipTarget("louis vuitton alma", "bag", 0.20, 0.32, 12, 2000, "preferred", 9, "Structured, shell shape"),
-    BlueChipTarget("louis vuitton capucines", "bag", 0.18, 0.28, 8, 5500, "required", 8, "Top handle, sophisticated"),
-    BlueChipTarget("louis vuitton onthego", "bag", 0.15, 0.25, 10, 2800, "preferred", 9, "Tote, monogram/reverse"),
-    BlueChipTarget("louis vuitton bumbag", "bag", 0.22, 0.35, 8, 2200, "preferred", 9, "Discontinued, high demand"),
-    BlueChipTarget("louis vuitton multi pochette", "bag", 0.20, 0.32, 10, 2500, "preferred", 9, "Modular, multiple bags"),
-    
-    # More Dior
-    BlueChipTarget("dior bobby", "bag", 0.18, 0.28, 8, 3200, "required", 8, "Hobo shape, CD clasp"),
-    BlueChipTarget("dior caro", "bag", 0.18, 0.28, 8, 3800, "required", 8, "Cannage quilt, chain strap"),
-    BlueChipTarget("dior 30 montaigne", "bag", 0.15, 0.25, 10, 3200, "required", 8, "Box bag, CD lock"),
-    BlueChipTarget("dior travel", "bag", 0.15, 0.22, 8, 2800, "required", 7, "Luggage, oblique canvas"),
-    
-    # More Gucci
-    BlueChipTarget("gucci 1955 horsebit", "bag", 0.18, 0.28, 10, 2800, "preferred", 9, "Vintage reissue, classic"),
-    BlueChipTarget("gucci bamboo", "bag", 0.18, 0.28, 8, 3200, "preferred", 8, "Top handle, bamboo hardware"),
-    BlueChipTarget("gucci jackie", "bag", 0.20, 0.30, 10, 2400, "preferred", 9, "Hobo, piston closure"),
-    BlueChipTarget("gucci blondie", "bag", 0.18, 0.28, 6, 3200, "preferred", 8, "Interlocking G, chain"),
-    
-    # More Saint Laurent
-    BlueChipTarget("saint laurent le 5 a 7", "bag", 0.20, 0.32, 10, 2200, "preferred", 9, "Hobo, YSL logo, trending"),
-    BlueChipTarget("saint laurent icare", "bag", 0.15, 0.25, 6, 4500, "preferred", 7, "Maxi shopping tote"),
-    BlueChipTarget("saint laurent manhattan", "bag", 0.18, 0.28, 8, 2800, "preferred", 8, "Top handle, boxy"),
-    BlueChipTarget("saint laurent niki", "bag", 0.18, 0.28, 10, 2600, "preferred", 9, "Crinkled leather, chain"),
-    BlueChipTarget("saint laurent puffer", "bag", 0.15, 0.25, 8, 2800, "preferred", 8, "Quilted, oversized"),
-    
-    # More Celine
-    BlueChipTarget("celine classic box", "bag", 0.18, 0.28, 8, 3500, "required", 9, "Structured, blade clasp"),
-    BlueChipTarget("celine belt bag", "bag", 0.18, 0.28, 10, 2800, "required", 9, "Knot closure, minimalist"),
-    BlueChipTarget("celine luggage", "bag", 0.15, 0.25, 10, 3200, "required", 8, "Smiley face, structured"),
-    BlueChipTarget("celine cabas", "bag", 0.15, 0.25, 10, 2200, "required", 8, "Tote, vertical/horizontal"),
-    BlueChipTarget("celine ava", "bag", 0.20, 0.32, 10, 1800, "preferred", 9, "Crescent shape, Triomphe"),
-    
-    # More Prada
-    BlueChipTarget("prada cleo", "bag", 0.18, 0.28, 10, 2800, "required", 9, "Structured, curved bottom"),
-    BlueChipTarget("prada symbole", "bag", 0.18, 0.28, 8, 3200, "required", 8, "Triangle logo, jacquard"),
-    BlueChipTarget("prada galleria", "bag", 0.12, 0.20, 12, 3200, "required", 8, "Saffiano leather, classic"),
-    BlueChipTarget("prada cahier", "bag", 0.18, 0.28, 8, 2800, "required", 8, "Book shape, metal corners"),
-    
-    # More Bottega
-    BlueChipTarget("bottega veneta mini jodie", "bag", 0.22, 0.35, 10, 2200, "required", 9, "Small hobo, knot detail"),
-    BlueChipTarget("bottega veneta pouch", "bag", 0.18, 0.28, 10, 2800, "required", 8, "Oversized clutch, soft"),
-    BlueChipTarget("bottega veneta point", "bag", 0.20, 0.32, 6, 3200, "required", 7, "Top handle, triangular"),
-    BlueChipTarget("bottega veneta arco", "bag", 0.18, 0.28, 6, 3800, "required", 7, "Top handle, intrecciato"),
-    
-    # More Balenciaga
-    BlueChipTarget("balenciaga hourglass", "bag", 0.20, 0.32, 10, 2800, "preferred", 9, "Structured, B logo"),
-    BlueChipTarget("balenciaga le cagole", "bag", 0.22, 0.35, 10, 2400, "preferred", 9, "Motorcycle bag, studs"),
-    BlueChipTarget("balenciaga city", "bag", 0.15, 0.25, 12, 1800, "preferred", 8, "Classic motorcycle"),
-    BlueChipTarget("balenciaga crush", "bag", 0.18, 0.28, 8, 3200, "preferred", 8, "Quilted chain bag"),
-    
-    # JW Anderson - Designer rising star
-    BlueChipTarget("jw anderson anchor", "bag", 0.18, 0.28, 8, 1200, "preferred", 8, "Anchor logo, playful"),
-    BlueChipTarget("jw anderson cap", "bag", 0.20, 0.30, 6, 1600, "preferred", 7, "Baseball cap shape"),
-    
-    # Khaite - Minimalist, NYC cool
-    BlueChipTarget("khaite elena", "bag", 0.18, 0.28, 5, 2200, "required", 7, "Woven leather, sculptural"),
-    BlueChipTarget("khaite olivia", "bag", 0.15, 0.25, 6, 1800, "required", 7, "Envelope clutch"),
-    
-    # Proenza Schouler - Downtown chic
-    BlueChipTarget("proenza schouler ps1", "bag", 0.18, 0.28, 8, 1800, "preferred", 8, "Messenger, hardware"),
-    BlueChipTarget("proenza schouler hex", "bag", 0.15, 0.25, 6, 1600, "preferred", 7, "Bucket bag, whipstitch"),
-    
-    # Strathberry - Royal favorite
-    BlueChipTarget("strathberry midi tote", "bag", 0.18, 0.28, 8, 650, "preferred", 8, "Bar closure, structured"),
-    BlueChipTarget("strathberry east west", "bag", 0.15, 0.25, 8, 550, "preferred", 8, "Oval shape, metal bar"),
-]
+# BLUE-CHIP BAGS — removed (no resources to authenticate/value)
+BLUE_CHIP_BAGS: list[BlueChipTarget] = []
 
 # BLUE-CHIP JEWELRY
 # High margins, small size, easy to authenticate
@@ -740,20 +526,28 @@ BLUE_CHIP_FASHION = [
     BlueChipTarget("denim tears hoodie", "fashion", 0.28, 0.45, 6, 350, "preferred", 8, "French logo, cotton"),
     BlueChipTarget("denim tears shirt", "fashion", 0.25, 0.40, 6, 320, "preferred", 7, "Button up, wreath"),
     BlueChipTarget("denim tears levis", "fashion", 0.28, 0.45, 6, 450, "preferred", 8, "Collaboration"),
+
+    # Vetements — Demna-era pieces (2014-2019) with proven liquidity
+    BlueChipTarget("vetements polizei hoodie", "fashion", 0.25, 0.40, 8, 1500, "preferred", 9, "Most iconic Vetements piece, green commands premium"),
+    BlueChipTarget("vetements metal logo hoodie", "fashion", 0.25, 0.40, 6, 1200, "preferred", 8, "OG AW15 versions most valuable"),
+    BlueChipTarget("vetements dhl tee", "fashion", 0.30, 0.50, 8, 500, "preferred", 8, "SS16 originals are grails, high rep risk"),
+    BlueChipTarget("vetements total darkness hoodie", "fashion", 0.25, 0.40, 6, 2500, "preferred", 7, "AW17 reversible, appreciating"),
+    BlueChipTarget("vetements champion hoodie", "fashion", 0.25, 0.40, 8, 700, "preferred", 8, "High volume, multiple seasons"),
+    BlueChipTarget("vetements snoop dogg", "fashion", 0.25, 0.40, 6, 920, "preferred", 7, "Cross-cultural appeal"),
+    BlueChipTarget("vetements alpha industries bomber", "fashion", 0.25, 0.40, 6, 850, "preferred", 7, "Demna-era exclusive, reversible"),
+    BlueChipTarget("vetements staff hoodie", "fashion", 0.25, 0.40, 8, 480, "preferred", 8, "Hanes collab, entry Vetements"),
+    BlueChipTarget("vetements polizei raincoat", "fashion", 0.25, 0.40, 6, 500, "preferred", 7, "Seasonal demand, fall/winter"),
+    BlueChipTarget("vetements securite hoodie", "fashion", 0.25, 0.40, 6, 2000, "preferred", 7, "Institutional parody series"),
 ]
 
 # Combine all blue-chip targets
 ALL_BLUE_CHIP_TARGETS = (
-    BLUE_CHIP_WATCHES + 
-    BLUE_CHIP_BAGS + 
-    BLUE_CHIP_JEWELRY + 
+    BLUE_CHIP_JEWELRY +
     BLUE_CHIP_FASHION
 )
 
 # Quick lookup by category
 TARGETS_BY_CATEGORY = {
-    'watch': BLUE_CHIP_WATCHES,
-    'bag': BLUE_CHIP_BAGS,
     'jewelry': BLUE_CHIP_JEWELRY,
     'fashion': BLUE_CHIP_FASHION,
 }
@@ -798,8 +592,6 @@ def get_target_stats() -> dict:
     """Get statistics about blue-chip targets."""
     return {
         'total_targets': len(ALL_BLUE_CHIP_TARGETS),
-        'watches': len(BLUE_CHIP_WATCHES),
-        'bags': len(BLUE_CHIP_BAGS),
         'jewelry': len(BLUE_CHIP_JEWELRY),
         'fashion': len(BLUE_CHIP_FASHION),
         'avg_margin': sum(t.target_margin for t in ALL_BLUE_CHIP_TARGETS) / len(ALL_BLUE_CHIP_TARGETS),

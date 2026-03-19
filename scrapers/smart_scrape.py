@@ -21,7 +21,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from scrapers import GrailedScraper, PoshmarkScraper, ScrapedItem
 from api.services.pricing import PricingService
-from authenticity_v2 import AuthenticityCheckerV2, format_auth_bar, format_auth_grade, MIN_AUTH_SCORE
+from core.authenticity_v2 import AuthenticityCheckerV2, format_auth_bar, format_auth_grade, MIN_AUTH_SCORE
 from telegram_bot import send_deal_to_subscribers, get_active_subscribers
 from db.sqlite_models import init_db, save_item, Item
 
@@ -147,15 +147,9 @@ GRAIL_SEARCHES = [
     "hysteric glamour courtney love",
     "hysteric glamour skull",
     
-    # Yohji
-    "yohji yamamoto pour homme",
-    "yohji yamamoto y's",
-    "yohji yamamoto bomber",
-    
     # CDG
     "comme des garcons homme plus",
     "cdg homme plus",
-    "comme des garcons junya",
     
     # Issey Miyake
     "issey miyake homme plisse",
@@ -174,8 +168,15 @@ GRAIL_SEARCHES = [
     "julius gas mask",
     "julius cargo",
     "ann demeulemeester boots",
-    "vetements champion",
-    "vetements total darkness",
+    "vetements champion hoodie",
+    "vetements total darkness hoodie",
+    "vetements polizei hoodie",
+    "vetements metal logo hoodie",
+    "vetements dhl tee",
+    "vetements snoop dogg",
+    "vetements alpha industries bomber",
+    "vetements staff hoodie",
+    "vetements securite hoodie",
     "alexander mcqueen bumster",
     "hussein chalayan",
 ]
@@ -333,7 +334,7 @@ def _detect_brand(title: str) -> str:
         "vivienne westwood", "maison margiela", "martin margiela", "margiela",
         "dior homme", "dior", "thierry mugler", "mugler",
         "enfants riches deprimes", "erd", "hysteric glamour",
-        "yohji yamamoto", "comme des garcons", "cdg",
+        "comme des garcons", "cdg",
         "issey miyake", "kapital", "carol christian poell",
         "boris bidjan saberi", "julius", "ann demeulemeester",
         "vetements", "alexander mcqueen",
