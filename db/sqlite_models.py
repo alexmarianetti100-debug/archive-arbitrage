@@ -433,6 +433,21 @@ def init_db():
         )
     """)
 
+    # --- comp_pair_rejections (per-pair quality tracking) ---
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS comp_pair_rejections (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sold_comp_id INTEGER NOT NULL REFERENCES sold_comps(id) ON DELETE CASCADE,
+            context_model TEXT NOT NULL,
+            times_rejected INTEGER DEFAULT 0,
+            times_matched INTEGER DEFAULT 0,
+            created_at TEXT DEFAULT (datetime('now')),
+            updated_at TEXT DEFAULT (datetime('now')),
+            UNIQUE(sold_comp_id, context_model)
+        )
+    """)
+    c.execute("CREATE INDEX IF NOT EXISTS idx_comp_pair_ctx ON comp_pair_rejections(sold_comp_id, context_model)")
+
     # --- product_prices (sale records per product) ---
     c.execute("""
         CREATE TABLE IF NOT EXISTS product_prices (
@@ -1003,6 +1018,40 @@ def get_comp_quality_scores(source_id_pairs: list) -> dict:
     return result
 
 
+def get_comp_rejection_reasons_batch(source_id_pairs: list) -> dict:
+    """Batch lookup rejection_reasons JSON for sold comps by (source, source_id).
+    Returns {(source, source_id): dict_of_reasons}. Missing comps not included.
+    """
+    if not source_id_pairs:
+        return {}
+
+    conn = _get_conn()
+    c = conn.cursor()
+
+    placeholders = " OR ".join(["(source = ? AND source_id = ?)"] * len(source_id_pairs))
+    params = []
+    for source, source_id in source_id_pairs:
+        params.extend([source, source_id])
+
+    c.execute(
+        f"SELECT source, source_id, rejection_reasons FROM sold_comps WHERE {placeholders}",
+        params,
+    )
+    result = {}
+    for row in c.fetchall():
+        raw = row["rejection_reasons"]
+        if raw:
+            try:
+                reasons = json.loads(raw)
+                if reasons:
+                    result[(row["source"], row["source_id"])] = reasons
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+    conn.close()
+    return result
+
+
 def get_sold_comps_stats(brand: Optional[str] = None) -> Dict[str, Any]:
     """Get aggregate stats on sold comps."""
     conn = _get_conn()
@@ -1025,7 +1074,7 @@ def get_sold_comps_stats(brand: Optional[str] = None) -> Dict[str, Any]:
 # Item Comps (comp feedback system)
 # ---------------------------------------------------------------------------
 
-def save_item_comps(item_id: int, comps: List[Dict[str, Any]]):
+def save_item_comps(item_id: int, comps: List[Dict[str, Any]], context_model: str = "unknown"):
     """Delete existing item_comps for this item, then insert new ones.
 
     Each comp dict has: sold_comp_id, similarity_score, rank,
@@ -1033,6 +1082,7 @@ def save_item_comps(item_id: int, comps: List[Dict[str, Any]]):
     snapshot_sold_date, snapshot_url.
 
     Also increments times_matched on each sold_comp and recalculates quality_score.
+    context_model is used for per-pair quality tracking.
     """
     conn = _get_conn()
     c = conn.cursor()
@@ -1078,6 +1128,12 @@ def save_item_comps(item_id: int, comps: List[Dict[str, Any]]):
 
     conn.commit()
     conn.close()
+
+    # Update per-pair tracking (outside the main transaction for isolation)
+    for comp in comps:
+        sold_comp_id = comp.get("sold_comp_id")
+        if sold_comp_id is not None:
+            increment_pair_matched(sold_comp_id, context_model)
 
 
 def get_item_comps(item_id: int) -> List[Dict[str, Any]]:
@@ -1147,6 +1203,90 @@ def link_item_to_sold_comps(
     return len(entries)
 
 
+# ---------------------------------------------------------------------------
+# Per-Pair Quality Tracking (comp_pair_rejections)
+# ---------------------------------------------------------------------------
+
+def get_pair_quality_score(sold_comp_id: int, context_model: str) -> Optional[float]:
+    """Get per-pair quality score for a comp in a specific model context.
+    Returns None if no pair record exists (caller falls back to global quality_score).
+    """
+    conn = _get_conn()
+    c = conn.cursor()
+    c.execute(
+        "SELECT times_rejected, times_matched FROM comp_pair_rejections "
+        "WHERE sold_comp_id = ? AND context_model = ?",
+        (sold_comp_id, context_model),
+    )
+    row = c.fetchone()
+    conn.close()
+    if not row:
+        return None
+    times_matched = max(row["times_matched"] or 1, 1)
+    times_rejected = row["times_rejected"] or 0
+    return max(0.2, 1.0 - (times_rejected / times_matched))
+
+
+def get_pair_quality_scores_batch(sold_comp_ids: list, context_model: str) -> dict:
+    """Batch lookup per-pair quality scores.
+    Returns {sold_comp_id: quality_score}. Missing pairs not included (caller falls back).
+    """
+    if not sold_comp_ids or not context_model:
+        return {}
+    conn = _get_conn()
+    c = conn.cursor()
+    placeholders = ",".join(["?"] * len(sold_comp_ids))
+    c.execute(
+        f"SELECT sold_comp_id, times_rejected, times_matched "
+        f"FROM comp_pair_rejections "
+        f"WHERE sold_comp_id IN ({placeholders}) AND context_model = ?",
+        sold_comp_ids + [context_model],
+    )
+    result = {}
+    for row in c.fetchall():
+        tm = max(row["times_matched"] or 1, 1)
+        tr = row["times_rejected"] or 0
+        result[row["sold_comp_id"]] = max(0.2, 1.0 - (tr / tm))
+    conn.close()
+    return result
+
+
+def increment_pair_matched(sold_comp_id: int, context_model: str):
+    """Increment times_matched for a comp-in-context pair."""
+    conn = _get_conn()
+    c = conn.cursor()
+    c.execute(
+        "INSERT OR IGNORE INTO comp_pair_rejections (sold_comp_id, context_model, times_matched, times_rejected) "
+        "VALUES (?, ?, 0, 0)",
+        (sold_comp_id, context_model),
+    )
+    c.execute(
+        "UPDATE comp_pair_rejections SET times_matched = times_matched + 1, updated_at = datetime('now') "
+        "WHERE sold_comp_id = ? AND context_model = ?",
+        (sold_comp_id, context_model),
+    )
+    conn.commit()
+    conn.close()
+
+
+def increment_pair_rejected(sold_comp_id: int, context_model: str):
+    """Increment times_rejected for a comp-in-context pair."""
+    conn = _get_conn()
+    c = conn.cursor()
+    c.execute(
+        "INSERT OR IGNORE INTO comp_pair_rejections (sold_comp_id, context_model, times_matched, times_rejected) "
+        "VALUES (?, ?, 0, 0)",
+        (sold_comp_id, context_model),
+    )
+    c.execute(
+        "UPDATE comp_pair_rejections SET times_rejected = times_rejected + 1, updated_at = datetime('now') "
+        "WHERE sold_comp_id = ? AND context_model = ?",
+        (sold_comp_id, context_model),
+    )
+    conn.commit()
+    conn.close()
+
+
 def get_active_item_comps(item_id: int) -> List[Dict[str, Any]]:
     """Get item_comps for an item excluding rejected ones, ordered by rank ASC."""
     conn = _get_conn()
@@ -1200,9 +1340,9 @@ def update_item_comp_feedback(item_comp_id: int, status: str, reason: str = None
     return dict(row) if row else None
 
 
-def update_sold_comp_rejection(sold_comp_id: int, reason: str):
+def update_sold_comp_rejection(sold_comp_id: int, reason: str, context_model: str = "unknown"):
     """Increment times_rejected, update rejection_reasons JSON frequency map,
-    recalculate quality_score, and set last_rejected_at.
+    recalculate quality_score, set last_rejected_at, and update per-pair tracking.
     """
     conn = _get_conn()
     c = conn.cursor()
@@ -1245,6 +1385,9 @@ def update_sold_comp_rejection(sold_comp_id: int, reason: str):
     ))
     conn.commit()
     conn.close()
+
+    # Also update per-pair tracking
+    increment_pair_rejected(sold_comp_id, context_model)
 
 
 # ---------------------------------------------------------------------------

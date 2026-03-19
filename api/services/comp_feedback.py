@@ -74,8 +74,18 @@ def process_comp_feedback(
         if status == "rejected" and reason:
             sold_comp_id = updated_comp.get("sold_comp_id")
             if sold_comp_id:
+                # Extract context_model from item for per-pair tracking
+                context_model = "unknown"
                 try:
-                    update_sold_comp_rejection(sold_comp_id, reason)
+                    from scrapers.comp_matcher import parse_title
+                    item_brand = (item.brand or "").lower().strip()
+                    item_title = item.title or ""
+                    parsed = parse_title(item_brand, item_title)
+                    context_model = parsed.model or parsed.item_type or "unknown"
+                except Exception:
+                    pass
+                try:
+                    update_sold_comp_rejection(sold_comp_id, reason, context_model=context_model)
                 except Exception:
                     logger.exception(
                         "Failed to update sold_comp rejection for sold_comp_id=%s",

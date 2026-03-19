@@ -672,19 +672,43 @@ def compute_weighted_price(
     are similar enough (hard gate: 0 comps above 0.5 similarity).
     """
     from scrapers.comp_matcher import parse_title, score_comp_similarity
-    from db.sqlite_models import get_comp_quality_scores
+    from db.sqlite_models import get_comp_quality_scores, get_pair_quality_scores_batch
 
     if not sold_items:
         return None
 
     listing_fp = parse_title(brand, item_title)
+    context_model = listing_fp.model or listing_fp.item_type or "unknown"
 
-    # Look up quality scores for all comps in one batch
+    # Look up global quality scores in one batch
     source_pairs = [
         (getattr(c, 'source', 'grailed'), getattr(c, 'source_id', ''))
         for c in sold_items
     ]
     quality_scores = get_comp_quality_scores(source_pairs)
+
+    # Look up per-pair quality scores (Gap 2: scoped to this listing's model context)
+    # Also fetch rejection reasons for Gap 3 amplification
+    sold_comp_ids = []
+    source_to_scid = {}  # map (source, source_id) -> sold_comp_id for pair lookup
+    for c in sold_items:
+        src = getattr(c, 'source', 'grailed')
+        sid = getattr(c, 'source_id', '')
+        # sold_comp_id may be available from DB comps
+        scid = getattr(c, '_db_sold_comp_id', None)
+        if scid:
+            sold_comp_ids.append(scid)
+            source_to_scid[(src, sid)] = scid
+
+    pair_scores = get_pair_quality_scores_batch(sold_comp_ids, context_model) if sold_comp_ids else {}
+
+    # Batch fetch rejection reasons for Gap 3
+    rejection_reasons_map = {}
+    try:
+        from db.sqlite_models import get_comp_rejection_reasons_batch
+        rejection_reasons_map = get_comp_rejection_reasons_batch(source_pairs)
+    except ImportError:
+        pass
 
     # Score each comp
     scored = []
@@ -693,8 +717,22 @@ def compute_weighted_price(
             continue
         source = getattr(comp, 'source', 'grailed')
         source_id = getattr(comp, 'source_id', '')
-        q_score = quality_scores.get((source, source_id), 1.0)
-        similarity = score_comp_similarity(listing_fp, comp.title, comp_quality_score=q_score)
+
+        # Per-pair quality takes priority over global quality
+        scid = source_to_scid.get((source, source_id))
+        if scid and scid in pair_scores:
+            q_score = pair_scores[scid]
+        else:
+            q_score = quality_scores.get((source, source_id), 1.0)
+
+        # Get rejection reasons for this comp (Gap 3)
+        comp_reasons = rejection_reasons_map.get((source, source_id))
+
+        similarity = score_comp_similarity(
+            listing_fp, comp.title,
+            comp_quality_score=q_score,
+            rejection_reasons=comp_reasons,
+        )
         scored.append((comp, similarity))
 
     if not scored:
