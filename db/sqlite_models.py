@@ -1059,6 +1059,38 @@ def get_item_comps(item_id: int) -> List[Dict[str, Any]]:
     return comps
 
 
+def link_item_to_sold_comps(item_id: int, search_key: str, limit: int = 15) -> int:
+    """Link an item to its sold comps by searching sold_comps table.
+
+    This is the reliable way to populate item_comps — queries the sold_comps
+    table directly instead of relying on in-memory data from gap_hunter.
+
+    Returns number of comps linked.
+    """
+    # Get matching sold comps
+    comps = get_sold_comps(search_key=search_key, limit=limit)
+    if not comps:
+        return 0
+
+    # Build item_comps entries
+    entries = []
+    for rank, sc in enumerate(comps, start=1):
+        entries.append({
+            "sold_comp_id": sc.get("id"),
+            "similarity_score": max(0.5, 1.0 - rank * 0.03),
+            "rank": rank,
+            "snapshot_title": sc.get("title"),
+            "snapshot_price": sc.get("sold_price"),
+            "snapshot_condition": sc.get("condition"),
+            "snapshot_source": sc.get("source", "grailed"),
+            "snapshot_sold_date": sc.get("sold_date"),
+            "snapshot_url": sc.get("sold_url"),
+        })
+
+    save_item_comps(item_id, entries)
+    return len(entries)
+
+
 def get_active_item_comps(item_id: int) -> List[Dict[str, Any]]:
     """Get item_comps for an item excluding rejected ones, ordered by rank ASC."""
     conn = _get_conn()

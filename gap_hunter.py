@@ -2663,28 +2663,12 @@ class GapHunter:
                 finally:
                     conn.close()
 
-                # Persist comp assignments by querying sold_comps table
-                from db.sqlite_models import save_item_comps, get_sold_comps
-                sold_comps_rows = get_sold_comps(search_key=deal.query, limit=15)
-                comp_count_saved = 0
-                if sold_comps_rows:
-                    comp_entries = []
-                    for rank, sc in enumerate(sold_comps_rows, start=1):
-                        comp_entries.append({
-                            "sold_comp_id": sc.get("id"),
-                            "similarity_score": max(0.5, 1.0 - rank * 0.03),
-                            "rank": rank,
-                            "snapshot_title": sc.get("title"),
-                            "snapshot_price": sc.get("sold_price"),
-                            "snapshot_condition": sc.get("condition"),
-                            "snapshot_source": sc.get("source", "grailed"),
-                            "snapshot_sold_date": sc.get("sold_date"),
-                            "snapshot_url": sc.get("sold_url"),
-                        })
-                    save_item_comps(persisted_id, comp_entries)
-                    comp_count_saved = len(comp_entries)
-                else:
-                    logger.warning(f"    ⚠️ No sold_comps found for query '{deal.query}' — comps not linked")
+                # Link item to sold comps from DB
+                from db.sqlite_models import link_item_to_sold_comps
+                comp_count_saved = link_item_to_sold_comps(persisted_id, deal.query)
+                if comp_count_saved == 0:
+                    logger.warning(f"    ⚠️ No sold_comps for '{deal.query}' — trying brand fallback")
+                    comp_count_saved = link_item_to_sold_comps(persisted_id, brand or "")
 
                 logger.info(f"    💾 Persisted to DB: item #{persisted_id}, grade {grade}, {comp_count_saved} comps [v2-snapshots]")
             except Exception as e:

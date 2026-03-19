@@ -376,6 +376,21 @@ async def get_item_comps_endpoint(item_id: int):
     }
 
 
+@app.post("/api/items/{item_id}/link-comps")
+async def link_comps_for_item(item_id: int):
+    """Retroactively link sold comps to an item that's missing them."""
+    item = get_item_by_id(item_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    from db.sqlite_models import link_item_to_sold_comps
+    # Try item title as search key, then brand
+    search_key = (item.title or "").lower().strip()
+    linked = link_item_to_sold_comps(item_id, search_key)
+    if linked == 0 and item.brand:
+        linked = link_item_to_sold_comps(item_id, item.brand.lower())
+    return {"item_id": item_id, "comps_linked": linked}
+
+
 class CompFeedbackRequest(BaseModel):
     status: str  # accepted | rejected
     reason: Optional[str] = None
