@@ -1431,21 +1431,33 @@ class GapHunter:
             comp_prices = [s.price for s in valid_comps]
             comp_urls = [getattr(s, 'url', None) for s in valid_comps]
 
-            # ── Persist sold comps to DB for reliable retrieval at item persist time ──
-            from db.sqlite_models import save_sold_comp
+            # ── Persist sold comps to DB with embeddings ──
+            from scrapers.title_matcher import get_title_embedding, save_comp_with_embedding
+            from scrapers.comp_matcher import parse_title as _cm_parse
             for vc in valid_comps[:15]:
                 try:
-                    save_sold_comp(query, {
-                        "brand": query_brand,
-                        "title": vc.title,
-                        "sold_price": vc.price,
-                        "size": getattr(vc, 'size', None),
-                        "sold_url": getattr(vc, 'url', None),
-                        "source": getattr(vc, 'source', 'grailed'),
-                        "source_id": getattr(vc, 'source_id', None),
-                        "condition": getattr(vc, 'condition', None),
-                        "sold_date": None,
-                    })
+                    emb = get_title_embedding(vc.title)
+                    vc_fp = _cm_parse(query_brand, vc.title) if query_brand else None
+                    save_comp_with_embedding(
+                        search_key=query,
+                        title=vc.title,
+                        brand=query_brand,
+                        sold_price=vc.price,
+                        source=getattr(vc, 'source', 'grailed'),
+                        source_id=getattr(vc, 'source_id', '') or '',
+                        size=getattr(vc, 'size', None) or '',
+                        condition=getattr(vc, 'condition', None) or '',
+                        sold_url=getattr(vc, 'url', None) or '',
+                        sold_date=str((vc.raw_data or {}).get('sold_at', '')),
+                        embedding=emb,
+                        platform=getattr(vc, 'source', 'grailed'),
+                        item_type=vc_fp.item_type if vc_fp else '',
+                        model_name=vc_fp.model if vc_fp else '',
+                        sub_brand=vc_fp.sub_brand if vc_fp else '',
+                        material=vc_fp.material if vc_fp else '',
+                        color=vc_fp.color if vc_fp else '',
+                        season=vc_fp.season if vc_fp else '',
+                    )
                 except Exception:
                     pass  # Duplicate or constraint error — skip
 
@@ -3239,6 +3251,27 @@ class GapHunter:
             logger.info(f"   🗾 Japan arbitrage: ENABLED (every cycle)")
             logger.info(f"     Platforms: Yahoo Auctions, Mercari, Rakuma (via Buyee)")
         logger.info("=" * 60)
+
+        # ── Embedding backfill check ──
+        try:
+            import sqlite3 as _sq
+            _dbpath = os.path.join(os.path.dirname(__file__), "data", "archive.db")
+            _c = _sq.connect(_dbpath)
+            _missing = _c.execute("SELECT COUNT(*) FROM sold_comps WHERE title_embedding IS NULL").fetchone()[0]
+            _c.close()
+            if _missing > 100:
+                logger.warning(f"  ⚠️ {_missing} comps lack embeddings — run with BACKFILL_EMBEDDINGS=1")
+        except Exception:
+            pass
+
+        if os.getenv("BACKFILL_EMBEDDINGS", "0") == "1":
+            try:
+                from scrapers.title_matcher import backfill_embeddings
+                count = backfill_embeddings()
+                if count > 0:
+                    logger.info(f"  📦 Backfilled embeddings for {count} comps")
+            except Exception as e:
+                logger.warning(f"  ⚠️ Embedding backfill failed: {e}")
 
         while self.running:
             try:
