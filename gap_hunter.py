@@ -644,6 +644,8 @@ class GapDeal:
     downside_net_profit: float = 0.0
     margin_of_safety_score: float = 0.0
     discovered_at: Optional[datetime] = None
+    # Comp snapshot data for frontend persistence
+    comp_snapshots: list = None  # List of dicts with title, price, url per comp
 
 
 def _map_grade(fire_level: int, quality_score: float) -> str:
@@ -2043,6 +2045,18 @@ class GapHunter:
                 downside_bonus = max(0.0, downside_profit) * 0.10
                 mos_score = max(0.0, downside_profit) + pricing_bonus + downside_bonus
 
+                # Build comp snapshots for frontend persistence
+                _titles = getattr(sold_data, 'comp_titles', None) or []
+                _prices = getattr(sold_data, 'comp_prices', None) or []
+                _urls = getattr(sold_data, 'comp_urls', None) or []
+                _snapshots = []
+                for _i, _t in enumerate(_titles[:15]):
+                    _snapshots.append({
+                        "title": _t,
+                        "price": _prices[_i] if _i < len(_prices) else sold_data.avg_price,
+                        "url": _urls[_i] if _i < len(_urls) else None,
+                    })
+
                 deals.append(GapDeal(
                     item=item,
                     sold_avg=sold_data.avg_price,
@@ -2063,6 +2077,7 @@ class GapHunter:
                     downside_net_profit=downside_profit,
                     margin_of_safety_score=mos_score,
                     discovered_at=datetime.now(),
+                    comp_snapshots=_snapshots,
                 ))
             else:
                 if debug_near_misses:
@@ -2631,28 +2646,27 @@ class GapHunter:
                     conn.close()
 
                 # Persist comp assignments for frontend display
-                sold_data_obj = self.sold_cache.get(deal.query)
                 comp_count_saved = 0
-                if sold_data_obj and getattr(sold_data_obj, 'comp_titles', None):
+                snapshots = getattr(deal, 'comp_snapshots', None) or []
+                if snapshots:
                     from db.sqlite_models import save_item_comps
-                    titles = sold_data_obj.comp_titles or []
-                    prices_list = getattr(sold_data_obj, 'comp_prices', None) or []
-                    urls_list = getattr(sold_data_obj, 'comp_urls', None) or []
                     comp_entries = []
-                    for rank, title in enumerate(titles[:15], start=1):
+                    for rank, snap in enumerate(snapshots, start=1):
                         comp_entries.append({
                             "sold_comp_id": None,
                             "similarity_score": max(0.5, 1.0 - rank * 0.03),
                             "rank": rank,
-                            "snapshot_title": title,
-                            "snapshot_price": prices_list[rank - 1] if rank - 1 < len(prices_list) else sold_data_obj.avg_price,
+                            "snapshot_title": snap.get("title"),
+                            "snapshot_price": snap.get("price", deal.sold_avg),
                             "snapshot_condition": None,
                             "snapshot_source": "grailed",
                             "snapshot_sold_date": None,
-                            "snapshot_url": urls_list[rank - 1] if rank - 1 < len(urls_list) else None,
+                            "snapshot_url": snap.get("url"),
                         })
                     save_item_comps(persisted_id, comp_entries)
                     comp_count_saved = len(comp_entries)
+                else:
+                    logger.warning(f"    ⚠️ No comp snapshots on deal — comps not saved for item #{persisted_id}")
 
                 logger.info(f"    💾 Persisted to DB: item #{persisted_id}, grade {grade}, {comp_count_saved} comps")
             except Exception as e:
