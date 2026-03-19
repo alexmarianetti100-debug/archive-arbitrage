@@ -1069,10 +1069,10 @@ def save_item_comps(item_id: int, comps: List[Dict[str, Any]]):
                 SET times_matched = COALESCE(times_matched, 0) + 1
                 WHERE id = ?
             """, (sold_comp_id,))
-            # Recalculate quality_score = 1 - (times_rejected / times_matched)
+            # Recalculate quality_score with 0.2 floor
             c.execute("""
                 UPDATE sold_comps
-                SET quality_score = 1.0 - (CAST(COALESCE(times_rejected, 0) AS REAL) / MAX(times_matched, 1))
+                SET quality_score = MAX(0.2, 1.0 - (CAST(COALESCE(times_rejected, 0) AS REAL) / MAX(times_matched, 1)))
                 WHERE id = ?
             """, (sold_comp_id,))
 

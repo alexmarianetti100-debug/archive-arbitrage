@@ -646,6 +646,7 @@ class GapDeal:
     discovered_at: Optional[datetime] = None
     # Comp snapshot data for frontend persistence
     comp_snapshots: list = None  # List of dicts with title, price, url per comp
+    similarity_scores: list = None  # Per-comp similarity scores from compute_weighted_price
 
 
 def _map_grade(fire_level: int, quality_score: float) -> str:
@@ -703,7 +704,6 @@ def compute_weighted_price(
     scored.sort(key=lambda x: x[1], reverse=True)
 
     above_threshold = [(c, s) for c, s in scored if s >= 0.5]
-    below_threshold = [(c, s) for c, s in scored if s < 0.5]
 
     # Gate logic
     if len(above_threshold) >= 3:
@@ -1260,7 +1260,7 @@ class GapHunter:
 
             if len(fresh_sold) < min_comps:
                 logger.info(f"  📊 Insufficient comps for '{query}': {len(fresh_sold)} fresh, need {min_comps} (had {len(sold or [])} total)")
-                return None
+                return (None, []) if return_raw else None
 
             sold = fresh_sold
 
@@ -1281,7 +1281,7 @@ class GapHunter:
             
             prices = sorted([i.price for i in sold if i.price and i.price > 0])
             if len(prices) < min_comps:
-                return None
+                return (None, []) if return_raw else None
 
             comp_confidence_penalty = 0  # May be set by comp_validator below
             query_brand = self._detect_brand(query) or ""
@@ -1393,7 +1393,7 @@ class GapHunter:
                     comp_confidence_penalty = validation.score_penalty
                 elif validation.surviving_count < 3:
                     logger.info(f"  ❌ Comp validator: only {validation.surviving_count} comps survived for '{query[:50]}' (need 3)")
-                    return None
+                    return (None, []) if return_raw else None
 
             # ── Detect bimodal distribution (p75 > 2.5x p25 = likely mixed products) ──
             if len(prices) >= 5:
@@ -2390,6 +2390,7 @@ class GapHunter:
                     margin_of_safety_score=mos_score,
                     discovered_at=datetime.now(),
                     comp_snapshots=_snapshots,
+                    similarity_scores=getattr(effective_sold, '_similarity_scores', None),
                 ))
             else:
                 if debug_near_misses:
@@ -2957,12 +2958,12 @@ class GapHunter:
                 finally:
                     conn.close()
 
-                # Link item to sold comps from DB (with real similarity scores if available)
+                # Link item to sold comps from DB
+                # Note: similarity_scores not passed because link_item_to_sold_comps
+                # fetches comps in DB order (id DESC) which doesn't match the price-sorted
+                # order from compute_weighted_price. Synthetic rank-based scores are used instead.
                 from db.sqlite_models import link_item_to_sold_comps
-                sim_scores = getattr(effective_sold, '_similarity_scores', None)
-                comp_count_saved = link_item_to_sold_comps(
-                    persisted_id, deal.query, similarity_scores=sim_scores,
-                )
+                comp_count_saved = link_item_to_sold_comps(persisted_id, deal.query)
                 if comp_count_saved == 0:
                     logger.warning(f"    ⚠️ No sold_comps for '{deal.query}' — trying brand fallback")
                     comp_count_saved = link_item_to_sold_comps(persisted_id, brand or "")
@@ -3013,7 +3014,8 @@ class GapHunter:
         self.cycle_count += 1
         self.cycles_since_prune += 1
         self._item_comp_cache.clear()  # Fresh per-item comp cache each cycle
-        self._raw_items_cache.clear()
+        # Note: _raw_items_cache NOT cleared here — its lifecycle matches sold_cache
+        # (TTL-based expiry). Clearing it would break weighted pricing on cached queries.
         cycle_start = time.time()
         
         # ── Periodic data pruning ──
