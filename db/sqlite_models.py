@@ -969,6 +969,40 @@ def get_sold_comps(
     return comps
 
 
+def get_comp_quality_scores(source_id_pairs: list) -> dict:
+    """Batch lookup quality scores for sold comps by (source, source_id).
+
+    Args:
+        source_id_pairs: List of (source, source_id) tuples
+
+    Returns:
+        Dict of (source, source_id) -> quality_score. Defaults to 1.0 for unknown comps.
+    """
+    if not source_id_pairs:
+        return {}
+
+    result = {pair: 1.0 for pair in source_id_pairs}
+
+    conn = _get_conn()
+    c = conn.cursor()
+
+    placeholders = " OR ".join(["(source = ? AND source_id = ?)"] * len(source_id_pairs))
+    params = []
+    for source, source_id in source_id_pairs:
+        params.extend([source, source_id])
+
+    c.execute(
+        f"SELECT source, source_id, quality_score FROM sold_comps WHERE {placeholders}",
+        params,
+    )
+    for row in c.fetchall():
+        key = (row["source"], row["source_id"])
+        result[key] = row["quality_score"] if row["quality_score"] is not None else 1.0
+
+    conn.close()
+    return result
+
+
 def get_sold_comps_stats(brand: Optional[str] = None) -> Dict[str, Any]:
     """Get aggregate stats on sold comps."""
     conn = _get_conn()
