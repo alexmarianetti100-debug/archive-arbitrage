@@ -2957,9 +2957,12 @@ class GapHunter:
                 finally:
                     conn.close()
 
-                # Link item to sold comps from DB
+                # Link item to sold comps from DB (with real similarity scores if available)
                 from db.sqlite_models import link_item_to_sold_comps
-                comp_count_saved = link_item_to_sold_comps(persisted_id, deal.query)
+                sim_scores = getattr(effective_sold, '_similarity_scores', None)
+                comp_count_saved = link_item_to_sold_comps(
+                    persisted_id, deal.query, similarity_scores=sim_scores,
+                )
                 if comp_count_saved == 0:
                     logger.warning(f"    ⚠️ No sold_comps for '{deal.query}' — trying brand fallback")
                     comp_count_saved = link_item_to_sold_comps(persisted_id, brand or "")

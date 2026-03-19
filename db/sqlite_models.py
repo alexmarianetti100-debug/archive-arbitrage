@@ -1093,25 +1093,38 @@ def get_item_comps(item_id: int) -> List[Dict[str, Any]]:
     return comps
 
 
-def link_item_to_sold_comps(item_id: int, search_key: str, limit: int = 15) -> int:
+def link_item_to_sold_comps(
+    item_id: int,
+    search_key: str,
+    limit: int = 15,
+    similarity_scores: list = None,
+) -> int:
     """Link an item to its sold comps by searching sold_comps table.
 
-    This is the reliable way to populate item_comps — queries the sold_comps
-    table directly instead of relying on in-memory data from gap_hunter.
+    Args:
+        item_id: The item to link comps to
+        search_key: Query used to find matching comps
+        limit: Max comps to link
+        similarity_scores: Pre-computed similarity scores from compute_weighted_price().
+            If provided, used instead of synthetic rank-based scores.
 
     Returns number of comps linked.
     """
-    # Get matching sold comps
     comps = get_sold_comps(search_key=search_key, limit=limit)
     if not comps:
         return 0
 
-    # Build item_comps entries
     entries = []
     for rank, sc in enumerate(comps, start=1):
+        # Use provided similarity score if available, otherwise synthetic fallback
+        if similarity_scores and rank - 1 < len(similarity_scores):
+            sim = similarity_scores[rank - 1]
+        else:
+            sim = max(0.5, 1.0 - rank * 0.03)
+
         entries.append({
             "sold_comp_id": sc.get("id"),
-            "similarity_score": max(0.5, 1.0 - rank * 0.03),
+            "similarity_score": sim,
             "rank": rank,
             "snapshot_title": sc.get("title"),
             "snapshot_price": sc.get("sold_price"),
