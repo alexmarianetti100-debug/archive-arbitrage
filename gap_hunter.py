@@ -1695,7 +1695,7 @@ class GapHunter:
         for query_str, expected_quality in queries_by_specificity[:3]:
             cache_key = query_str.strip().lower()
 
-            # Check per-item comp cache first
+            # Check per-item comp cache first (already weighted)
             if cache_key in self._item_comp_cache:
                 cached = self._item_comp_cache[cache_key]
                 if cached is not None and cached.count >= 3:
@@ -1707,32 +1707,56 @@ class GapHunter:
                 # Cached but insufficient — try next query
                 continue
 
-            # Also check the existing sold_cache (populated by generic queries)
+            # Also check the existing sold_cache + apply weighted pricing
             if cache_key in self.sold_cache:
                 cached = self.sold_cache[cache_key]
                 if time.time() - cached.timestamp < SOLD_CACHE_TTL and cached.count >= 3:
-                    self._item_comp_cache[cache_key] = cached
+                    raw = self._raw_items_cache.get(cache_key, [])
+                    if raw:
+                        weighted = compute_weighted_price(item.title, brand, raw, cached)
+                        if weighted is not None:
+                            self._item_comp_cache[cache_key] = weighted
+                            logger.info(
+                                f"    🎯 Item comps (sold_cache+weighted): '{query_str}' → "
+                                f"${weighted.avg_price:.0f} ({weighted.count} comps)"
+                            )
+                            return (weighted, query_str, True)
+                    else:
+                        self._item_comp_cache[cache_key] = cached
+                        logger.info(
+                            f"    🎯 Item comps (sold_cache): '{query_str}' → "
+                            f"${cached.avg_price:.0f} ({cached.count} comps)"
+                        )
+                        return (cached, query_str, True)
+
+            # Fetch fresh sold data with raw items for similarity scoring
+            result = await self.get_sold_data(query_str, return_raw=True)
+            if isinstance(result, tuple):
+                sold, raw_items = result
+            else:
+                sold, raw_items = result, []
+
+            if sold and sold.count >= 3 and raw_items:
+                weighted = compute_weighted_price(item.title, brand, raw_items, sold)
+                if weighted is not None:
+                    self._item_comp_cache[cache_key] = weighted
                     logger.info(
-                        f"    🎯 Item comps (sold_cache): '{query_str}' → "
-                        f"${cached.avg_price:.0f} ({cached.count} comps)"
+                        f"    🎯 Item comps (fresh+weighted): '{query_str}' → "
+                        f"${weighted.avg_price:.0f} ({weighted.count} comps, "
+                        f"quality={expected_quality:.2f})"
                     )
-                    return (cached, query_str, True)
-
-            # Fetch fresh sold data for this specific query
-            sold = await self.get_sold_data(query_str)
-            self._item_comp_cache[cache_key] = sold
-
-            if sold and sold.count >= 3:
-                logger.info(
-                    f"    🎯 Item comps (fresh): '{query_str}' → "
-                    f"${sold.avg_price:.0f} ({sold.count} comps, "
-                    f"quality={expected_quality:.2f})"
-                )
-                return (sold, query_str, True)
+                    return (weighted, query_str, True)
+                else:
+                    logger.debug(
+                        f"    ℹ️ Weighted pricing returned None for '{query_str}' "
+                        f"— no comps similar enough"
+                    )
+                    # Cache None so we don't retry this query
+                    self._item_comp_cache[cache_key] = None
             elif sold:
                 logger.debug(
                     f"    ℹ️ Specific query '{query_str}' returned only "
-                    f"{sold.count} comps (need 3)"
+                    f"{sold.count if sold else 0} comps (need 3)"
                 )
 
         # None of the specific queries returned enough comps
