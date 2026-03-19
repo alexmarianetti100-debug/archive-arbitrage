@@ -790,6 +790,9 @@ class GapHunter:
                     "pricing_method": v.pricing_method,
                     "pricing_confidence": v.pricing_confidence,
                     "haircut_pct": v.haircut_pct,
+                    "comp_titles": v.comp_titles,
+                    "comp_prices": v.comp_prices,
+                    "comp_urls": v.comp_urls,
                 }
             with open(SOLD_CACHE_FILE, "w") as f:
                 json.dump(raw, f)
