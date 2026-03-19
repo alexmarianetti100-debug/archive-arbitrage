@@ -28,7 +28,7 @@ def quality_weight(quality_score: float = None) -> float:
     """
     if quality_score is None:
         return 1.0
-    return max(0.0, min(1.0, quality_score))
+    return max(0.2, min(1.0, quality_score))
 
 
 # Sub-brands / lines that distinguish pricing tiers
@@ -96,9 +96,16 @@ MODEL_PATTERNS = [
     r"ozweego|response trail|replicant|cylon|runner|orion|virginia creeper|riot",
     # Margiela
     r"tabi|replica|gat|german army|fusion|paint splatter|deconstructed",
+    # Chrome Hearts
+    r"cemetery cross|spacer|forever ring|dagger pendant|floral cross|paperchain|tiny e|scroll ring",
+    r"plus ring|keeper ring|fuck you ring|fleur de lis|cross ball|filigree cross|baby fat",
+    r"dagger ring|star ring|foti harris teeter|heart ring|chomper|grillz|fang",
+    # Balenciaga
+    r"triple s|track|speed trainer|defender",
+    # Supreme
+    r"box logo|bogo",
     # Others
-    r"geobasket|ramones|dunks|triple s|track|speed trainer|defender",
-    r"box logo|bogo|tabi|astro|flak|painter",
+    r"dunks|astro|flak|painter",
 ]
 
 # Words to strip from search queries (noise)

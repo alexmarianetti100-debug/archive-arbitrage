@@ -10,17 +10,23 @@ class TestQualityWeight:
     def test_perfect_score(self):
         assert quality_weight(1.0) == 1.0
 
-    def test_zero_score(self):
-        assert quality_weight(0.0) == 0.5
+    def test_zero_score_floors_at_0_2(self):
+        assert quality_weight(0.0) == 0.2
 
     def test_half_score(self):
-        assert quality_weight(0.5) == 0.75
+        assert quality_weight(0.5) == 0.5
+
+    def test_low_score_floors_at_0_2(self):
+        assert quality_weight(0.1) == 0.2
+
+    def test_above_floor(self):
+        assert quality_weight(0.3) == 0.3
 
     def test_clamps_above_one(self):
         assert quality_weight(1.5) == 1.0
 
-    def test_clamps_below_zero(self):
-        assert quality_weight(-0.5) == 0.5
+    def test_clamps_below_zero_to_floor(self):
+        assert quality_weight(-0.5) == 0.2
 
     def test_score_integrated_in_similarity(self):
         """quality_score should reduce the final similarity score."""
@@ -32,4 +38,4 @@ class TestQualityWeight:
         score_bad = score_comp_similarity(parsed, comp_title, comp_quality_score=0.0)
 
         assert score_good > score_bad
-        assert score_bad >= score_good * 0.5  # floor is 50%
+        assert score_bad >= 0.2 * score_good  # floor is 0.2

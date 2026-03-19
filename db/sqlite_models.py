@@ -1171,7 +1171,7 @@ def update_sold_comp_rejection(sold_comp_id: int, reason: str):
 
     times_rejected = (row["times_rejected"] or 0) + 1
     times_matched = max(row["times_matched"] or 1, 1)
-    quality_score = 1.0 - (times_rejected / times_matched)
+    quality_score = max(0.2, 1.0 - (times_rejected / times_matched))
 
     c.execute("""
         UPDATE sold_comps
