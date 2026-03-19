@@ -659,6 +659,124 @@ def _map_grade(fire_level: int, quality_score: float) -> str:
     return "D"
 
 
+def compute_weighted_price(
+    item_title: str,
+    brand: str,
+    sold_items: list,
+    sold_data,
+) -> Optional[SoldData]:
+    """Score each comp against the listing and compute similarity-weighted pricing.
+
+    Returns a new SoldData with recalculated prices, or None if no comps
+    are similar enough (hard gate: 0 comps above 0.5 similarity).
+    """
+    from scrapers.comp_matcher import parse_title, score_comp_similarity
+    from db.sqlite_models import get_comp_quality_scores
+
+    if not sold_items:
+        return None
+
+    listing_fp = parse_title(brand, item_title)
+
+    # Look up quality scores for all comps in one batch
+    source_pairs = [
+        (getattr(c, 'source', 'grailed'), getattr(c, 'source_id', ''))
+        for c in sold_items
+    ]
+    quality_scores = get_comp_quality_scores(source_pairs)
+
+    # Score each comp
+    scored = []
+    for comp in sold_items:
+        if not comp.price or comp.price <= 0:
+            continue
+        source = getattr(comp, 'source', 'grailed')
+        source_id = getattr(comp, 'source_id', '')
+        q_score = quality_scores.get((source, source_id), 1.0)
+        similarity = score_comp_similarity(listing_fp, comp.title, comp_quality_score=q_score)
+        scored.append((comp, similarity))
+
+    if not scored:
+        return None
+
+    # Sort by similarity descending for logging
+    scored.sort(key=lambda x: x[1], reverse=True)
+
+    above_threshold = [(c, s) for c, s in scored if s >= 0.5]
+    below_threshold = [(c, s) for c, s in scored if s < 0.5]
+
+    # Gate logic
+    if len(above_threshold) >= 3:
+        # Drop gate: enough good comps, drop the rest
+        final = above_threshold
+    elif len(above_threshold) == 0:
+        # Hard gate: no comps similar enough — skip this item
+        logger.info(
+            f"    ❌ No comps above 0.5 similarity for '{item_title[:50]}' "
+            f"(best: {scored[0][1]:.2f} '{scored[0][0].title[:40]}')"
+        )
+        return None
+    else:
+        # Downweight fallback: keep all, weight by similarity
+        final = scored
+
+    # Compute weighted median
+    final.sort(key=lambda x: x[0].price)
+    total_weight = sum(s for _, s in final)
+    if total_weight <= 0:
+        return None
+
+    # Walk through prices accumulating weight until 50th percentile
+    cumulative = 0.0
+    weighted_median = final[-1][0].price
+    for comp, sim in final:
+        cumulative += sim
+        if cumulative >= total_weight * 0.5:
+            weighted_median = comp.price
+            break
+
+    # Weighted average
+    weighted_avg = sum(c.price * s for c, s in final) / total_weight
+
+    # Build new SoldData
+    surviving_comps = [c for c, _ in final]
+    similarity_scores = [s for _, s in final]
+
+    result = SoldData(
+        query=getattr(sold_data, 'query', ''),
+        avg_price=weighted_avg,
+        median_price=weighted_median,
+        min_price=min(c.price for c in surviving_comps),
+        max_price=max(c.price for c in surviving_comps),
+        count=len(final),
+        timestamp=getattr(sold_data, 'timestamp', 0),
+    )
+    # Carry over attributes from original
+    result.comp_titles = [c.title for c in surviving_comps]
+    result.comp_prices = [c.price for c in surviving_comps]
+    result.comp_urls = [getattr(c, 'url', None) for c in surviving_comps]
+    result.comp_sizes = [getattr(c, 'size', None) for c in surviving_comps]
+    result._similarity_scores = similarity_scores
+    result._confidence = getattr(sold_data, '_confidence', 'medium')
+    result._cv = getattr(sold_data, '_cv', None)
+    result._hyper_pricing = getattr(sold_data, '_hyper_pricing', False)
+    result.comp_confidence_penalty = getattr(sold_data, 'comp_confidence_penalty', 0)
+    result.pricing_confidence = getattr(sold_data, 'pricing_confidence', 'medium')
+    result.liquidation_anchor = getattr(sold_data, 'liquidation_anchor', None)
+    result.downside_anchor = getattr(sold_data, 'downside_anchor', None)
+    result._authenticated_comps = getattr(sold_data, '_authenticated_comps', 0)
+    result._auth_confidence = getattr(sold_data, '_auth_confidence', 0.0)
+
+    logger.info(
+        f"    📊 Weighted pricing: {len(final)} comps "
+        f"(dropped {len(scored) - len(final)}), "
+        f"median ${weighted_median:.0f}, avg ${weighted_avg:.0f}, "
+        f"best sim={similarity_scores[0]:.2f}"
+    )
+
+    return result
+
+
 class GapHunter:
     """Find items listed significantly below proven sold prices."""
 
@@ -673,7 +791,8 @@ class GapHunter:
         self.image_hashes: Dict[str, List[Dict]] = {}  # hash -> list of {seller, url, title}
         self._fx_cache: Dict[str, tuple] = {}  # currency -> (rate, timestamp)
         self._last_query_metrics: Dict[str, int] = {}
-        
+        self._item_comp_cache: Dict[str, Optional[SoldData]] = {}  # per-item comp cache (cleared each cycle)
+
         # Initialize seller manager (replaces manual blocklist handling)
         from core.seller_manager import SellerManager
         self.seller_manager = SellerManager()
@@ -1532,6 +1651,84 @@ class GapHunter:
             logger.debug(f"Hyper-pricing failed for '{query}', using standard: {e}")
             return base_data
 
+    async def get_item_specific_comps(self, item, brand: str, generic_sold: SoldData) -> tuple:
+        """Get sold data specific to a listing's actual product, not the generic query.
+
+        Uses comp_matcher to parse the listing title into structured data,
+        then searches for sold comps with increasingly specific queries
+        (model → sub-brand + item type → brand + item type → fallback).
+
+        Returns:
+            (SoldData, query_used: str, is_item_specific: bool)
+        """
+        from scrapers.comp_matcher import parse_title, build_search_queries
+
+        if not brand:
+            return (generic_sold, "", False)
+
+        try:
+            fp = parse_title(brand, item.title)
+        except Exception as e:
+            logger.debug(f"    ⚠️ parse_title failed for '{item.title[:50]}': {e}")
+            return (generic_sold, "", False)
+
+        queries = build_search_queries(fp)
+        if not queries:
+            return (generic_sold, "", False)
+
+        # Sort by word count descending — more words = more specific query.
+        # "chrome hearts cemetery cross sterling silver" (6 words) should be tried
+        # before "chrome hearts ring" (3 words) because it targets the actual product.
+        queries_by_specificity = sorted(queries, key=lambda q: len(q[0].split()), reverse=True)
+
+        # Only try the top 3 most-specific queries to limit API load
+        for query_str, expected_quality in queries_by_specificity[:3]:
+            cache_key = query_str.strip().lower()
+
+            # Check per-item comp cache first
+            if cache_key in self._item_comp_cache:
+                cached = self._item_comp_cache[cache_key]
+                if cached is not None and cached.count >= 3:
+                    logger.info(
+                        f"    🎯 Item comps (cached): '{query_str}' → "
+                        f"${cached.avg_price:.0f} ({cached.count} comps)"
+                    )
+                    return (cached, query_str, True)
+                # Cached but insufficient — try next query
+                continue
+
+            # Also check the existing sold_cache (populated by generic queries)
+            if cache_key in self.sold_cache:
+                cached = self.sold_cache[cache_key]
+                if time.time() - cached.timestamp < SOLD_CACHE_TTL and cached.count >= 3:
+                    self._item_comp_cache[cache_key] = cached
+                    logger.info(
+                        f"    🎯 Item comps (sold_cache): '{query_str}' → "
+                        f"${cached.avg_price:.0f} ({cached.count} comps)"
+                    )
+                    return (cached, query_str, True)
+
+            # Fetch fresh sold data for this specific query
+            sold = await self.get_sold_data(query_str)
+            self._item_comp_cache[cache_key] = sold
+
+            if sold and sold.count >= 3:
+                logger.info(
+                    f"    🎯 Item comps (fresh): '{query_str}' → "
+                    f"${sold.avg_price:.0f} ({sold.count} comps, "
+                    f"quality={expected_quality:.2f})"
+                )
+                return (sold, query_str, True)
+            elif sold:
+                logger.debug(
+                    f"    ℹ️ Specific query '{query_str}' returned only "
+                    f"{sold.count} comps (need 3)"
+                )
+
+        # None of the specific queries returned enough comps
+        logger.debug(f"    ℹ️ No item-specific comps for '{item.title[:50]}', using generic")
+        return (generic_sold, "", False)
+
     async def find_gaps(self, query: str, sold_data: SoldData) -> List[GapDeal]:
         """Find active listings priced below sold average."""
         deals = []
@@ -1978,13 +2175,22 @@ class GapHunter:
                 logger.debug(f"    Skipped unknown brand: {item.title[:50]}")
                 continue
 
+            # ── Per-item comp lookup: get sold data specific to THIS listing ──
+            effective_sold, item_comp_query, is_item_specific = await self.get_item_specific_comps(
+                item, detected_brand, sold_data
+            )
+            if is_item_specific:
+                self.stats["item_specific_comp_hits"] = self.stats.get("item_specific_comp_hits", 0) + 1
+            else:
+                self.stats["item_specific_comp_misses"] = self.stats.get("item_specific_comp_misses", 0) + 1
+
             # Calculate gap against Grailed resale value (no platform discount).
             # We buy on any platform and resell on Grailed — the reference is what
             # the item sells for on Grailed, not what it would sell for on the source platform.
-            reference_price = sold_data.liquidation_anchor or (
-                getattr(sold_data, '_hyper_pricing', False) and sold_data.avg_price or sold_data.median_price
+            reference_price = effective_sold.liquidation_anchor or (
+                getattr(effective_sold, '_hyper_pricing', False) and effective_sold.avg_price or effective_sold.median_price
             )
-            downside_reference = sold_data.downside_anchor or (reference_price * 0.85)
+            downside_reference = effective_sold.downside_anchor or (reference_price * 0.85)
 
             # ── Condition adjustment: if source is worse condition than comps, haircut reference ──
             source_condition, _, _ = parse_condition(item.title, brand=detected_brand or "")
@@ -2032,9 +2238,9 @@ class GapHunter:
             # A listing >90% below a $200+ market is virtually never a real deal —
             # it's a wrong match (keyword stuffing, different category entirely).
             # Both the $13 Dr. Martens and extreme Vinted outliers are caught here.
-            if gap_percent >= IMPLAUSIBLE_GAP_CAP and sold_data.median_price >= IMPLAUSIBLE_GAP_MIN_MARKET:
+            if gap_percent >= IMPLAUSIBLE_GAP_CAP and effective_sold.median_price >= IMPLAUSIBLE_GAP_MIN_MARKET:
                 logger.info(
-                    f"    🚫 Implausible gap {gap_percent*100:.0f}% on ${sold_data.median_price:.0f} market "
+                    f"    🚫 Implausible gap {gap_percent*100:.0f}% on ${effective_sold.median_price:.0f} market "
                     f"(listed ${item.price:.0f}) — likely wrong match: {item.title[:50]}"
                 )
                 self.stats.setdefault("implausible_gap_skipped", 0)
@@ -2043,8 +2249,8 @@ class GapHunter:
                 continue
 
             # 3-tier confidence-gated thresholds
-            comp_confidence = getattr(sold_data, '_confidence', 'medium')
-            comp_cv = getattr(sold_data, '_cv', None)
+            comp_confidence = getattr(effective_sold, '_confidence', 'medium')
+            comp_cv = getattr(effective_sold, '_cv', None)
             effective_min_profit = MIN_PROFIT_DOLLARS
             if comp_confidence == "high" and (comp_cv is None or comp_cv < 0.5):
                 effective_min_gap = MIN_GAP_PERCENT * 0.83  # ~25% for high confidence
@@ -2054,41 +2260,41 @@ class GapHunter:
                 effective_min_gap = MIN_GAP_PERCENT * 1.07  # ~32% for medium
 
             # Lower profit threshold for liquid items (high comp count + safe downside)
-            if sold_data.count >= 12 and downside_profit > 30:
+            if effective_sold.count >= 12 and downside_profit > 30:
                 effective_min_profit = 50.0
 
             if gap_percent >= effective_min_gap and profit >= effective_min_profit:
-                pricing_conf = (sold_data.pricing_confidence or getattr(sold_data, '_confidence', 'medium')).lower()
+                pricing_conf = (effective_sold.pricing_confidence or getattr(effective_sold, '_confidence', 'medium')).lower()
                 pricing_bonus = {"high": 12.0, "medium": 6.0, "low": 0.0}.get(pricing_conf, 0.0)
                 downside_bonus = max(0.0, downside_profit) * 0.10
                 mos_score = max(0.0, downside_profit) + pricing_bonus + downside_bonus
 
                 # Build comp snapshots for frontend persistence
-                _titles = getattr(sold_data, 'comp_titles', None) or []
-                _prices = getattr(sold_data, 'comp_prices', None) or []
-                _urls = getattr(sold_data, 'comp_urls', None) or []
+                _titles = getattr(effective_sold, 'comp_titles', None) or []
+                _prices = getattr(effective_sold, 'comp_prices', None) or []
+                _urls = getattr(effective_sold, 'comp_urls', None) or []
                 _snapshots = []
                 for _i, _t in enumerate(_titles[:15]):
                     _snapshots.append({
                         "title": _t,
-                        "price": _prices[_i] if _i < len(_prices) else sold_data.avg_price,
+                        "price": _prices[_i] if _i < len(_prices) else effective_sold.avg_price,
                         "url": _urls[_i] if _i < len(_urls) else None,
                     })
 
                 deals.append(GapDeal(
                     item=item,
-                    sold_avg=sold_data.avg_price,
+                    sold_avg=effective_sold.avg_price,
                     gap_percent=gap_percent,
                     profit_estimate=profit,
-                    sold_count=sold_data.count,
-                    query=query,
-                    comp_confidence=getattr(sold_data, '_confidence', 'medium'),
-                    comp_confidence_level=getattr(sold_data, '_confidence_level', getattr(sold_data, '_confidence', 'medium')),
-                    comp_cv=getattr(sold_data, '_cv', None),
-                    authenticated_comps=getattr(sold_data, '_authenticated_comps', 0),
-                    comp_auth_confidence=getattr(sold_data, '_auth_confidence', 0.0),
-                    hyper_pricing=getattr(sold_data, '_hyper_pricing', False),
-                    comp_confidence_penalty=getattr(sold_data, 'comp_confidence_penalty', 0),
+                    sold_count=effective_sold.count,
+                    query=item_comp_query if is_item_specific else query,
+                    comp_confidence=getattr(effective_sold, '_confidence', 'medium'),
+                    comp_confidence_level=getattr(effective_sold, '_confidence_level', getattr(effective_sold, '_confidence', 'medium')),
+                    comp_cv=getattr(effective_sold, '_cv', None),
+                    authenticated_comps=getattr(effective_sold, '_authenticated_comps', 0),
+                    comp_auth_confidence=getattr(effective_sold, '_auth_confidence', 0.0),
+                    hyper_pricing=getattr(effective_sold, '_hyper_pricing', False),
+                    comp_confidence_penalty=getattr(effective_sold, 'comp_confidence_penalty', 0),
                     liquidation_anchor=reference_price,
                     downside_anchor=downside_reference,
                     expected_net_profit=profit,
@@ -2105,7 +2311,7 @@ class GapHunter:
                         downside_profit / max(1.0, effective_min_profit * 0.35),
                     )
                     if closeness >= 0.65:
-                        pricing_conf = (sold_data.pricing_confidence or getattr(sold_data, '_confidence', 'medium')).lower()
+                        pricing_conf = (effective_sold.pricing_confidence or getattr(effective_sold, '_confidence', 'medium')).lower()
                         pricing_bonus = {"high": 12.0, "medium": 6.0, "low": 0.0}.get(pricing_conf, 0.0)
                         downside_bonus = max(0.0, downside_profit) * 0.10
                         mos_score = max(0.0, downside_profit) + pricing_bonus + downside_bonus
@@ -2715,6 +2921,7 @@ class GapHunter:
         """
         self.cycle_count += 1
         self.cycles_since_prune += 1
+        self._item_comp_cache.clear()  # Fresh per-item comp cache each cycle
         cycle_start = time.time()
         
         # ── Periodic data pruning ──
@@ -2966,6 +3173,8 @@ class GapHunter:
                 f"collab_floor={self.stats.get('collab_floor_skipped', 0)} | "
                 f"collab_model={self.stats.get('collab_model_skipped', 0)} | "
                 f"implausible={self.stats.get('implausible_gap_skipped', 0)} | "
+                f"item_comp_hits={self.stats.get('item_specific_comp_hits', 0)} | "
+                f"item_comp_misses={self.stats.get('item_specific_comp_misses', 0)} | "
                 f"seen={len(self.seen_ids)}"
             )
 
