@@ -158,6 +158,8 @@ class ScoredComp:
     num_bids: Optional[int] = None
     shipping_cost: Optional[float] = None
     normalized_price: Optional[float] = None  # After all normalizations
+    phash: Optional[str] = None
+    image_url: Optional[str] = None
 
 
 @dataclass
@@ -310,6 +312,35 @@ def build_search_queries(parsed: ParsedTitle) -> List[Tuple[str, float]]:
             unique.append((q_clean, score))
     
     return unique
+
+
+def image_similarity_boost(listing_phash: str = None, comp_phash: str = None) -> float:
+    """Convert pHash hamming distance to a scoring multiplier.
+
+    Returns:
+        1.2  — strong visual match (distance <= 5)
+        1.0  — neutral (either hash missing, or moderate distance 6-15)
+        0.7  — visual mismatch (distance 16-25)
+        0.5  — strong visual mismatch (distance > 25)
+    """
+    if not listing_phash or not comp_phash:
+        return 1.0
+    if len(listing_phash) != len(comp_phash):
+        return 1.0
+    try:
+        n1, n2 = int(listing_phash, 16), int(comp_phash, 16)
+        distance = bin(n1 ^ n2).count("1")
+    except (ValueError, TypeError):
+        return 1.0
+
+    if distance <= 5:
+        return 1.2
+    elif distance <= 15:
+        return 1.0
+    elif distance <= 25:
+        return 0.7
+    else:
+        return 0.5
 
 
 MODEL_MISMATCH_PENALTY = 0.25
@@ -883,7 +914,7 @@ def save_sold_comp_to_db(search_key: str, item, brand: str = ""):
             "brand": brand or item.brand,
             "sold_price": item.price,
             "size": getattr(item, "size", None),
-            "image_url": getattr(item, "image_url", None),
+            "image_url": item.images[0] if getattr(item, "images", None) else None,
             "sold_url": item.url,
         }
         save_sold_comp(search_key, comp_data)

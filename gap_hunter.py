@@ -665,13 +665,14 @@ def compute_weighted_price(
     brand: str,
     sold_items: list,
     sold_data,
+    listing_phash: str = None,
 ) -> Optional[SoldData]:
     """Score each comp against the listing and compute similarity-weighted pricing.
 
     Returns a new SoldData with recalculated prices, or None if no comps
     are similar enough (hard gate: 0 comps above 0.5 similarity).
     """
-    from scrapers.comp_matcher import parse_title, score_comp_similarity
+    from scrapers.comp_matcher import parse_title, score_comp_similarity, image_similarity_boost
     from db.sqlite_models import get_comp_quality_scores, get_pair_quality_scores_batch
 
     if not sold_items:
@@ -733,6 +734,12 @@ def compute_weighted_price(
             comp_quality_score=q_score,
             rejection_reasons=comp_reasons,
         )
+
+        # Image similarity boost (neutral when either hash is missing)
+        comp_phash = getattr(comp, 'phash', None)
+        img_boost = image_similarity_boost(listing_phash, comp_phash)
+        similarity = similarity * img_boost
+
         scored.append((comp, similarity))
 
     if not scored:

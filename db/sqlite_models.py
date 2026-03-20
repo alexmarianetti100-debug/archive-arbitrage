@@ -347,6 +347,9 @@ def init_db():
         ("sold_comps", "rejection_reasons", "TEXT DEFAULT '{}'"),
         ("sold_comps", "quality_score", "REAL DEFAULT 1.0"),
         ("sold_comps", "last_rejected_at", "TEXT"),
+        ("sold_comps", "image_url", "TEXT"),
+        ("sold_comps", "phash", "TEXT"),
+        ("item_comps", "snapshot_phash", "TEXT"),
     ]
     for table, col, col_type in migrations:
         _add_column_if_missing(c, table, col, col_type)
@@ -485,6 +488,7 @@ def init_db():
         "CREATE INDEX IF NOT EXISTS idx_items_phash ON items(phash)",
         "CREATE INDEX IF NOT EXISTS idx_items_product_id ON items(product_id)",
         "CREATE INDEX IF NOT EXISTS idx_sold_comps_brand ON sold_comps(brand)",
+        "CREATE INDEX IF NOT EXISTS idx_sold_comps_phash ON sold_comps(phash)",
         "CREATE INDEX IF NOT EXISTS idx_sold_comps_search_key ON sold_comps(search_key)",
         "CREATE INDEX IF NOT EXISTS idx_products_fingerprint ON products(fingerprint_hash)",
         "CREATE INDEX IF NOT EXISTS idx_products_brand ON products(brand)",
@@ -944,19 +948,20 @@ def save_sold_comp(search_key: str, comp: Dict[str, Any]):
             conn.close()
             return
     c.execute("""
-        INSERT INTO sold_comps (search_key, brand, title, sold_price, size, sold_url, source, source_id, condition, sold_date)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO sold_comps (search_key, brand, title, sold_price, size, sold_url, source, source_id, condition, sold_date, image_url)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         search_key,
         comp.get("brand"),
         comp.get("title"),
         comp.get("sold_price") or comp.get("price"),
         comp.get("size"),
-        comp.get("sold_url") or comp.get("url"),
+        comp.get("sold_url") or comp.get("url") or None,
         source,
         source_id,
         comp.get("condition"),
         comp.get("sold_date"),
+        comp.get("image_url"),
     ))
     conn.commit()
     conn.close()
@@ -1048,6 +1053,42 @@ def get_comp_rejection_reasons_batch(source_id_pairs: list) -> dict:
             except (json.JSONDecodeError, TypeError):
                 pass
 
+    conn.close()
+    return result
+
+
+def update_sold_comp_phash(source: str, source_id: str, phash: str):
+    """Store computed pHash on a sold_comp."""
+    conn = _get_conn()
+    c = conn.cursor()
+    c.execute(
+        "UPDATE sold_comps SET phash = ? WHERE source = ? AND source_id = ?",
+        (phash, source, source_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_sold_comp_phashes_batch(source_id_pairs: list) -> dict:
+    """Batch lookup pHashes for sold comps by (source, source_id).
+    Returns dict of (source, source_id) -> phash string or None.
+    """
+    if not source_id_pairs:
+        return {}
+    result = {}
+    conn = _get_conn()
+    c = conn.cursor()
+    placeholders = " OR ".join(["(source = ? AND source_id = ?)"] * len(source_id_pairs))
+    params = []
+    for source, source_id in source_id_pairs:
+        params.extend([source, source_id])
+    c.execute(
+        f"SELECT source, source_id, phash FROM sold_comps WHERE {placeholders}",
+        params,
+    )
+    for row in c.fetchall():
+        if row["phash"]:
+            result[(row["source"], row["source_id"])] = row["phash"]
     conn.close()
     return result
 
