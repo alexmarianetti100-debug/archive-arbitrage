@@ -813,6 +813,12 @@ def compute_weighted_price(
     result.comp_conditions = [getattr(c, 'condition', None) for c in surviving_comps]
     result.comp_sold_dates = [getattr(c, 'sold_date', None) for c in surviving_comps]
     result.comp_phashes = [getattr(c, 'phash', None) for c in surviving_comps]
+    result.comp_image_urls = [
+        (getattr(c, 'images', None) or [None])[0]
+        if hasattr(c, 'images')
+        else getattr(c, 'image_url', None)
+        for c in surviving_comps
+    ]
     result._confidence = getattr(sold_data, '_confidence', 'medium')
     result._cv = getattr(sold_data, '_cv', None)
     result._hyper_pricing = getattr(sold_data, '_hyper_pricing', False)
@@ -2422,6 +2428,7 @@ class GapHunter:
                 _conditions = getattr(effective_sold, 'comp_conditions', None) or []
                 _sold_dates = getattr(effective_sold, 'comp_sold_dates', None) or []
                 _phashes = getattr(effective_sold, 'comp_phashes', None) or []
+                _image_urls = getattr(effective_sold, 'comp_image_urls', None) or []
                 _sim_scores = getattr(effective_sold, '_similarity_scores', None) or []
                 _snapshots = []
                 for _i, _t in enumerate(_titles[:10]):
@@ -2434,6 +2441,7 @@ class GapHunter:
                         "condition": _conditions[_i] if _i < len(_conditions) else None,
                         "sold_date": _sold_dates[_i] if _i < len(_sold_dates) else None,
                         "phash": _phashes[_i] if _i < len(_phashes) else None,
+                        "image_url": _image_urls[_i] if _i < len(_image_urls) else None,
                         "similarity_score": _sim_scores[_i] if _i < len(_sim_scores) else None,
                     })
 

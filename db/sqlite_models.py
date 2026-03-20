@@ -1226,6 +1226,20 @@ def persist_scored_comps(item_id: int, snapshots: list, context_model: str = "un
         for row in c.fetchall():
             sold_comp_ids[(row["source"], row["source_id"])] = row["id"]
 
+    # Backfill image_url on sold_comps where it's NULL
+    for snap in snapshots:
+        img_url = snap.get("image_url")
+        if not img_url:
+            continue
+        source = snap.get("source", "grailed")
+        source_id = snap.get("source_id", "")
+        sc_id = sold_comp_ids.get((source, source_id))
+        if sc_id is not None:
+            c.execute(
+                "UPDATE sold_comps SET image_url = ? WHERE id = ? AND image_url IS NULL",
+                (img_url, sc_id),
+            )
+    conn.commit()
     conn.close()
 
     # Build item_comp entries with real scores
