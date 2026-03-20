@@ -40,6 +40,9 @@ from scrapers import (
     GrailedScraper,
     PoshmarkScraper,
     EbayScraper,
+    TheRealRealScraper,
+    FashionphileScraper,
+    SecondStreetScraper,
     ARCHIVE_BRANDS,
     PRIORITY_BRANDS,
     ScrapedItem,
@@ -55,7 +58,7 @@ except ImportError:
 from scrapers.trending_analyzer import TrendingAnalyzer, save_report
 from api.services.pricing import PricingService
 from db.sqlite_models import init_db, save_item, Item
-from alerts import AlertService, AlertItem, alert_if_profitable
+from core.alerts import AlertService, AlertItem, alert_if_profitable
 
 # Telegram alerts
 try:
@@ -66,7 +69,7 @@ except Exception:
 
 # Authenticity checker
 try:
-    from authenticity_v2 import AuthenticityCheckerV2
+    from core.authenticity_v2 import AuthenticityCheckerV2
     AUTH_V2_AVAILABLE = True
 except Exception:
     AUTH_V2_AVAILABLE = False
@@ -109,6 +112,9 @@ ALL_SOURCES = {
     "grailed": GrailedScraper,
     "poshmark": PoshmarkScraper,
     "ebay": EbayScraper,
+    "therealreal": TheRealRealScraper,
+    "fashionphile": FashionphileScraper,
+    "2ndstreet": SecondStreetScraper,
 }
 
 # Mercari runs in a subprocess (Playwright crashes event loop otherwise)
@@ -138,7 +144,6 @@ def detect_category(title: str) -> str | None:
         "hoodie": ["hoodie", "hooded", "pullover"],
         "sweater": ["sweater", "knit", "cardigan"],
         "shoes": ["shoes", "sneakers", "boots"],
-        "bag": ["bag", "backpack", "tote"],
     }
     for cat, kws in cats.items():
         if any(kw in title_lower for kw in kws):

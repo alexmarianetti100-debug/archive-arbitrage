@@ -1,0 +1,80 @@
+{
+  "www.vinted.sk|/|v_udt": {
+    "name": "v_udt",
+    "value": "QmF3YjlWL1VYUU1wN3V5RGVIbXlhei9uMHgrSC0teUFvTnA3Z09TcmFuZ2hxZS0tZGlFNjZQcDJtM25JS3FrVWpyTW5wUT09",
+    "domain": "www.vinted.sk",
+    "path": "/",
+    "secure": false,
+    "expires": 1807414740,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  },
+  "www.vinted.sk|/|anon_id": {
+    "name": "anon_id",
+    "value": "9ad8f357-2652-4128-970f-4f39b133a096",
+    "domain": "www.vinted.sk",
+    "path": "/",
+    "secure": false,
+    "expires": 1807414740,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  },
+  "www.vinted.sk|/|anonymous-locale": {
+    "name": "anonymous-locale",
+    "value": "sk-fr",
+    "domain": "www.vinted.sk",
+    "path": "/",
+    "secure": false,
+    "expires": 1807414740,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  },
+  ".www.vinted.sk|/|non_dot_com_www_domain_cookie_buster": {
+    "name": "non_dot_com_www_domain_cookie_buster",
+    "value": "1",
+    "domain": ".www.vinted.sk",
+    "path": "/",
+    "secure": false,
+    "expires": 1775446753,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  },
+  ".www.vinted.sk|/|refresh_token_web": {
+    "name": "refresh_token_web",
+    "value": "eyJraWQiOiJFNTdZZHJ1SHBsQWp1MmNObzFEb3JIM2oyN0J1NS1zX09QNVB3UGlobjVNIiwiYWxnIjoiUFMyNTYifQ.eyJhcHBfaWQiOjQsImF1ZCI6ImZyLmNvcmUuYXBpIiwiY2xpZW50X2lkIjoid2ViIiwiZXhwIjoxNzczNDU5NTUyLCJpYXQiOjE3NzI4NTQ3NTIsImlzcyI6InZpbnRlZC1pYW0tc2VydmljZSIsInB1cnBvc2UiOiJyZWZyZXNoIiwic2NvcGUiOiJwdWJsaWMiLCJzaWQiOiIyZjdhMGMwYy0xNzcyODU0NzUyIn0.ydfCjzkhTWccGm3pzAJpao3e_K0AS4spfwWAu9XmLrzrViMRv1FwRoKiTmkpEqqjjS7TlGj7LhSYKuAPDigDuMNJhDL4V93Xj6uDsnCgtw8WlHkHsrjxjoqqVSlNC8MwHTIbtmotJ8OdRDdY-ufFN3-sB1rpqRXpjBbYh9fpLJqnWbf8weRn6vA7baeNge_fx3RFzlccbFfiZXlhmPD2vfPLo7s1vRbMklkxcjo9AnHouSuGm84Exl1gmmBXioJ9WPNm7CMavqeWuBisPQfPZDl8jjcYiqPAN5MuFneqzfuBZhNWQgW4VgC0mKk3EEqBGxtTogZnN6sgpvs0fCUm4w",
+    "domain": ".www.vinted.sk",
+    "path": "/",
+    "secure": true,
+    "expires": 1773459553,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  },
+  ".vinted.sk|/|access_token_web": {
+    "name": "access_token_web",
+    "value": "eyJraWQiOiJFNTdZZHJ1SHBsQWp1MmNObzFEb3JIM2oyN0J1NS1zX09QNVB3UGlobjVNIiwiYWxnIjoiUFMyNTYifQ.eyJhcHBfaWQiOjQsImF1ZCI6ImZyLmNvcmUuYXBpIiwiY2xpZW50X2lkIjoid2ViIiwiZXhwIjoxNzcyODYxOTUyLCJpYXQiOjE3NzI4NTQ3NTIsImlzcyI6InZpbnRlZC1pYW0tc2VydmljZSIsInB1cnBvc2UiOiJhY2Nlc3MiLCJzY29wZSI6InB1YmxpYyIsInNpZCI6IjJmN2EwYzBjLTE3NzI4NTQ3NTIifQ.xY7l35wcJ-6jcr23WlgBnQnJC2IAopHzjKzqTqfzfp4lvji_s47z0JTWzYzsnprZxjas-nJTW1e0Nh8PsOiTw6rWhdWWEBVGDuyTGw9VlF09ad_2VGg1hD9Arn4hErxal-ANnfhoZeSjimZRK0JoyQXLTSKWsy3tbhL9Zi16p1zzM8-VIF2P76nmBJeKuRlHM4GDf8CBSxlkXLx4dIki65g97Ac4LNJchpcPemfDVZhEYmQiGSujPQeqtw1v89iXpV-B10iU0tfCyce0WB7FXKBQjNjaVnYGUrNc9TMcFfpG_kFtUngf2D4kHivH9wjFq7_8hbyPGxrbjBuFwTzDqg",
+    "domain": ".vinted.sk",
+    "path": "/",
+    "secure": true,
+    "expires": 1773459553,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  }
+}

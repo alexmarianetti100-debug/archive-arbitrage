@@ -23,12 +23,18 @@ from core.japan_cost_calculator import (
     is_arbitrage_profitable,
     PROXY_SERVICES,
 )
-from core.blue_chip_targets import BLUE_CHIP_WATCHES, BLUE_CHIP_BAGS, BLUE_CHIP_JEWELRY, BLUE_CHIP_FASHION
+from core.blue_chip_targets import BLUE_CHIP_JEWELRY, BLUE_CHIP_FASHION
 from core.mercari_scraper import MercariJapanScraper, MercariItem
 from core.rakuma_scraper import RakumaJapanScraper, RakumaItem
 from core.mercari_direct import MercariDirectScraper, HAS_MERCAPI
 from core.robust_scraper import MercariRobustScraper
 from core.yahoo_auctions_jp import YahooAuctionsScraper, YahooAuctionItem
+from core.jp_query_translator import (
+    build_japan_targets,
+    normalize_jp_query,
+    propagate_english_tiers_to_japan,
+    translate_query,
+)
 
 logger = logging.getLogger("japan_integration")
 
@@ -269,83 +275,13 @@ class JapanDealAlert:
 
 class JapanArbitrageMonitor:
     """Monitor Japanese auctions for arbitrage opportunities."""
-    
+
     # Exchange rate
     JPY_TO_USD = 0.0067
-    
-    # Search queries optimized for Japanese market (Yahoo Auctions, Mercari, Rakuma)
-    # Japanese queries use native terms and popular search patterns in Japan
+
+    # Legacy fallback targets — only used when TrendEngine is unavailable.
+    # New queries flow through TrendEngine → jp_query_translator automatically.
     SEARCH_TARGETS = [
-        # ===== WATCHES (時計) =====
-        # Rolex - most popular luxury watch in Japan
-        {'jp': 'ロレックス デイトジャスト', 'en': 'rolex datejust', 'category': 'watch', 'brand': 'Rolex', 'weight': 0.3},
-        {'jp': 'ロレックス サブマリーナ', 'en': 'rolex submariner', 'category': 'watch', 'brand': 'Rolex', 'weight': 0.3},
-        {'jp': 'ロレックス GMT マスター', 'en': 'rolex gmt master', 'category': 'watch', 'brand': 'Rolex', 'weight': 0.3},
-        {'jp': 'ロレックス エクスプローラー', 'en': 'rolex explorer', 'category': 'watch', 'brand': 'Rolex', 'weight': 0.3},
-        {'jp': 'ロレックス デイデイト', 'en': 'rolex day-date', 'category': 'watch', 'brand': 'Rolex', 'weight': 0.3},
-        {'jp': 'ロレックス ヨットマスター', 'en': 'rolex yacht-master', 'category': 'watch', 'brand': 'Rolex', 'weight': 0.3},
-        {'jp': 'ロレックス オイスター', 'en': 'rolex oyster perpetual', 'category': 'watch', 'brand': 'Rolex', 'weight': 0.3},
-        
-        # Cartier - extremely popular in Japan, especially among women
-        {'jp': 'カルティエ タンク', 'en': 'cartier tank', 'category': 'watch', 'brand': 'Cartier', 'weight': 0.3},
-        {'jp': 'カルティエ サントス', 'en': 'cartier santos', 'category': 'watch', 'brand': 'Cartier', 'weight': 0.3},
-        {'jp': 'カルティエ バロンブルー', 'en': 'cartier ballon bleu', 'category': 'watch', 'brand': 'Cartier', 'weight': 0.3},
-        {'jp': 'カルティエ パンテール', 'en': 'cartier panthere', 'category': 'watch', 'brand': 'Cartier', 'weight': 0.3},
-        
-        # Omega - strong following in Japan
-        {'jp': 'オメガ スピードマスター', 'en': 'omega speedmaster', 'category': 'watch', 'brand': 'Omega', 'weight': 0.3},
-        {'jp': 'オメガ シーマスター', 'en': 'omega seamaster', 'category': 'watch', 'brand': 'Omega', 'weight': 0.3},
-        {'jp': 'オメガ コンステレーション', 'en': 'omega constellation', 'category': 'watch', 'brand': 'Omega', 'weight': 0.3},
-        
-        # High-end watches
-        {'jp': 'パテックフィリップ ノーチラス', 'en': 'patek philippe nautilus', 'category': 'watch', 'brand': 'Patek Philippe', 'weight': 0.3},
-        {'jp': 'パテックフィリップ アクアノート', 'en': 'patek philippe aquanaut', 'category': 'watch', 'brand': 'Patek Philippe', 'weight': 0.3},
-        {'jp': 'オーデマピゲ ロイヤルオーク', 'en': 'audemars piguet royal oak', 'category': 'watch', 'brand': 'Audemars Piguet', 'weight': 0.3},
-        {'jp': 'ヴァシュロンコンスタンタン', 'en': 'vacheron constantin', 'category': 'watch', 'brand': 'Vacheron Constantin', 'weight': 0.3},
-        {'jp': 'ブレゲ マリーン', 'en': 'breguet marine', 'category': 'watch', 'brand': 'Breguet', 'weight': 0.3},
-        {'jp': 'ブルガリ オクト', 'en': 'bvlgari octo', 'category': 'watch', 'brand': 'Bulgari', 'weight': 0.3},
-        
-        # Japanese watch brands (popular domestically)
-        {'jp': 'グランドセイコー', 'en': 'grand seiko', 'category': 'watch', 'brand': 'Grand Seiko', 'weight': 0.3},
-        {'jp': 'セイコー プロスペックス', 'en': 'seiko prospex', 'category': 'watch', 'brand': 'Seiko', 'weight': 0.3},
-        
-        # ===== BAGS (バッグ) =====
-        # Hermès - extremely high demand in Japan
-        {'jp': 'エルメス バーキン', 'en': 'hermes birkin', 'category': 'bag', 'brand': 'Hermès', 'weight': 0.8},
-        {'jp': 'エルメス ケリー', 'en': 'hermes kelly', 'category': 'bag', 'brand': 'Hermès', 'weight': 0.8},
-        {'jp': 'エルメス コンスタンス', 'en': 'hermes constance', 'category': 'bag', 'brand': 'Hermès', 'weight': 0.6},
-        {'jp': 'エルメス ピコタン', 'en': 'hermes picotin', 'category': 'bag', 'brand': 'Hermès', 'weight': 0.5},
-        {'jp': 'エルメス エブリン', 'en': 'hermes evelyne', 'category': 'bag', 'brand': 'Hermès', 'weight': 0.5},
-        {'jp': 'エルメス リンディ', 'en': 'hermes lindy', 'category': 'bag', 'brand': 'Hermès', 'weight': 0.6},
-        {'jp': 'エルメス ガーデンパーティ', 'en': 'hermes garden party', 'category': 'bag', 'brand': 'Hermès', 'weight': 0.5},
-        {'jp': 'エルメス ボリード', 'en': 'hermes bolide', 'category': 'bag', 'brand': 'Hermès', 'weight': 0.5},
-        
-        # Chanel - very popular in Japan
-        {'jp': 'シャネル マトラッセ', 'en': 'chanel classic flap', 'category': 'bag', 'brand': 'Chanel', 'weight': 0.6},
-        {'jp': 'シャネル ボーイシャネル', 'en': 'chanel boy bag', 'category': 'bag', 'brand': 'Chanel', 'weight': 0.6},
-        {'jp': 'シャネル 19', 'en': 'chanel 19', 'category': 'bag', 'brand': 'Chanel', 'weight': 0.6},
-        {'jp': 'シャネル WOC', 'en': 'chanel wallet on chain', 'category': 'bag', 'brand': 'Chanel', 'weight': 0.4},
-        {'jp': 'シャネル ココハンドル', 'en': 'chanel coco handle', 'category': 'bag', 'brand': 'Chanel', 'weight': 0.5},
-        {'jp': 'シャネル GST', 'en': 'chanel gst', 'category': 'bag', 'brand': 'Chanel', 'weight': 0.5},
-        
-        # Louis Vuitton - accessible luxury, high volume
-        {'jp': 'ルイヴィトン スピーディ', 'en': 'louis vuitton speedy', 'category': 'bag', 'brand': 'Louis Vuitton', 'weight': 0.5},
-        {'jp': 'ルイヴィトン ネヴァーフル', 'en': 'louis vuitton neverfull', 'category': 'bag', 'brand': 'Louis Vuitton', 'weight': 0.5},
-        {'jp': 'ルイヴィトン アルマ', 'en': 'louis vuitton alma', 'category': 'bag', 'brand': 'Louis Vuitton', 'weight': 0.5},
-        {'jp': 'ルイヴィトン キーポル', 'en': 'louis vuitton keepall', 'category': 'bag', 'brand': 'Louis Vuitton', 'weight': 0.6},
-        {'jp': 'ルイヴィトン ポシェット', 'en': 'louis vuitton pochette', 'category': 'bag', 'brand': 'Louis Vuitton', 'weight': 0.3},
-        {'jp': 'ルイヴィトン モノグラム', 'en': 'louis vuitton monogram', 'category': 'bag', 'brand': 'Louis Vuitton', 'weight': 0.5},
-        
-        # Other luxury bags
-        {'jp': 'ゴヤール サンルイ', 'en': 'goyard saint louis', 'category': 'bag', 'brand': 'Goyard', 'weight': 0.5},
-        {'jp': 'ゴヤール アンジュ', 'en': 'goyard anjou', 'category': 'bag', 'brand': 'Goyard', 'weight': 0.5},
-        {'jp': 'セリーヌ ボックス', 'en': 'celine box bag', 'category': 'bag', 'brand': 'Celine', 'weight': 0.5},
-        {'jp': 'セリーヌ ラゲージ', 'en': 'celine luggage', 'category': 'bag', 'brand': 'Celine', 'weight': 0.6},
-        {'jp': 'セリーヌ トリオンフ', 'en': 'celine triomphe', 'category': 'bag', 'brand': 'Celine', 'weight': 0.5},
-        {'jp': 'ロエベ パズル', 'en': 'loewe puzzle', 'category': 'bag', 'brand': 'Loewe', 'weight': 0.6},
-        {'jp': 'ボッテガヴェネタ カセット', 'en': 'bottega veneta cassette', 'category': 'bag', 'brand': 'Bottega Veneta', 'weight': 0.5},
-        {'jp': 'プラダ ナイロン', 'en': 'prada nylon bag', 'category': 'bag', 'brand': 'Prada', 'weight': 0.4},
-        
         # ===== JEWELRY (ジュエリー) =====
         # Chrome Hearts - cult following in Japan
         {'jp': 'クロムハーツ リング', 'en': 'chrome hearts ring', 'category': 'jewelry', 'brand': 'Chrome Hearts', 'weight': 0.1},
@@ -354,27 +290,6 @@ class JapanArbitrageMonitor:
         {'jp': 'クロムハーツ ペンダント', 'en': 'chrome hearts pendant', 'category': 'jewelry', 'brand': 'Chrome Hearts', 'weight': 0.1},
         {'jp': 'クロムハーツ ピアス', 'en': 'chrome hearts earrings', 'category': 'jewelry', 'brand': 'Chrome Hearts', 'weight': 0.1},
         
-        # Van Cleef - extremely popular in Japan
-        {'jp': 'ヴァンクリーフ アルハンブラ', 'en': 'van cleef alhambra', 'category': 'jewelry', 'brand': 'Van Cleef & Arpels', 'weight': 0.1},
-        {'jp': 'ヴァンクリーフ フリヴォル', 'en': 'van cleef frivole', 'category': 'jewelry', 'brand': 'Van Cleef & Arpels', 'weight': 0.1},
-        
-        # Cartier jewelry
-        {'jp': 'カルティエ ラブブレス', 'en': 'cartier love bracelet', 'category': 'jewelry', 'brand': 'Cartier', 'weight': 0.1},
-        {'jp': 'カルティエ ラブリング', 'en': 'cartier love ring', 'category': 'jewelry', 'brand': 'Cartier', 'weight': 0.1},
-        {'jp': 'カルティエ ジャストアンクル', 'en': 'cartier juste un clou', 'category': 'jewelry', 'brand': 'Cartier', 'weight': 0.1},
-        {'jp': 'カルティエ トリニティ', 'en': 'cartier trinity', 'category': 'jewelry', 'brand': 'Cartier', 'weight': 0.1},
-        
-        # Tiffany - popular in Japan
-        {'jp': 'ティファニー Tワイヤー', 'en': 'tiffany t wire', 'category': 'jewelry', 'brand': 'Tiffany', 'weight': 0.1},
-        {'jp': 'ティファニー リターントゥ', 'en': 'tiffany return to', 'category': 'jewelry', 'brand': 'Tiffany', 'weight': 0.1},
-        {'jp': 'ティファニー オープンハート', 'en': 'tiffany open heart', 'category': 'jewelry', 'brand': 'Tiffany', 'weight': 0.1},
-        
-        # Other jewelry
-        {'jp': 'ブルガリ セルペンティ', 'en': 'bvlgari serpenti', 'category': 'jewelry', 'brand': 'Bulgari', 'weight': 0.1},
-        {'jp': 'ブルガリ ビーゼロワン', 'en': 'bvlgari b zero1', 'category': 'jewelry', 'brand': 'Bulgari', 'weight': 0.1},
-        {'jp': 'エルメス クリッククラック', 'en': 'hermes clic clac', 'category': 'jewelry', 'brand': 'Hermès', 'weight': 0.1},
-        {'jp': 'エルメス ケリーブレス', 'en': 'hermes kelly bracelet', 'category': 'jewelry', 'brand': 'Hermès', 'weight': 0.1},
-        {'jp': 'ショーメ リアン', 'en': 'chaumet liens', 'category': 'jewelry', 'brand': 'Chaumet', 'weight': 0.1},
         
         # ===== FASHION (ファッション) =====
         # Rick Owens - strong following in Japan
@@ -427,13 +342,8 @@ class JapanArbitrageMonitor:
         # Undercover
         {'jp': 'アンダーカバー ジャケット', 'en': 'undercover jacket', 'category': 'fashion', 'brand': 'Undercover', 'weight': 0.8},
         {'jp': 'アンダーカバー アーツアンドクラフツ', 'en': 'undercover arts and crafts', 'category': 'fashion', 'brand': 'Undercover', 'weight': 0.8},
-        # Yohji Yamamoto
-        {'jp': 'ヨウジヤマモト コート', 'en': 'yohji yamamoto coat', 'category': 'fashion', 'brand': 'Yohji Yamamoto', 'weight': 1.0},
-        {'jp': 'ヨウジヤマモト ジャケット', 'en': 'yohji yamamoto jacket', 'category': 'fashion', 'brand': 'Yohji Yamamoto', 'weight': 1.0},
         # Comme des Garcons
         {'jp': 'コムデギャルソン ジャケット', 'en': 'comme des garcons jacket', 'category': 'fashion', 'brand': 'Comme des Garcons', 'weight': 0.8},
-        # Junya Watanabe
-        {'jp': 'ジュンヤワタナベ コート', 'en': 'junya watanabe coat', 'category': 'fashion', 'brand': 'Junya Watanabe', 'weight': 0.8},
         # Vivienne Westwood
         {'jp': 'ヴィヴィアンウエストウッド オーブ', 'en': 'vivienne westwood orb', 'category': 'fashion', 'brand': 'Vivienne Westwood', 'weight': 0.3},
         {'jp': 'ヴィヴィアンウエストウッド アーマーリング', 'en': 'vivienne westwood armor ring', 'category': 'fashion', 'brand': 'Vivienne Westwood', 'weight': 0.1},
@@ -1171,6 +1081,47 @@ class JapanArbitrageMonitor:
         
         return items
 
+    async def _get_trend_engine_targets(self, n: int = 20) -> list[dict]:
+        """Pull English queries from TrendEngine, translate to JP targets.
+
+        Uses English tier data as a starting prior for JP scoring.
+        Falls back to legacy SEARCH_TARGETS if TrendEngine unavailable.
+        """
+        try:
+            from trend_engine import TrendEngine
+
+            engine = TrendEngine()
+            en_queries = await engine.get_cycle_targets(n=n)
+            if not en_queries:
+                raise ValueError("TrendEngine returned empty targets")
+
+            # Load perf data for tier propagation
+            en_perf_file = Path(__file__).parent.parent / "data" / "trends" / "query_performance.json"
+            en_perf = {}
+            if en_perf_file.exists():
+                try:
+                    with open(en_perf_file) as f:
+                        en_perf = json.load(f)
+                except Exception:
+                    pass
+
+            jp_perf = _load_japan_perf()
+
+            targets = propagate_english_tiers_to_japan(en_perf, jp_perf, en_queries)
+            if targets:
+                logger.info(
+                    f"TrendEngine provided {len(en_queries)} EN queries → "
+                    f"{len(targets)} translatable JP targets"
+                )
+                return targets
+
+            logger.warning("No EN queries could be translated to JP — falling back to legacy targets")
+        except Exception as e:
+            logger.warning(f"TrendEngine unavailable for JP targets: {e} — falling back to legacy")
+
+        # Fallback: use legacy hardcoded targets
+        return prioritize_japan_targets(self.SEARCH_TARGETS)
+
     async def scan_for_opportunities(self, include_mercari: bool = True, include_rakuma: bool = False) -> List[JapanDealAlert]:
         """Scan all targets for arbitrage opportunities."""
         all_opportunities = []
@@ -1181,13 +1132,15 @@ class JapanArbitrageMonitor:
             logger.warning("Rakuma scanning disabled on macOS due to browser stability issues")
             include_rakuma = False
 
-        # Prioritize targets using golden catalog + Japan telemetry
-        ordered_targets = prioritize_japan_targets(self.SEARCH_TARGETS)
+        # Get targets from TrendEngine (with fallback to legacy SEARCH_TARGETS)
+        ordered_targets = await self._get_trend_engine_targets(n=25)
 
         logger.info(f"Starting Japan arbitrage scan with {len(ordered_targets)} targets")
         logger.info(f"Platforms: Yahoo Auctions" + (", Mercari" if include_mercari else "") + (", Rakuma" if include_rakuma else ""))
 
         for target in ordered_targets:
+            # Normalize JP query before scraping (full-width/half-width, spacing, NFC)
+            target['jp'] = normalize_jp_query(target['jp'])
             logger.info(f"Scanning: {target['en']} (JP: {target['jp']})")
             
             items = []

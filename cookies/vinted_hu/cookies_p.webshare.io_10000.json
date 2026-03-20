@@ -1,0 +1,80 @@
+{
+  "www.vinted.hu|/|v_udt": {
+    "name": "v_udt",
+    "value": "Mm1QUUw2SlFocjNLTlBOaHVaaExmZHBFWVl2Ui0tY2Z5VEsyYzVwV0VBYUFXTi0taWJXdENjUjhCaEloOE9mYW5xbmlQUT09",
+    "domain": "www.vinted.hu",
+    "path": "/",
+    "secure": false,
+    "expires": 1807415760,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  },
+  "www.vinted.hu|/|anon_id": {
+    "name": "anon_id",
+    "value": "f2341270-7fd3-4d4e-a869-412ab5c48f4e",
+    "domain": "www.vinted.hu",
+    "path": "/",
+    "secure": false,
+    "expires": 1807415760,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  },
+  "www.vinted.hu|/|anonymous-locale": {
+    "name": "anonymous-locale",
+    "value": "hu-fr",
+    "domain": "www.vinted.hu",
+    "path": "/",
+    "secure": false,
+    "expires": 1807415760,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  },
+  ".www.vinted.hu|/|non_dot_com_www_domain_cookie_buster": {
+    "name": "non_dot_com_www_domain_cookie_buster",
+    "value": "1",
+    "domain": ".www.vinted.hu",
+    "path": "/",
+    "secure": false,
+    "expires": 1775447768,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  },
+  ".www.vinted.hu|/|refresh_token_web": {
+    "name": "refresh_token_web",
+    "value": "eyJraWQiOiJFNTdZZHJ1SHBsQWp1MmNObzFEb3JIM2oyN0J1NS1zX09QNVB3UGlobjVNIiwiYWxnIjoiUFMyNTYifQ.eyJhcHBfaWQiOjQsImF1ZCI6ImZyLmNvcmUuYXBpIiwiY2xpZW50X2lkIjoid2ViIiwiZXhwIjoxNzczNDYwNTY2LCJpYXQiOjE3NzI4NTU3NjYsImlzcyI6InZpbnRlZC1pYW0tc2VydmljZSIsInB1cnBvc2UiOiJyZWZyZXNoIiwic2NvcGUiOiJwdWJsaWMiLCJzaWQiOiJlOGIzMDkyNC0xNzcyODU1NzY2In0.esqGprJ7YQDOwRKWeLW6wtu6IgoZdviuE39dT-BuZo46WGiKI-ZcCppOSJXNcIfus4gEPKQJ1uOH85XKKhzzfNiLakWKea9_SJor0GTtHKG3vMSZA-L8Bszgr6hbzS1OGcS2UV17Nc41cFVTxIyz-Fdw9irbRz0FL-qDhXkPWD2i3mNtcSFq9stXglVl2TV9LtTfaB7zdv-cRkWFfC_NjiUJ_kROxfVL_H3t2f0P025RG1jpoHh2Hu1ThroqCrq_qX7JrIkbFE7zr-ga8NYQkE3pq4Y2JU32IU8JlGjF940UmteZFzC96pvMHNqQ4JXkg9Tx0ow-1RaYe_YRdal-Vg",
+    "domain": ".www.vinted.hu",
+    "path": "/",
+    "secure": true,
+    "expires": 1773460568,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  },
+  ".vinted.hu|/|access_token_web": {
+    "name": "access_token_web",
+    "value": "eyJraWQiOiJFNTdZZHJ1SHBsQWp1MmNObzFEb3JIM2oyN0J1NS1zX09QNVB3UGlobjVNIiwiYWxnIjoiUFMyNTYifQ.eyJhcHBfaWQiOjQsImF1ZCI6ImZyLmNvcmUuYXBpIiwiY2xpZW50X2lkIjoid2ViIiwiZXhwIjoxNzcyODYyOTY2LCJpYXQiOjE3NzI4NTU3NjYsImlzcyI6InZpbnRlZC1pYW0tc2VydmljZSIsInB1cnBvc2UiOiJhY2Nlc3MiLCJzY29wZSI6InB1YmxpYyIsInNpZCI6ImU4YjMwOTI0LTE3NzI4NTU3NjYifQ.JiKNAx_rDDPCF4TYUZvCIcvPemq8Tmf6kORrTLe2a0Z_LywwJ0eYRUO_2jqOkLjKsnWkZdmYmxawBqc7vcEWV2xxnuCiS9pTbzEU8izL3LpmjC-Dx9_dydGSqhBMwWA02lyI5LUBk9w3RFdNo7G-RwHgS1cvcEjfKrZgoXn3lVix10aSX9jLtIP0cImpPolI8xA-lcqOTrJaAoeAT9_OXDU4kJnjsTV1T_gO3cFbH8km2r2zbAa6SneitDr0ow670kidxSyfkx1pWnwd0DAtNLCw_jokZgVZmik3PAU2cxXNMTZGQQzbuhmzuZYLghKFNOgskxrPQI-AtTwqnYO7fQ",
+    "domain": ".vinted.hu",
+    "path": "/",
+    "secure": true,
+    "expires": 1773460568,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  }
+}

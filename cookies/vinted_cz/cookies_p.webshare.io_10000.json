@@ -1,0 +1,93 @@
+{
+  "www.vinted.cz|/|v_udt": {
+    "name": "v_udt",
+    "value": "TFlieVhHdWxzMmMvNkVySHJRaWc3OFJhWlRZRS0tYkx1bkRQNlZSZCtNd1pDRC0tRGlDaVNONFZVVjVKVzlzOFNrOGFnZz09",
+    "domain": "www.vinted.cz",
+    "path": "/",
+    "secure": false,
+    "expires": 1807420860,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  },
+  "www.vinted.cz|/|anon_id": {
+    "name": "anon_id",
+    "value": "78b8cd5c-4950-4365-ba82-7e916fa1e3c2",
+    "domain": "www.vinted.cz",
+    "path": "/",
+    "secure": false,
+    "expires": 1807420860,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  },
+  "www.vinted.cz|/|anonymous-locale": {
+    "name": "anonymous-locale",
+    "value": "cz-fr",
+    "domain": "www.vinted.cz",
+    "path": "/",
+    "secure": false,
+    "expires": 1807420860,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  },
+  ".www.vinted.cz|/|non_dot_com_www_domain_cookie_buster": {
+    "name": "non_dot_com_www_domain_cookie_buster",
+    "value": "1",
+    "domain": ".www.vinted.cz",
+    "path": "/",
+    "secure": false,
+    "expires": 1775452834,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  },
+  ".www.vinted.cz|/|refresh_token_web": {
+    "name": "refresh_token_web",
+    "value": "eyJraWQiOiJFNTdZZHJ1SHBsQWp1MmNObzFEb3JIM2oyN0J1NS1zX09QNVB3UGlobjVNIiwiYWxnIjoiUFMyNTYifQ.eyJhcHBfaWQiOjQsImF1ZCI6ImZyLmNvcmUuYXBpIiwiY2xpZW50X2lkIjoid2ViIiwiZXhwIjoxNzczNDY1NjMzLCJpYXQiOjE3NzI4NjA4MzMsImlzcyI6InZpbnRlZC1pYW0tc2VydmljZSIsInB1cnBvc2UiOiJyZWZyZXNoIiwic2NvcGUiOiJwdWJsaWMiLCJzaWQiOiIwMWNhNjAwZS0xNzcyODYwODMzIn0.f5ugjcPT3ePedUt_mR2yQ83etvyj8y6IYi3eNTejXKaI_Ri0mgjMmIFMyXdaQim99FZOmxodhdgVws0BEK_SClE0MxiWlOcaDEQ8tMSX9ocaGZF44dnDNiygHjO_TMndQyJ-NAmt7dpidvnUBSodUK0KLkQVcm0Ll0w0DHgV6SN0N7y44COIV5DT0sma71JgA-h7rux2KqLfsIC1unKhej_lzW8tF12ys6S272yY_pTufMp5sdOomLm9ppcECnu927Lg44hoF7LzJzO6S4bEiekDymj0Xud89y17h49mbpu_PGJDIKjeR4JOeBnKQ-vu_YufY44Hpnn_aiAXHuBeyA",
+    "domain": ".www.vinted.cz",
+    "path": "/",
+    "secure": true,
+    "expires": 1773465634,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  },
+  ".vinted.cz|/|access_token_web": {
+    "name": "access_token_web",
+    "value": "eyJraWQiOiJFNTdZZHJ1SHBsQWp1MmNObzFEb3JIM2oyN0J1NS1zX09QNVB3UGlobjVNIiwiYWxnIjoiUFMyNTYifQ.eyJhcHBfaWQiOjQsImF1ZCI6ImZyLmNvcmUuYXBpIiwiY2xpZW50X2lkIjoid2ViIiwiZXhwIjoxNzcyODY4MDMzLCJpYXQiOjE3NzI4NjA4MzMsImlzcyI6InZpbnRlZC1pYW0tc2VydmljZSIsInB1cnBvc2UiOiJhY2Nlc3MiLCJzY29wZSI6InB1YmxpYyIsInNpZCI6IjAxY2E2MDBlLTE3NzI4NjA4MzMifQ.WuPGbt-DGj4czN9qMhJtl3lKpC5VwyxjmCCTPb2ch40CthF14bRhm1n_uopy1vq26h5ncpmWzP5o04a15cOqwLY9j0MZLDiTB2oVwXoRVNlLQlKBFsOrot9fdgakz1ESFcBBF_HhV_4TRqxMUlRSE8f8MR_Lfwj3GT9v9DfftHOBhlGJ1ANoh49k8gigb8HMCUgT2h8m27hms4WOWBg7KoGrdFHZO9b_2l7-5Zt6muAscOe23HtSEjGIAOQFJ0vvY7eCHRsm3XXO9IkCFq5LBxYmC7-vYjdKGvPOpEK8o0v2kdrg73EaYTlForO6M7RP8KWus1pZ0jCub1SV9XnpUg",
+    "domain": ".vinted.cz",
+    "path": "/",
+    "secure": true,
+    "expires": 1773465634,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  },
+  ".vinted.cz|/|__cf_bm": {
+    "name": "__cf_bm",
+    "value": "JaHX_JfqLbXjk4xtBRH_iRrA4hJo0ZHiAYCtxVL9r8Q-1772860834-1.0.1.1-mJk1gDzJvk4S8uv6ueyTx6Q09fxx8wX4ZOBalZRBR3GfK6ceUsg9Ib7c9VbYP5xUTbqsZiB4irmF3okcDpRGJkrioWiK0z8B4..KN4BT_.JGi3mBpw9PDpnEEYoI18zK",
+    "domain": ".vinted.cz",
+    "path": "/",
+    "secure": true,
+    "expires": 1772862634,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  }
+}

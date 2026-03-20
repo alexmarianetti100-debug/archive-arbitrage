@@ -66,7 +66,7 @@ TIER_A_BRANDS = [
 
 # Group B: High demand, checked every 2nd cycle
 TIER_B_BRANDS = [
-    "enfants riches deprimes", "hysteric glamour", "yohji yamamoto",
+    "enfants riches deprimes", "hysteric glamour",
     "comme des garcons", "issey miyake", "thierry mugler",
     "balenciaga", "saint laurent", "prada", "gucci",
     "kapital", "julius", "ann demeulemeester",
@@ -79,7 +79,7 @@ TIER_C_BRANDS = [
     "supreme", "off-white", "gallery dept", "amiri",
     "bape", "human made", "cav empt", "wacko maria",
     "neighborhood", "wtaps", "visvim", "sacai",
-    "junya watanabe", "dries van noten",
+    "dries van noten",
 ]
 
 # Targeted searches for specific grails (rotated in)
@@ -404,7 +404,7 @@ class RealtimeMonitor:
             "vivienne westwood", "maison margiela", "martin margiela", "margiela",
             "dior homme", "dior", "thierry mugler", "mugler",
             "enfants riches deprimes", "erd", "hysteric glamour",
-            "yohji yamamoto", "comme des garcons", "cdg",
+            "comme des garcons", "cdg",
             "issey miyake", "kapital", "carol christian poell",
             "boris bidjan saberi", "julius", "ann demeulemeester",
             "vetements", "alexander mcqueen",
@@ -412,7 +412,7 @@ class RealtimeMonitor:
             "prada", "gucci", "louis vuitton", "supreme", "off-white",
             "gallery dept", "amiri", "bape", "human made",
             "cav empt", "wacko maria", "neighborhood", "wtaps",
-            "visvim", "sacai", "junya watanabe", "dries van noten",
+            "visvim", "sacai", "dries van noten",
         ]
         for brand in brands:
             if brand in title_lower:

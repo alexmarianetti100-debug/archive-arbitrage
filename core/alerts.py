@@ -34,8 +34,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Discord webhook URL
-WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL", "")
+# Discord webhook URL — fall back to beginner tier webhook if single URL not set
+WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL", "") or os.getenv("DISCORD_WEBHOOK_BEGINNER", "")
 
 # Alert thresholds — configurable via .env, sensible defaults
 DEFAULT_MIN_PROFIT = float(os.getenv("ALERT_MIN_PROFIT", "150"))

@@ -45,6 +45,30 @@ SIZE_ADJUSTMENTS = {
         "9": 1.00, "9.5": 1.00, "10": 1.00, "10.5": 1.00,
         "11": 0.98, "11.5": 0.97, "12": 0.95, "13": 0.90, "14": 0.85,
     },
+    "rings": {
+        # Ring sizes (US) — smaller sizes command premiums due to rarity
+        # Most common sizes are 8-10 (baseline). Smaller = rarer = premium.
+        "4": 1.25, "4.5": 1.22, "5": 1.20, "5.5": 1.18,
+        "6": 1.15, "6.5": 1.12, "7": 1.08, "7.5": 1.05,
+        "8": 1.02, "8.5": 1.00, "9": 1.00, "9.5": 1.00,
+        "10": 0.98, "10.5": 0.97, "11": 0.95, "11.5": 0.93,
+        "12": 0.90, "13": 0.85, "14": 0.80,
+        # EU ring sizes
+        "47": 1.20, "48": 1.18, "49": 1.15, "50": 1.12,
+        "51": 1.08, "52": 1.05, "53": 1.02, "54": 1.00,
+        "55": 1.00, "56": 1.00, "57": 0.98, "58": 0.97,
+        "59": 0.95, "60": 0.93, "61": 0.90, "62": 0.88,
+        "63": 0.85, "64": 0.82,
+    },
+    "bracelets": {
+        # Bracelet sizes — less variation than rings
+        "xs": 1.05, "s": 1.02, "m": 1.00, "l": 0.98, "xl": 0.95,
+        "6": 1.05, "6.5": 1.02, "7": 1.00, "7.5": 0.98, "8": 0.95,
+    },
+    "necklaces": {
+        # Necklace/chain lengths — standard length is baseline
+        "16": 1.05, "18": 1.00, "20": 1.00, "22": 0.98, "24": 0.95,
+    },
 }
 
 # ══════════════════════════════════════════════════════════════
@@ -115,6 +139,26 @@ BRAND_SIZE_OVERRIDES = {
             "s": 1.15, "m": 1.10, "l": 1.00, "xl": 0.95, "xxl": 0.88,
         },
     },
+    "chrome hearts": {
+        "rings": {
+            # CH rings — small sizes are significantly rarer and command premiums
+            # Most CH rings are produced in sizes 8-11, smaller sizes are special order
+            "4": 1.35, "4.5": 1.30, "5": 1.28, "5.5": 1.25,
+            "6": 1.22, "6.5": 1.18, "7": 1.12, "7.5": 1.08,
+            "8": 1.05, "8.5": 1.02, "9": 1.00, "9.5": 1.00,
+            "10": 0.98, "10.5": 0.97, "11": 0.95, "11.5": 0.93,
+            "12": 0.88, "13": 0.82,
+            # EU ring sizes
+            "47": 1.28, "48": 1.25, "49": 1.22, "50": 1.18,
+            "51": 1.12, "52": 1.08, "53": 1.05, "54": 1.02,
+            "55": 1.00, "56": 1.00, "57": 0.98, "58": 0.97,
+            "59": 0.95, "60": 0.93, "61": 0.88,
+        },
+        "bracelets": {
+            # CH bracelets — most are adjustable but specific sizes exist
+            "xs": 1.10, "s": 1.05, "m": 1.00, "l": 0.98, "xl": 0.95,
+        },
+    },
 }
 
 
@@ -131,23 +175,45 @@ def normalize_size(size_str: str) -> str:
 
 
 def detect_item_category(item_type: str) -> str:
-    """Map item_type to size category."""
+    """Map item_type to size adjustment category."""
     item_type = (item_type or "").lower()
 
-    footwear = ["boots", "shoes", "sneakers", "sandals", "slides", "derbies", "loafers", "mules"]
-    bottoms = ["pants", "jeans", "trousers", "shorts", "denim", "cargo"]
-    outerwear = ["jacket", "coat", "parka", "bomber", "blazer", "vest"]
-    # Default tops: tee, shirt, hoodie, sweater, etc.
+    # Direct match for fingerprint-detected types
+    DIRECT_MAP = {
+        "rings": "rings",
+        "bracelets": "bracelets",
+        "necklaces": "necklaces",
+        "earrings": "necklaces",  # no size adjustments, use necklaces as proxy
+        "footwear": "footwear",
+        "outerwear": "outerwear",
+        "pants": "bottoms",
+        "shorts": "bottoms",
+        "bags": "tops",         # bags don't have size-based pricing
+        "hats": "tops",         # hats are mostly one-size
+        "belts": "tops",        # belts have length but not tracked
+        "wallets": "tops",      # one-size
+        "eyewear": "tops",      # one-size
+        "hoodies": "tops",
+        "sweaters": "tops",
+        "shirts": "tops",
+        "t-shirts": "tops",
+    }
+    if item_type in DIRECT_MAP:
+        return DIRECT_MAP[item_type]
 
-    for kw in footwear:
-        if kw in item_type:
-            return "footwear"
-    for kw in bottoms:
-        if kw in item_type:
-            return "bottoms"
-    for kw in outerwear:
-        if kw in item_type:
-            return "outerwear"
+    # Keyword fallback for non-fingerprinted types
+    if any(kw in item_type for kw in ["ring", "band", "signet"]):
+        return "rings"
+    if any(kw in item_type for kw in ["bracelet", "cuff", "bangle"]):
+        return "bracelets"
+    if any(kw in item_type for kw in ["necklace", "pendant", "chain"]):
+        return "necklaces"
+    if any(kw in item_type for kw in ["boots", "shoes", "sneakers", "sandals", "loafers", "derbies", "mules"]):
+        return "footwear"
+    if any(kw in item_type for kw in ["pants", "jeans", "trousers", "shorts", "denim", "cargo"]):
+        return "bottoms"
+    if any(kw in item_type for kw in ["jacket", "coat", "parka", "bomber", "blazer"]):
+        return "outerwear"
     return "tops"
 
 

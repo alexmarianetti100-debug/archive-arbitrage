@@ -1,0 +1,80 @@
+{
+  "www.vinted.ro|/|v_udt": {
+    "name": "v_udt",
+    "value": "OFEwMG1KUWVKMkl3N01teUYyWFdCY0V4ZVFKby0tSFVUejh4QWpoaU4wWXBkYS0tNXl0WFYyNzNqaytHNDYyRTNvcWFqQT09",
+    "domain": "www.vinted.ro",
+    "path": "/",
+    "secure": false,
+    "expires": 1807414680,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  },
+  "www.vinted.ro|/|anon_id": {
+    "name": "anon_id",
+    "value": "3d35aa84-b264-49d0-91a6-40e8bb6fbb0d",
+    "domain": "www.vinted.ro",
+    "path": "/",
+    "secure": false,
+    "expires": 1807414680,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  },
+  "www.vinted.ro|/|anonymous-locale": {
+    "name": "anonymous-locale",
+    "value": "ro-fr",
+    "domain": "www.vinted.ro",
+    "path": "/",
+    "secure": false,
+    "expires": 1807414680,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  },
+  ".www.vinted.ro|/|non_dot_com_www_domain_cookie_buster": {
+    "name": "non_dot_com_www_domain_cookie_buster",
+    "value": "1",
+    "domain": ".www.vinted.ro",
+    "path": "/",
+    "secure": false,
+    "expires": 1775446705,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  },
+  ".www.vinted.ro|/|refresh_token_web": {
+    "name": "refresh_token_web",
+    "value": "eyJraWQiOiJFNTdZZHJ1SHBsQWp1MmNObzFEb3JIM2oyN0J1NS1zX09QNVB3UGlobjVNIiwiYWxnIjoiUFMyNTYifQ.eyJhcHBfaWQiOjQsImF1ZCI6ImZyLmNvcmUuYXBpIiwiY2xpZW50X2lkIjoid2ViIiwiZXhwIjoxNzczNDU5NTA1LCJpYXQiOjE3NzI4NTQ3MDUsImlzcyI6InZpbnRlZC1pYW0tc2VydmljZSIsInB1cnBvc2UiOiJyZWZyZXNoIiwic2NvcGUiOiJwdWJsaWMiLCJzaWQiOiJlYjAzODQzMi0xNzcyODU0NzA1In0.qybut6FIaYBj6aeOgbpvQ2ptbUOQhaANjrIjmqOWb4yOkGS4itYKLV6nXZ-PvZN511rfU5XAomIJGwsY3VPLfM_EjITo2SwkU2UWrNOhQRje9wUYwzTHcBO6JSaDbij8a9hXRHywUXUaG9NNzPkJVSIq0l87TITrJvNEkIZLXiVMIk6aerBef0z0QUQcH0gLh7VCTR5mVzosjX9nr8iA3Mk_nOwQlh18GrIxdKUw8Y-tG2MlGjjWiloiBpGGHvzSVFU6opBfO-iqiTAU71Z3JUQmCGFMf8hqfx1sfhBeMwgcwcQTLf_3mVIxd2XHV29R_yP5HdFEmDixLLZcJZiLxw",
+    "domain": ".www.vinted.ro",
+    "path": "/",
+    "secure": true,
+    "expires": 1773459505,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  },
+  ".vinted.ro|/|access_token_web": {
+    "name": "access_token_web",
+    "value": "eyJraWQiOiJFNTdZZHJ1SHBsQWp1MmNObzFEb3JIM2oyN0J1NS1zX09QNVB3UGlobjVNIiwiYWxnIjoiUFMyNTYifQ.eyJhcHBfaWQiOjQsImF1ZCI6ImZyLmNvcmUuYXBpIiwiY2xpZW50X2lkIjoid2ViIiwiZXhwIjoxNzcyODYxOTA1LCJpYXQiOjE3NzI4NTQ3MDUsImlzcyI6InZpbnRlZC1pYW0tc2VydmljZSIsInB1cnBvc2UiOiJhY2Nlc3MiLCJzY29wZSI6InB1YmxpYyIsInNpZCI6ImViMDM4NDMyLTE3NzI4NTQ3MDUifQ.QVctvbwkiKNTJfzyEkMVpol0hZmr-6zs6yhXvq1oSpKOO_oiVDgMaDluXG76K-cXN37Zldd0sCvjv1548wsHLB-VrXWhi4VIVUH0pfXs2hRCsmoWOCJ0cNS-j9les0SqHEmWnZ5qP5rm5aUtZwoxxnCNmgiwpaRsj2XGa1BCZTRZirP3pws0VUCanp5-HbTAdVVSPKI4G8Yl5ok6DOqto5SMVq4ODtConKB50JHJaCyUIXzrD-35EAu1rHcEivyZaGyY8HUPy1jO0hib_8UHm77GuVbmsBz9PZcHt-yMTDHK1QKmPhc3f-ePqoIPtEH7vRAl0ZyR2nw6CxPFylF2pg",
+    "domain": ".vinted.ro",
+    "path": "/",
+    "secure": true,
+    "expires": 1773459505,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  }
+}

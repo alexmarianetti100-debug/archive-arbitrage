@@ -97,10 +97,24 @@ BRAND_MARKET_ESTIMATES = {
     "our legacy": {"jacket": 350, "pants": 200, "shirt": 150, "tee": 80, "default": 170},
     
     # === OTHER ===
-    "enfants riches deprimes": {"jacket": 500, "pants": 300, "shirt": 250, "tee": 200, "hoodie": 350, "default": 300},
-    "erd": {"jacket": 500, "pants": 300, "shirt": 250, "tee": 200, "hoodie": 350, "default": 300},
+    "enfants riches deprimes": {"jacket": 1500, "denim jacket": 800, "bomber": 1200, "pants": 400, "jeans": 500, "shirt": 400, "tee": 400, "long sleeve": 300, "hoodie": 500, "sweater": 600, "flannel": 400, "hat": 200, "belt": 500, "default": 400},
+    "erd": {"jacket": 1500, "denim jacket": 800, "bomber": 1200, "pants": 400, "jeans": 500, "shirt": 400, "tee": 400, "long sleeve": 300, "hoodie": 500, "sweater": 600, "flannel": 400, "hat": 200, "belt": 500, "default": 400},
     "chrome hearts": {"jacket": 2000, "pants": 800, "shirt": 600, "tee": 400, "hoodie": 1000, "default": 800},
-    
+    "celine": {"jacket": 800, "leather jacket": 1200, "boots": 300, "belt": 200, "default": 400},
+    "haider ackermann": {"jacket": 400, "leather jacket": 600, "blazer": 200, "coat": 350, "pants": 150, "default": 250},
+    "dries van noten": {"jacket": 300, "leather jacket": 400, "coat": 300, "blazer": 200, "default": 200},
+    "sacai": {"jacket": 300, "leather jacket": 500, "blazer": 200, "coat": 300, "default": 250},
+    "guidi": {"boots": 300, "jacket": 400, "default": 300},
+    "lemaire": {"jacket": 250, "leather jacket": 400, "coat": 300, "boots": 200, "default": 200},
+    "acne studios": {"jacket": 250, "leather jacket": 350, "shearling": 400, "boots": 150, "default": 150},
+    "simone rocha": {"dress": 200, "jacket": 200, "default": 180},
+    "brunello cucinelli": {"jacket": 350, "leather jacket": 600, "sweater": 200, "coat": 400, "default": 250},
+    "soloist": {"jacket": 300, "leather jacket": 500, "boots": 250, "default": 300},
+    "takahiromiyashita": {"jacket": 300, "leather jacket": 500, "boots": 250, "default": 300},
+    "hysteric glamour": {"jacket": 300, "leather jacket": 500, "denim jacket": 200, "jeans": 150, "tee": 100, "knit": 120, "default": 150},
+    "louis vuitton": {"keepall": 800, "bag": 600, "wallet": 300, "trainer": 400, "default": 400},
+    "chanel": {"classic flap": 4000, "bag": 2500, "espadrilles": 400, "slingbacks": 400, "default": 500},
+
     # Default for unknown brands
     "_default": {"jacket": 200, "pants": 120, "shirt": 100, "tee": 60, "hoodie": 150, "default": 100},
 }

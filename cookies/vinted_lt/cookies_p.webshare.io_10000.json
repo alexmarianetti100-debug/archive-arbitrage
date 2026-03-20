@@ -1,0 +1,93 @@
+{
+  "www.vinted.lt|/|v_udt": {
+    "name": "v_udt",
+    "value": "OWpuQXVLc2RNMlJTV3RyaFNtNVY1VXlRenZoby0tMllHTzNCLzB1VithdG0vRC0tZzdXdVZOUVAvN0c4UFlvUnhhd1NnUT09",
+    "domain": "www.vinted.lt",
+    "path": "/",
+    "secure": false,
+    "expires": 1807415760,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  },
+  "www.vinted.lt|/|anon_id": {
+    "name": "anon_id",
+    "value": "a66e88c4-0345-48fd-a3d1-6af4827cf973",
+    "domain": "www.vinted.lt",
+    "path": "/",
+    "secure": false,
+    "expires": 1807415760,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  },
+  "www.vinted.lt|/|anonymous-locale": {
+    "name": "anonymous-locale",
+    "value": "lt-fr",
+    "domain": "www.vinted.lt",
+    "path": "/",
+    "secure": false,
+    "expires": 1807415760,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  },
+  ".www.vinted.lt|/|non_dot_com_www_domain_cookie_buster": {
+    "name": "non_dot_com_www_domain_cookie_buster",
+    "value": "1",
+    "domain": ".www.vinted.lt",
+    "path": "/",
+    "secure": false,
+    "expires": 1775447760,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  },
+  ".www.vinted.lt|/|refresh_token_web": {
+    "name": "refresh_token_web",
+    "value": "eyJraWQiOiJFNTdZZHJ1SHBsQWp1MmNObzFEb3JIM2oyN0J1NS1zX09QNVB3UGlobjVNIiwiYWxnIjoiUFMyNTYifQ.eyJhcHBfaWQiOjQsImF1ZCI6ImZyLmNvcmUuYXBpIiwiY2xpZW50X2lkIjoid2ViIiwiZXhwIjoxNzczNDYwNTYwLCJpYXQiOjE3NzI4NTU3NjAsImlzcyI6InZpbnRlZC1pYW0tc2VydmljZSIsInB1cnBvc2UiOiJyZWZyZXNoIiwic2NvcGUiOiJwdWJsaWMiLCJzaWQiOiJmNDQ4MjBiMy0xNzcyODU1NzYwIn0.rkEKmtE7JLc1-gdrc3SBx-yEhSkEw4GyDQML0I0LMsQZyh_fB6XuJmVIkcKf4pFKEDbRlHTvZ3mLTQOQimh3tI8f3rBKoR-AcXs3OZRsaQ8Us8UU0oiVvrk9mO7vRMkOHGt5z1jsYL5UH0cwzHjUjfNycHTWR5Qdc0osOQ0zFQoHcO-L40xzi9jXOeyq9PyGUyT8klcPMAs4wAwQKTGEaQz-4Gqx9Ua4Z8_Mu7x21oV3l5uB5oEFzAEFXmE9z2I1LvEnXiEewLKXbpwR9brzLAB-lI0J9bAPy3Z7sYNJDVfRAnfA16BkF41I-t7Ci-oUH8-NCkcVpkXZdxVSeykTpw",
+    "domain": ".www.vinted.lt",
+    "path": "/",
+    "secure": true,
+    "expires": 1773460560,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  },
+  ".vinted.lt|/|access_token_web": {
+    "name": "access_token_web",
+    "value": "eyJraWQiOiJFNTdZZHJ1SHBsQWp1MmNObzFEb3JIM2oyN0J1NS1zX09QNVB3UGlobjVNIiwiYWxnIjoiUFMyNTYifQ.eyJhcHBfaWQiOjQsImF1ZCI6ImZyLmNvcmUuYXBpIiwiY2xpZW50X2lkIjoid2ViIiwiZXhwIjoxNzcyODYyOTYwLCJpYXQiOjE3NzI4NTU3NjAsImlzcyI6InZpbnRlZC1pYW0tc2VydmljZSIsInB1cnBvc2UiOiJhY2Nlc3MiLCJzY29wZSI6InB1YmxpYyIsInNpZCI6ImY0NDgyMGIzLTE3NzI4NTU3NjAifQ.gMzzZ_XPrHOZ7Afm3-sVfCxppgd1CdGkFeeyCjKcoWetL0EbE6TdRNo20m7gBS-FBHhYEn0sVqCPUSjhAgHPiMgTCRaLsmRIeboCi29syqFmyb-Zs4H4-YSw7J3EXJeclBICtcmjm45QulL4XLBUQZ3IqYuj35LJRLIG8ucwBNm4MU5xSLATwanokp68GM9OvUEFyfW4WfUkZ3dT3tGARRW2kuO_tblj1NeaAHjggBzU1oMqUgGAlzJYa2SsWqix63m9lVuW3-I46IkwSOPiWZl3tsojmJQRUV2eRD2amp3hYEAkY2nRD7GW9yyRFFSXStx2E8HcSGSgesVFbXMAyw",
+    "domain": ".vinted.lt",
+    "path": "/",
+    "secure": true,
+    "expires": 1773460560,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  },
+  ".vinted.lt|/|__cf_bm": {
+    "name": "__cf_bm",
+    "value": "psGk0mw_3rZrHeVLHYNzGL7kVacsmSpv_XKPnd0.pBs-1772855760-1.0.1.1-WfgfREDN3ucBMLP8phXpNti92FEnnXQt31s6ScGrbfI3VXQBoaiCwB63OXcxdY99cWGG2KvnCyXaOGdhQ.8YsOf8CSsQ4.xcsp9czChfAfu34QepWkxXO9Cb91OfAjPL",
+    "domain": ".vinted.lt",
+    "path": "/",
+    "secure": true,
+    "expires": 1772857560,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  }
+}

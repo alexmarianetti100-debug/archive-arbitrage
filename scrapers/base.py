@@ -54,6 +54,21 @@ REFERER_CHAINS = {
         "https://www.google.com/search?q=grailed",
         "https://www.grailed.com/",
     ],
+    "therealreal": [
+        "https://www.google.com/",
+        "https://www.google.com/search?q=therealreal",
+        "https://www.therealreal.com/",
+    ],
+    "fashionphile": [
+        "https://www.google.com/",
+        "https://www.google.com/search?q=fashionphile",
+        "https://www.fashionphile.com/",
+    ],
+    "2ndstreet": [
+        "https://www.google.com/",
+        "https://www.google.com/search?q=2nd+street+japan",
+        "https://en.2ndstreet.jp/",
+    ],
     "default": [
         "https://www.google.com/",
     ],

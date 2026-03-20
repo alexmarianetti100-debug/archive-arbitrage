@@ -103,11 +103,11 @@ class TestClassifyAll:
 class TestGetWeightMultiplier:
     def test_a_tier_boost(self):
         perf = {"q": _entry(runs=10, deals=5)}
-        assert get_weight_multiplier("q", perf) == 2.5
+        assert get_weight_multiplier("q", perf) == 3.5
 
     def test_trap_demotion(self):
         perf = {"q": _entry(runs=30, deals=0)}
-        assert get_weight_multiplier("q", perf) == 0.2
+        assert get_weight_multiplier("q", perf) == 0.15
 
     def test_unknown_query_neutral(self):
         assert get_weight_multiplier("never seen", {}) == 1.0
@@ -116,9 +116,9 @@ class TestGetWeightMultiplier:
         """get_weight_multiplier falls back to lowercase key match."""
         perf = {"rick owens boots": _entry(runs=10, deals=5)}
         # Exact key miss but lowercase fallback finds it
-        assert get_weight_multiplier("Rick Owens Boots", perf) == 2.5
+        assert get_weight_multiplier("Rick Owens Boots", perf) == 3.5
         # Direct match also works
-        assert get_weight_multiplier("rick owens boots", perf) == 2.5
+        assert get_weight_multiplier("rick owens boots", perf) == 3.5
 
 
 # ── get_tier_summary ─────────────────────────────────────────────────────────

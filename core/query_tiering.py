@@ -23,6 +23,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
 
+from core.query_normalization import normalize_query
+
 logger = logging.getLogger("query_tiering")
 
 
@@ -47,9 +49,9 @@ TRAP_MAX_DEALS = 0                # must have found exactly 0 deals
 
 # ── Weight multipliers (applied in TrendEngine rotation weighting) ────────────
 TIER_WEIGHT_MULTIPLIERS = {
-    QueryTier.A: 2.5,
+    QueryTier.A: 3.5,
     QueryTier.B: 1.0,
-    QueryTier.TRAP: 0.2,
+    QueryTier.TRAP: 0.15,
 }
 
 
@@ -177,8 +179,9 @@ def get_weight_multiplier(query: str, perf_data: dict) -> float:
     Quick lookup: return the weight multiplier for a query.
     Used directly in TrendEngine's rotation weighting.
     """
-    entry = perf_data.get(query) or perf_data.get(query.lower())
-    result = classify_query(query, entry)
+    canonical = normalize_query(query)
+    entry = perf_data.get(canonical) or perf_data.get(query) or perf_data.get(query.lower())
+    result = classify_query(canonical, entry)
     return result.weight_multiplier
 
 

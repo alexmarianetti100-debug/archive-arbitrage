@@ -1,0 +1,550 @@
+{
+  "timestamp": "2026-03-18T05:50:34.600788",
+  "hot_brands": [
+    [
+      "Post Archive Faction (Paf)",
+      25
+    ],
+    [
+      "Comme Des Garcons Shirt",
+      15
+    ],
+    [
+      "Nike",
+      10
+    ],
+    [
+      "On",
+      8
+    ],
+    [
+      "Brut Archive",
+      7
+    ],
+    [
+      "Comme Des Garcons",
+      7
+    ],
+    [
+      "Balenciaga",
+      6
+    ],
+    [
+      "Samurai Jeans",
+      6
+    ],
+    [
+      "Maison Margiela",
+      5
+    ],
+    [
+      "Rick Owens",
+      5
+    ],
+    [
+      "Band Tees",
+      5
+    ],
+    [
+      "Yohji Yamamoto",
+      5
+    ],
+    [
+      "Japanese Brand",
+      5
+    ],
+    [
+      "Prada",
+      5
+    ],
+    [
+      "Kapital",
+      5
+    ],
+    [
+      "Supreme",
+      5
+    ],
+    [
+      "Nudie Jeans",
+      5
+    ],
+    [
+      "White'S Boots",
+      5
+    ],
+    [
+      "Nicks Boots",
+      5
+    ],
+    [
+      "Aime Leon Dore",
+      4
+    ],
+    [
+      "Adidas",
+      4
+    ],
+    [
+      "Grailz",
+      4
+    ],
+    [
+      "Carhartt",
+      4
+    ],
+    [
+      "Sancho Boots",
+      4
+    ],
+    [
+      "Dr. Martens",
+      3
+    ],
+    [
+      "Designer",
+      3
+    ],
+    [
+      "Acne Studios",
+      3
+    ],
+    [
+      "Raf Simons",
+      3
+    ],
+    [
+      "Aran Sweater Market",
+      3
+    ],
+    [
+      "Justin Boots",
+      3
+    ]
+  ],
+  "hot_categories": [
+    [
+      "jacket",
+      48
+    ],
+    [
+      "t-shirt",
+      38
+    ],
+    [
+      "pants",
+      34
+    ],
+    [
+      "jeans",
+      31
+    ],
+    [
+      "sweater",
+      30
+    ],
+    [
+      "boots",
+      26
+    ],
+    [
+      "hoodie",
+      23
+    ],
+    [
+      "coat",
+      19
+    ],
+    [
+      "sneakers",
+      19
+    ],
+    [
+      "shirt",
+      18
+    ],
+    [
+      "bag",
+      16
+    ],
+    [
+      "shorts",
+      15
+    ]
+  ],
+  "hot_items": [
+    {
+      "query": "Post Archive Faction (Paf) jacket",
+      "brand": "Post Archive Faction (Paf)",
+      "category": "jacket",
+      "sold_count": 25,
+      "avg_price": 194.12,
+      "price_range": [
+        12.0,
+        725.0
+      ],
+      "sample_titles": [
+        "POST ARCHIVE FACTION (PAF) PAF 4.0 Right Nylon Trousers",
+        "POST ARCHIVE FACTION (PAF) San San Gear Slash Jersey Brown",
+        "POST ARCHIVE FACTION (PAF) Post Archive Faction (PAF) Shirri"
+      ],
+      "score": 0.905296
+    },
+    {
+      "query": "Comme Des Garcons Shirt t-shirt",
+      "brand": "Comme Des Garcons Shirt",
+      "category": "t-shirt",
+      "sold_count": 15,
+      "avg_price": 149.53333333333333,
+      "price_range": [
+        18.0,
+        380.0
+      ],
+      "sample_titles": [
+        "Comme des Garcons SHIRT Supreme CDG Polka Dot Box Logo Tee",
+        "Comme des Garcons SHIRT Supreme Comme Des Garcons Shirt Box ",
+        "Comme des Garcons SHIRT Comme des Garcons SHIRT Zipper Tee '"
+      ],
+      "score": 0.5696266666666666
+    },
+    {
+      "query": "Rick Owens pants",
+      "brand": "Rick Owens",
+      "category": "pants",
+      "sold_count": 5,
+      "avg_price": 489.6,
+      "price_range": [
+        315.0,
+        1000.0
+      ],
+      "sample_titles": [
+        "Rick Owens Rick Owens Memphis Cargo Pod Shorts",
+        "Rick Owens Rick owens island dunk",
+        "Rick Owens Rick Owens DRKSHDW full-zip jacket"
+      ],
+      "score": 0.54168
+    },
+    {
+      "query": "Balenciaga sweater",
+      "brand": "Balenciaga",
+      "category": "sweater",
+      "sold_count": 6,
+      "avg_price": 444.1666666666667,
+      "price_range": [
+        85.0,
+        1180.0
+      ],
+      "sample_titles": [
+        "Balenciaga Balenciaga oversized crewneck",
+        "Balenciaga RARE Balenciaga Graffiti Skater T",
+        "Balenciaga Balenciaga Double Leopard Print T-shirt"
+      ],
+      "score": 0.5353333333333334
+    },
+    {
+      "query": "White'S Boots boots",
+      "brand": "White'S Boots",
+      "category": "boots",
+      "sold_count": 5,
+      "avg_price": 391.0,
+      "price_range": [
+        300.0,
+        495.0
+      ],
+      "sample_titles": [
+        "White's Boots White\u2019s Semi-Dress Boots",
+        "White's Boots 9D white\u2019s westbale boots",
+        "White's Boots White\u2019s Boots Northwest LTT Oxford Stumptown T"
+      ],
+      "score": 0.4628
+    },
+    {
+      "query": "On",
+      "brand": "On",
+      "category": null,
+      "sold_count": 8,
+      "avg_price": 240.375,
+      "price_range": [
+        170.0,
+        350.0
+      ],
+      "sample_titles": [
+        "On Post Archive Faction x On Cloud venture peak PAF",
+        "On POST ARCHIVE FACTION Cloudventure Peak Black",
+        "On Cloudventure Peak Black"
+      ],
+      "score": 0.4323
+    },
+    {
+      "query": "Prada jacket",
+      "brand": "Prada",
+      "category": "jacket",
+      "sold_count": 5,
+      "avg_price": 319.0,
+      "price_range": [
+        45.0,
+        1000.0
+      ],
+      "sample_titles": [
+        "Prada Rare Distressed Prada Light Hooded Windbreaker/Jacket",
+        "Prada Prada Linea Rossa Red Tab Vintage Rider Jacket Nylon",
+        "Prada Sneakers"
+      ],
+      "score": 0.4052
+    },
+    {
+      "query": "Nicks Boots boots",
+      "brand": "Nicks Boots",
+      "category": "boots",
+      "sold_count": 5,
+      "avg_price": 308.0,
+      "price_range": [
+        220.0,
+        500.0
+      ],
+      "sample_titles": [
+        "Nicks Boots Nicks Overlander Blackout Max Support Black 9 E",
+        "Nicks Boots Falcon - Black Waxed Flesh",
+        "Nicks Boots Nicks Boots Suede Chelsea"
+      ],
+      "score": 0.3964
+    },
+    {
+      "query": "Brut Archive jacket",
+      "brand": "Brut Archive",
+      "category": "jacket",
+      "sold_count": 7,
+      "avg_price": 182.42857142857142,
+      "price_range": [
+        40.0,
+        425.0
+      ],
+      "sample_titles": [
+        "BRUT Archive Brut Archives University Cap",
+        "BRUT Archive Brut Archives \u2018The Best Sweat\u2019 summer hoodie or",
+        "BRUT Archive Chambray Blazer"
+      ],
+      "score": 0.3559428571428571
+    },
+    {
+      "query": "Aime Leon Dore sweater",
+      "brand": "Aime Leon Dore",
+      "category": "sweater",
+      "sold_count": 4,
+      "avg_price": 273.0,
+      "price_range": [
+        53.0,
+        500.0
+      ],
+      "sample_titles": [
+        "Aime Leon Dore Aim\u00e9 Leon Dore x Woolrich ALD Quilted Down Pu",
+        "Aime Leon Dore Aime Leon Dore x Porsche 993 Turbo Heritage C",
+        "Aime Leon Dore Aime Leon Dore x Woolrich Sweater"
+      ],
+      "score": 0.33840000000000003
+    },
+    {
+      "query": "Comme Des Garcons coat",
+      "brand": "Comme Des Garcons",
+      "category": "coat",
+      "sold_count": 7,
+      "avg_price": 156.0,
+      "price_range": [
+        30.0,
+        351.0
+      ],
+      "sample_titles": [
+        "Comme des Garcons Hoodie",
+        "Comme des Garcons Coat",
+        "Comme des Garcons Comme Des Garcons Car Coat"
+      ],
+      "score": 0.3348
+    },
+    {
+      "query": "Nike pants",
+      "brand": "Nike",
+      "category": "pants",
+      "sold_count": 10,
+      "avg_price": 31.6,
+      "price_range": [
+        3.0,
+        68.0
+      ],
+      "sample_titles": [
+        "Nike Vintage 90s Nike Blue Windbreaker Sweatpants",
+        "Nike Vintage 1990s Nike Athletics Track Jacket",
+        "Nike Vintage Nike Dream Team USA Olympics Barcelona XL"
+      ],
+      "score": 0.32528
+    },
+    {
+      "query": "Yohji Yamamoto shirt",
+      "brand": "Yohji Yamamoto",
+      "category": "shirt",
+      "sold_count": 5,
+      "avg_price": 215.6,
+      "price_range": [
+        33.0,
+        545.0
+      ],
+      "sample_titles": [
+        "Yohji Yamamoto Undefined pleated Shirt Issey Style",
+        "Yohji Yamamoto Yohji Yamamoto 94SS Linen Stripe Light Jacket",
+        "Yohji Yamamoto Vintage Y\u2019s For Men Yohji Yamamoto Black Trou"
+      ],
+      "score": 0.32248
+    },
+    {
+      "query": "Maison Margiela sneakers",
+      "brand": "Maison Margiela",
+      "category": "sneakers",
+      "sold_count": 5,
+      "avg_price": 192.6,
+      "price_range": [
+        65.0,
+        400.0
+      ],
+      "sample_titles": [
+        "Maison Margiela Maison Margiela Upside Down Logo Hoodie",
+        "Maison Margiela SEND OFFER \ud83d\udca5 Maison Margiela 2018 Pants",
+        "Maison Margiela Organic Cotton T Shirt"
+      ],
+      "score": 0.30408
+    },
+    {
+      "query": "Kapital jacket",
+      "brand": "Kapital",
+      "category": "jacket",
+      "sold_count": 5,
+      "avg_price": 181.6,
+      "price_range": [
+        65.0,
+        270.0
+      ],
+      "sample_titles": [
+        "Kapital \ud83d\udd25RARE\ud83d\udd25Kapital \ud83c\uddef\ud83c\uddf5 \u201dSURF\u201d HOODIE",
+        "Kapital Kapital Skeleton Sovenir Skajan Jacket",
+        "Kapital COMBED BURBERRY BRUSH-CAMO EASY PANTS - TURQUOISE"
+      ],
+      "score": 0.29528
+    },
+    {
+      "query": "Samurai Jeans jeans",
+      "brand": "Samurai Jeans",
+      "category": "jeans",
+      "sold_count": 6,
+      "avg_price": 122.33333333333333,
+      "price_range": [
+        34.0,
+        225.0
+      ],
+      "sample_titles": [
+        "Samurai Jeans SAMURAI OVERALLS BY SAMURAI JEANS SHIRT MADE I",
+        "Samurai Jeans SAMURAI JEANS CO. CASUAL SHIRT",
+        "Samurai Jeans VINTAGE SAMURAI JEANS SWEATSHIRT"
+      ],
+      "score": 0.27786666666666665
+    },
+    {
+      "query": "Supreme pants",
+      "brand": "Supreme",
+      "category": "pants",
+      "sold_count": 5,
+      "avg_price": 142.4,
+      "price_range": [
+        97.0,
+        203.0
+      ],
+      "sample_titles": [
+        "Supreme Supreme Camo Cargo Pants",
+        "Supreme Supreme tote bag",
+        "Supreme Supreme Shibori Baggy/Loose Jean SS23"
+      ],
+      "score": 0.26392
+    },
+    {
+      "query": "Band Tees t-shirt",
+      "brand": "Band Tees",
+      "category": "t-shirt",
+      "sold_count": 5,
+      "avg_price": 100.4,
+      "price_range": [
+        32.0,
+        200.0
+      ],
+      "sample_titles": [
+        "Band Tees Vintage Pink Floyd wish you were here shirt single",
+        "Band Tees Vintage Iron Maiden The Final Frontier Tour 2010 T",
+        "Band Tees Vintage Social Distortion Sick Boy graphic T shirt"
+      ],
+      "score": 0.23032
+    },
+    {
+      "query": "Japanese Brand jeans",
+      "brand": "Japanese Brand",
+      "category": "jeans",
+      "sold_count": 5,
+      "avg_price": 75.4,
+      "price_range": [
+        23.0,
+        150.0
+      ],
+      "sample_titles": [
+        "Japanese Brand 00s Japan Brand Crazy Flare Denim Mudwash Jea",
+        "Japanese Brand Iongaf Oil wash Sloodie",
+        "Japanese Brand Rare\u203c\ufe0f Nankai Team Crew Motorcycle Racing Jac"
+      ],
+      "score": 0.21032
+    },
+    {
+      "query": "Nudie Jeans jeans",
+      "brand": "Nudie Jeans",
+      "category": "jeans",
+      "sold_count": 5,
+      "avg_price": 65.0,
+      "price_range": [
+        30.0,
+        130.0
+      ],
+      "sample_titles": [
+        "Nudie Jeans Nudie Jeans W34 L32 \u2013 Thin Finn Slim Fit Denim,J",
+        "Nudie Jeans Nudie Jeans Grim Tim Jeans",
+        "Nudie Jeans Nudie Tuff Tony Dry Twilight Selvage"
+      ],
+      "score": 0.202
+    }
+  ],
+  "recommended_queries": [
+    "Post Archive Faction (Paf)",
+    "Post Archive Faction (Paf) jacket",
+    "Comme Des Garcons Shirt",
+    "Comme Des Garcons Shirt t-shirt",
+    "Rick Owens",
+    "Rick Owens pants",
+    "Balenciaga",
+    "Balenciaga sweater",
+    "White'S Boots",
+    "White'S Boots boots",
+    "On",
+    "Prada",
+    "Prada jacket",
+    "Nicks Boots",
+    "Nicks Boots boots",
+    "Brut Archive",
+    "Brut Archive jacket",
+    "Aime Leon Dore",
+    "Aime Leon Dore sweater",
+    "Comme Des Garcons",
+    "Comme Des Garcons coat",
+    "Nike",
+    "Nike pants",
+    "Yohji Yamamoto",
+    "Yohji Yamamoto shirt",
+    "Maison Margiela",
+    "Maison Margiela sneakers",
+    "Kapital",
+    "Kapital jacket",
+    "jacket"
+  ],
+  "total_items_analyzed": 409
+}

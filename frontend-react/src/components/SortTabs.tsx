@@ -15,26 +15,26 @@ const sortOptions: { value: SortField; label: string }[] = [
 
 export function SortTabs({ value, onChange }: SortTabsProps) {
   return (
-    <div className="flex items-center gap-1 bg-surface rounded-lg p-1">
-      <span className="text-xs text-text-secondary px-2">Sort:</span>
+    <div className="flex items-center gap-0.5 bg-surface rounded-lg p-0.5 border border-border">
+      <span className="font-mono text-[9px] text-text-muted px-2 uppercase tracking-wider">Sort</span>
       {sortOptions.map((option) => {
         const isActive = value === option.value;
-        
+
         return (
           <button
             key={option.value}
             onClick={() => onChange(option.value)}
-            className={`relative px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${
+            className={`relative px-2.5 py-1.5 font-mono text-[11px] rounded transition-all ${
               isActive
-                ? 'text-white'
-                : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover'
+                ? 'text-void'
+                : 'text-text-secondary hover:text-text-primary'
             }`}
           >
             {isActive && (
               <motion.div
                 layoutId="sortActive"
-                className="absolute inset-0 bg-accent rounded-md"
-                transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+                className="absolute inset-0 bg-accent rounded"
+                transition={{ type: 'spring', bounce: 0.15, duration: 0.5 }}
               />
             )}
             <span className="relative z-10">{option.label}</span>

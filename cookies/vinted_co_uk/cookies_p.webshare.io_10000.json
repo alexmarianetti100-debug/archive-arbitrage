@@ -1,0 +1,93 @@
+{
+  "www.vinted.co.uk|/|v_udt": {
+    "name": "v_udt",
+    "value": "eVQ1d2lNek9iVkVJcThDNkh6OVJKZFRhK3VmeC0tUnZ3MTFUa1NaUkJRLzNJdS0tQytrYzMraVRnZTBMNlJycVI3emQ3QT09",
+    "domain": "www.vinted.co.uk",
+    "path": "/",
+    "secure": false,
+    "expires": 1807628160,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  },
+  "www.vinted.co.uk|/|anon_id": {
+    "name": "anon_id",
+    "value": "7ad01024-fb99-4f2b-bd75-b56e9650689d",
+    "domain": "www.vinted.co.uk",
+    "path": "/",
+    "secure": false,
+    "expires": 1807628160,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  },
+  "www.vinted.co.uk|/|anonymous-locale": {
+    "name": "anonymous-locale",
+    "value": "en-uk-fr",
+    "domain": "www.vinted.co.uk",
+    "path": "/",
+    "secure": false,
+    "expires": 1807628160,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  },
+  ".www.vinted.co.uk|/|non_dot_com_www_domain_cookie_buster": {
+    "name": "non_dot_com_www_domain_cookie_buster",
+    "value": "1",
+    "domain": ".www.vinted.co.uk",
+    "path": "/",
+    "secure": false,
+    "expires": 1775660154,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  },
+  ".www.vinted.co.uk|/|refresh_token_web": {
+    "name": "refresh_token_web",
+    "value": "eyJraWQiOiJFNTdZZHJ1SHBsQWp1MmNObzFEb3JIM2oyN0J1NS1zX09QNVB3UGlobjVNIiwiYWxnIjoiUFMyNTYifQ.eyJhcHBfaWQiOjQsImF1ZCI6ImZyLmNvcmUuYXBpIiwiY2xpZW50X2lkIjoid2ViIiwiZXhwIjoxNzczNjcyOTUzLCJpYXQiOjE3NzMwNjgxNTMsImlzcyI6InZpbnRlZC1pYW0tc2VydmljZSIsInB1cnBvc2UiOiJyZWZyZXNoIiwic2NvcGUiOiJwdWJsaWMiLCJzaWQiOiJjNzQzNzZkMC0xNzczMDY4MTUzIn0.uOa84HwxG3WerKNDrgfhDcxfet9JteBume60VwSKQtOIl5Cinx7SA95cGT4U1iPNLiiIa8xudCau-NTnmAQ0MvrHc4Rpv1v94RVDfzgpCyCBjzvPupsxRtpRojIocHMR2b85YBL4ccdhH45ImxLpYUeHEypvm4rwgckP6flm7Q4ZQEYrycLf-z__B0Zc4T7h2nFJpxSTejMHT1QzC_ENbCOEte1OCJrb3IOwxDnM4DGlMJVe7mj9HsmGXzD0Rv1gXBU9jxaOIk9UYqf1fjU-teoHz5gq5AGgQaz9KtjDOCmdg1q271GG7byODbqZeRthvFAofaFIhcKvGo5oh2ru8w",
+    "domain": ".www.vinted.co.uk",
+    "path": "/",
+    "secure": true,
+    "expires": 1773672954,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  },
+  ".vinted.co.uk|/|access_token_web": {
+    "name": "access_token_web",
+    "value": "eyJraWQiOiJFNTdZZHJ1SHBsQWp1MmNObzFEb3JIM2oyN0J1NS1zX09QNVB3UGlobjVNIiwiYWxnIjoiUFMyNTYifQ.eyJhcHBfaWQiOjQsImF1ZCI6ImZyLmNvcmUuYXBpIiwiY2xpZW50X2lkIjoid2ViIiwiZXhwIjoxNzczMDc1MzUzLCJpYXQiOjE3NzMwNjgxNTMsImlzcyI6InZpbnRlZC1pYW0tc2VydmljZSIsInB1cnBvc2UiOiJhY2Nlc3MiLCJzY29wZSI6InB1YmxpYyIsInNpZCI6ImM3NDM3NmQwLTE3NzMwNjgxNTMifQ.f7ctgEK_8xGJ0A5NaeuhiOZuMQL5fDYTeu9GB2yTWjuHV5Zn8WLMANZcjU6_YmG7hJQaWipvCNhsRUZlbXLL_0dB3H_9b-qjtVgIC6AW_BbAM-FdCE7hBL3vMVuaTJLbl4MdMtT17xPAvKHF-xg804i_6G0P8seO7b5jxtdAxG3eNAu3pCKGHyuJO-aRpJIP-uZR8x39Q-9xDfGsJNONimogejerAiHr2ozIlj80nXv7R5B7kHJlhNWFF4YsUZduIXQZyaCd-t5-ld2Cl529Fy8BZYUXMoOFfOYgVIeHZj9QV1_vNGU7J46dhdvG5mQWwtZjC1VkoL_Y-nRnsNe9WA",
+    "domain": ".vinted.co.uk",
+    "path": "/",
+    "secure": true,
+    "expires": 1773672954,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  },
+  ".vinted.co.uk|/|__cf_bm": {
+    "name": "__cf_bm",
+    "value": "Sn_razwZ._CxIyvt9IG_vUR2Lax4aRTxxPgbmyabTz8-1773068154-1.0.1.1-I9Pqrkg5Pqu2hz8d8pasBm2mtQu3.2cDCBZh1OKG5nXPVVDdrsactGuHdwyc.uy_GzFGZ7iPVvOmhDBev6.jsPXk.6w_77bHUejZxx.TRAyA1NnwaJHkXrtEpG1jM2cK",
+    "domain": ".vinted.co.uk",
+    "path": "/",
+    "secure": true,
+    "expires": 1773069954,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  }
+}

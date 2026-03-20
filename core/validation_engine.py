@@ -55,9 +55,6 @@ DIFFUSION_KEYWORDS: dict[str, set[str]] = {
     "l'aveugle": {"l'aveugle", "laveugle", "l'aveugle par amour"},
     # Helmut Lang
     "helmut lang jeans": {"jeans"},
-    # General
-    "pre-owned": {"pre-owned", "preowned"},
-    "sample": {"sample"},
 }
 
 # Brands where diffusion-line detection matters most

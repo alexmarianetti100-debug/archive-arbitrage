@@ -6,10 +6,12 @@ Sends deal alerts to a Discord channel via webhook.
 Formats deals as rich embeds with images, pricing, and auth info.
 
 Setup:
-    1. In Discord: Server Settings → Integrations → Webhooks → New Webhook
-    2. Copy the webhook URL
-    3. Add to .env: DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
-    4. Optional: DISCORD_WEBHOOK_URL_2 for a second channel
+    1. In Discord: Create webhooks for #beginner-signals, #pro-signals, #whale-signals
+    2. Add to .env:
+        DISCORD_WEBHOOK_BEGINNER=https://discord.com/api/webhooks/...
+        DISCORD_WEBHOOK_PRO=https://discord.com/api/webhooks/...
+        DISCORD_WEBHOOK_WHALE=https://discord.com/api/webhooks/...
+    3. Each deal routes to exactly ONE channel based on tier metrics (exclusive routing)
 """
 
 import os
@@ -28,17 +30,19 @@ logger = logging.getLogger("discord_alerts")
 # Config
 # ---------------------------------------------------------------------------
 
-# Tier-specific webhook URLs
+# Tier-specific webhook URLs (exclusive routing: each deal → one channel only)
 DISCORD_WEBHOOK_BEGINNER = os.getenv("DISCORD_WEBHOOK_BEGINNER", "")
 DISCORD_WEBHOOK_PRO = os.getenv("DISCORD_WEBHOOK_PRO", "")
-DISCORD_WEBHOOK_BIG_BALLER = os.getenv("DISCORD_WEBHOOK_BIG_BALLER", "")
+DISCORD_WEBHOOK_WHALE = os.getenv("DISCORD_WEBHOOK_WHALE", "")
 
-# Legacy fallback
-DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL", "")
-DISCORD_WEBHOOK_URL_2 = os.getenv("DISCORD_WEBHOOK_URL_2", "")
+DISCORD_ENABLED = bool(DISCORD_WEBHOOK_BEGINNER or DISCORD_WEBHOOK_PRO or DISCORD_WEBHOOK_WHALE)
 
-DISCORD_ENABLED = bool(DISCORD_WEBHOOK_BEGINNER or DISCORD_WEBHOOK_PRO or 
-                       DISCORD_WEBHOOK_BIG_BALLER or DISCORD_WEBHOOK_URL)
+# Tier → webhook mapping
+TIER_WEBHOOK_MAP = {
+    "beginner": DISCORD_WEBHOOK_BEGINNER,
+    "pro": DISCORD_WEBHOOK_PRO,
+    "whale": DISCORD_WEBHOOK_WHALE,
+}
 
 # Embed colors by fire level
 EMBED_COLORS = {
@@ -202,44 +206,25 @@ def build_embed(
 def determine_tier(item: Any, profit: float = 0, margin: float = 0) -> str:
     """Determine which tier a deal belongs to based on strict qualification criteria.
 
+    Exclusive routing — returns the SINGLE highest qualifying tier.
     Tier Requirements (ALL must be met):
-    - Beginner: $150+ profit, 30%+ margin
-    - Pro: $300+ profit, 25%+ margin, price $1,000-$9,999
-    - Big Baller: $500+ profit, 20%+ margin, price $5,000+
+    - Whale: $500+ profit, 20%+ margin, $1,500+ price
+    - Pro: $300+ profit, 25%+ margin
+    - Beginner: everything else (default fallback)
 
-    Returns: 'beginner', 'pro', or 'big_baller'
+    Returns: 'beginner', 'pro', or 'whale'
     """
     price = getattr(item, "price", 0) or 0
-    title = (getattr(item, "title", "") or "").lower()
 
-    # Check Big Baller criteria FIRST (most exclusive)
-    # Must meet ALL: $500+ profit, 20%+ margin, $5,000+ price
-    meets_big_baller_profit = profit >= 500
-    meets_big_baller_margin = margin >= 0.20
-    meets_big_baller_price = price >= 5000
-
-    if meets_big_baller_profit and meets_big_baller_margin and meets_big_baller_price:
-        return "big_baller"
+    # Check Whale criteria FIRST (most exclusive)
+    if profit >= 500 and margin >= 0.20 and price >= 1500:
+        return "whale"
 
     # Check Pro criteria
-    # Must meet ALL: $300+ profit, 25%+ margin, $1,000+ price, <$10,000 price
-    meets_pro_profit = profit >= 300
-    meets_pro_margin = margin >= 0.25
-    meets_pro_price_min = price >= 1000
-    meets_pro_price_max = price < 10000
-
-    if meets_pro_profit and meets_pro_margin and meets_pro_price_min and meets_pro_price_max:
+    if profit >= 300 and margin >= 0.25:
         return "pro"
 
-    # Beginner: Must meet $150+ profit, 30%+ margin
-    meets_beginner_profit = profit >= 150
-    meets_beginner_margin = margin >= 0.30
-
-    if meets_beginner_profit and meets_beginner_margin:
-        return "beginner"
-
-    # If it doesn't meet any tier thresholds, return 'beginner' as fallback
-    # (but the deal probably won't be sent anyway due to min thresholds)
+    # Default: beginner
     return "beginner"
 
 
@@ -252,62 +237,74 @@ async def send_discord_alert(
     tier: str = "beginner",
     tiers: Optional[List[str]] = None,
 ) -> bool:
-    """Send a deal alert to Discord via webhook.
+    """Send a deal alert to exactly ONE Discord channel based on tier.
+
+    Exclusive routing: each deal goes to its single highest qualifying tier channel.
+    No waterfall, no multi-channel, no legacy fallback.
 
     Args:
-        tier: legacy minimum tier label
-        tiers: explicit channel tiers to post to, using nested entitlement routing
+        tier: the single tier label for this deal ('beginner', 'pro', or 'whale')
+        tiers: if provided, uses the FIRST entry only (exclusive routing)
 
     Returns True if sent successfully.
     """
     if not DISCORD_ENABLED:
         return False
 
+    # Exclusive routing: pick exactly one channel
+    # Map old "big_baller" references to "whale" for backwards compatibility
+    target_tier = (tiers[0] if tiers else tier) or "beginner"
+    if target_tier == "big_baller":
+        target_tier = "whale"
+
+    webhook_url = TIER_WEBHOOK_MAP.get(target_tier, DISCORD_WEBHOOK_BEGINNER)
+    if not webhook_url:
+        logger.warning(f"No webhook configured for tier '{target_tier}', falling back to beginner")
+        webhook_url = DISCORD_WEBHOOK_BEGINNER
+
+    if not webhook_url:
+        logger.error("No Discord webhooks configured at all")
+        return False
+
     embed = build_embed(item, message, fire_level, signals, auth_result)
+
+    # Add tier badge to the embed footer
+    tier_labels = {"beginner": "beginner-signals", "pro": "pro-signals", "whale": "whale-signals"}
+    channel_label = tier_labels.get(target_tier, target_tier)
+    if signals:
+        score = getattr(signals, "quality_score", 0)
+        embed["footer"] = {"text": f"Score: {score:.0f}/100 | #{channel_label} | Archive Arbitrage"}
+    else:
+        embed["footer"] = {"text": f"#{channel_label} | Archive Arbitrage"}
 
     payload = {
         "username": BOT_NAME,
         "embeds": [embed],
     }
 
-    channel_tiers = list(dict.fromkeys(tiers or [tier]))
-    urls = []
-    for channel_tier in channel_tiers:
-        if channel_tier == "beginner" and DISCORD_WEBHOOK_BEGINNER:
-            urls.append((channel_tier, DISCORD_WEBHOOK_BEGINNER))
-        elif channel_tier == "pro" and DISCORD_WEBHOOK_PRO:
-            urls.append((channel_tier, DISCORD_WEBHOOK_PRO))
-        elif channel_tier == "big_baller" and DISCORD_WEBHOOK_BIG_BALLER:
-            urls.append((channel_tier, DISCORD_WEBHOOK_BIG_BALLER))
-
-    # Fallback to legacy webhooks if tier webhooks not configured
-    if not urls:
-        if DISCORD_WEBHOOK_URL:
-            urls.append(("legacy", DISCORD_WEBHOOK_URL))
-        if DISCORD_WEBHOOK_URL_2:
-            urls.append(("legacy", DISCORD_WEBHOOK_URL_2))
-
-    success = False
     async with httpx.AsyncClient(timeout=10) as client:
-        for channel_tier, webhook_url in urls:
-            try:
-                resp = await client.post(webhook_url, json=payload)
-                if resp.status_code in (200, 204):
-                    logger.info(f"✅ Discord alert sent ({channel_tier}): {item.title[:50] if hasattr(item, 'title') else 'deal'}")
-                    success = True
-                else:
-                    logger.warning(f"Discord webhook returned {resp.status_code}: {resp.text[:200]}")
-            except Exception as e:
-                logger.error(f"Discord webhook error: {type(e).__name__}: {e}")
-                import traceback
-                logger.error(f"Discord webhook traceback: {traceback.format_exc()}")
-
-    return success
+        try:
+            resp = await client.post(webhook_url, json=payload)
+            if resp.status_code in (200, 204):
+                logger.info(f"✅ Discord alert sent to #{channel_label}: {item.title[:50] if hasattr(item, 'title') else 'deal'}")
+                return True
+            else:
+                logger.warning(f"Discord webhook returned {resp.status_code} for #{channel_label}: {resp.text[:200]}")
+                return False
+        except httpx.ConnectError as e:
+            logger.error(f"Discord webhook ConnectError ({channel_label}): cannot reach discord.com — check VPN/network. Detail: {e}")
+            return False
+        except httpx.TimeoutException as e:
+            logger.error(f"Discord webhook timeout ({channel_label}): {e}")
+            return False
+        except Exception as e:
+            logger.error(f"Discord webhook error ({channel_label}): {type(e).__name__}: {e}")
+            return False
 
 
 async def send_discord_message(text: str, webhook_url: str = "") -> bool:
     """Send a plain text message to Discord (for status updates, etc.)."""
-    url = webhook_url or DISCORD_WEBHOOK_URL
+    url = webhook_url or DISCORD_WEBHOOK_BEGINNER
     if not url:
         return False
 

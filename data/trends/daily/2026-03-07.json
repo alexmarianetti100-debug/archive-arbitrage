@@ -1,0 +1,58 @@
+{
+  "date": "2026-03-07",
+  "generated_at": "2026-03-08T01:32:19.844244",
+  "queries": [
+    "supreme arabic box logo",
+    "rick owens dunks",
+    "rick owens leather jacket",
+    "rick owens cargo pants",
+    "rick owens boots",
+    "margiela tabi boots",
+    "margiela tabi heels",
+    "saint laurent wyatt boots",
+    "saint laurent leather jacket",
+    "dior homme hedi slimane jacket",
+    "dior homme leather jacket",
+    "maison martin margiela replica GAT",
+    "helmut lang jacket",
+    "helmut lang leather jacket",
+    "helmut lang astro biker",
+    "number nine leather jacket",
+    "number nine skull cashmere",
+    "jean paul gaultier mesh top",
+    "jean paul gaultier leather jacket",
+    "raf simons riot bomber",
+    "raf simons leather jacket",
+    "chrome hearts hoodie",
+    "chrome hearts leather jacket",
+    "chrome hearts ring",
+    "bottega veneta puddle boots",
+    "bottega veneta cassette bag",
+    "ann demeulemeester leather jacket",
+    "ann demeulemeester boots",
+    "comme des garcons homme plus jacket",
+    "junya watanabe jacket",
+    "yohji yamamoto jacket",
+    "julius leather jacket",
+    "undercover jacket",
+    "vivienne westwood leather jacket",
+    "issey miyake homme plisse jacket",
+    "carol christian poell jacket",
+    "haider ackermann leather jacket",
+    "boris bidjan saberi jacket"
+  ],
+  "trend_count": 1,
+  "top_trends": [
+    {
+      "query": "supreme arabic box logo",
+      "brand": "Supreme",
+      "score": 0.6,
+      "direction": "stable",
+      "sources": [
+        "grailed_velocity"
+      ],
+      "velocity_change": 0.0,
+      "price_change": 0.0
+    }
+  ]
+}

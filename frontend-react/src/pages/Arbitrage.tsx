@@ -1,54 +1,66 @@
 import { useArbitrage } from '../hooks/useApi';
 import { ArbitrageCard } from '../components/ArbitrageCard';
+import { EmptyArbitrage } from '../components/EmptyState';
 
 export function Arbitrage() {
   const { data: opportunities, isLoading } = useArbitrage();
 
-  // Group by confidence
   const highConf = opportunities?.filter(o => o.confidence === 'high') || [];
   const mediumConf = opportunities?.filter(o => o.confidence === 'medium') || [];
   const lowConf = opportunities?.filter(o => o.confidence === 'low') || [];
+  const total = (opportunities?.length) || 0;
 
   return (
-    <div className="p-8">
+    <div className="p-6 lg:p-8 space-y-6">
       {/* Header */}
-      <div className="mb-6">
-        <h2 className="text-3xl font-bold text-white">Cross-Platform Arbitrage</h2>
-        <p className="text-gray-400 mt-1">Buy low on one platform, sell high on another</p>
+      <div>
+        <h1 className="font-serif text-headline text-text-primary italic">Arbitrage</h1>
+        <p className="font-mono text-[11px] text-text-muted mt-1 tracking-wide">
+          CROSS-PLATFORM PRICE GAPS
+        </p>
       </div>
 
-      {/* Summary Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        <div className="bg-gray-900 rounded-xl p-4 border border-gray-800">
-          <div className="text-2xl font-bold text-green-400">{highConf.length}</div>
-          <div className="text-sm text-gray-400">High Confidence</div>
+      {/* Summary */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="surface-terminal rounded-lg p-3.5 relative">
+          <div className="relative z-10">
+            <div className="data-value text-xl text-signal-green">{highConf.length}</div>
+            <div className="font-mono text-[10px] text-text-muted mt-1 uppercase tracking-wider">High Conf.</div>
+          </div>
         </div>
-        <div className="bg-gray-900 rounded-xl p-4 border border-gray-800">
-          <div className="text-2xl font-bold text-yellow-400">{mediumConf.length}</div>
-          <div className="text-sm text-gray-400">Medium Confidence</div>
+        <div className="surface-terminal rounded-lg p-3.5 relative">
+          <div className="relative z-10">
+            <div className="data-value text-xl text-signal-amber">{mediumConf.length}</div>
+            <div className="font-mono text-[10px] text-text-muted mt-1 uppercase tracking-wider">Medium</div>
+          </div>
         </div>
-        <div className="bg-gray-900 rounded-xl p-4 border border-gray-800">
-          <div className="text-2xl font-bold text-gray-400">{lowConf.length}</div>
-          <div className="text-sm text-gray-400">Low Confidence</div>
+        <div className="surface-terminal rounded-lg p-3.5 relative">
+          <div className="relative z-10">
+            <div className="data-value text-xl text-text-secondary">{lowConf.length}</div>
+            <div className="font-mono text-[10px] text-text-muted mt-1 uppercase tracking-wider">Low</div>
+          </div>
         </div>
       </div>
 
       {isLoading ? (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-32 bg-gray-800 rounded-xl animate-pulse"></div>
+            <div key={i} className="h-28 bg-surface rounded-lg border border-border animate-skeleton" />
           ))}
         </div>
+      ) : total === 0 ? (
+        <EmptyArbitrage />
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-6">
           {/* High Confidence */}
           {highConf.length > 0 && (
             <section>
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <span className="w-2 h-2 bg-green-400 rounded-full"></span>
-                High Confidence Opportunities
-              </h3>
-              <div className="space-y-3">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-1.5 h-1.5 rounded-full bg-signal-green" />
+                <h3 className="font-mono text-xs text-text-secondary uppercase tracking-wider">High Confidence</h3>
+                <span className="font-mono text-[10px] text-text-muted">{highConf.length}</span>
+              </div>
+              <div className="space-y-2">
                 {highConf.map((opp, i) => (
                   <ArbitrageCard key={i} opportunity={opp} />
                 ))}
@@ -59,11 +71,12 @@ export function Arbitrage() {
           {/* Medium Confidence */}
           {mediumConf.length > 0 && (
             <section>
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <span className="w-2 h-2 bg-yellow-400 rounded-full"></span>
-                Medium Confidence Opportunities
-              </h3>
-              <div className="space-y-3">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-1.5 h-1.5 rounded-full bg-signal-amber" />
+                <h3 className="font-mono text-xs text-text-secondary uppercase tracking-wider">Medium Confidence</h3>
+                <span className="font-mono text-[10px] text-text-muted">{mediumConf.length}</span>
+              </div>
+              <div className="space-y-2">
                 {mediumConf.map((opp, i) => (
                   <ArbitrageCard key={i} opportunity={opp} />
                 ))}
@@ -74,22 +87,17 @@ export function Arbitrage() {
           {/* Low Confidence */}
           {lowConf.length > 0 && (
             <section>
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <span className="w-2 h-2 bg-gray-400 rounded-full"></span>
-                Low Confidence Opportunities
-              </h3>
-              <div className="space-y-3">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-1.5 h-1.5 rounded-full bg-text-muted" />
+                <h3 className="font-mono text-xs text-text-secondary uppercase tracking-wider">Low Confidence</h3>
+                <span className="font-mono text-[10px] text-text-muted">{lowConf.length}</span>
+              </div>
+              <div className="space-y-2">
                 {lowConf.map((opp, i) => (
                   <ArbitrageCard key={i} opportunity={opp} />
                 ))}
               </div>
             </section>
-          )}
-
-          {opportunities?.length === 0 && (
-            <div className="text-center py-20 text-gray-500">
-              No arbitrage opportunities found. Run the detector to find deals.
-            </div>
           )}
         </div>
       )}

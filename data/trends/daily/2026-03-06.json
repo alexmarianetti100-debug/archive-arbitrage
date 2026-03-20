@@ -1,0 +1,124 @@
+{
+  "date": "2026-03-06",
+  "generated_at": "2026-03-07T06:20:18.088045",
+  "queries": [
+    "supreme -pack hanes boxers",
+    "supreme arabic box logo",
+    "rick owens geobasket",
+    "rick owens detroit cut",
+    "balenciaga speedhunters hoodie",
+    "rick owens ramones",
+    "supreme box logo hooded",
+    "balenciaga denim jacket",
+    "rick owens ramones high",
+    "rick owens dunks",
+    "rick owens stooges leather jacket",
+    "rick owens kiss boots",
+    "margiela tabi boots",
+    "chrome hearts cross pendant silver",
+    "chrome hearts cross ring",
+    "raf simons peter saville joy division",
+    "raf simons ozweego",
+    "helmut lang bondage jacket",
+    "balenciaga triple s",
+    "balenciaga track",
+    "saint laurent wyatt boots",
+    "prada americas cup",
+    "bottega veneta puddle boots",
+    "number nine leather jacket",
+    "undercover scab",
+    "dior homme hedi slimane jacket",
+    "maison martin margiela replica GAT"
+  ],
+  "trend_count": 8,
+  "top_trends": [
+    {
+      "query": "supreme -pack hanes boxers",
+      "brand": "Supreme",
+      "score": 1.0,
+      "direction": "stable",
+      "sources": [
+        "grailed_velocity"
+      ],
+      "velocity_change": 0.0,
+      "price_change": 0.0
+    },
+    {
+      "query": "supreme arabic box logo",
+      "brand": "Supreme",
+      "score": 1.0,
+      "direction": "stable",
+      "sources": [
+        "grailed_velocity"
+      ],
+      "velocity_change": 0.0,
+      "price_change": 0.0
+    },
+    {
+      "query": "rick owens geobasket",
+      "brand": "Rick Owens",
+      "score": 0.967,
+      "direction": "stable",
+      "sources": [
+        "grailed_velocity"
+      ],
+      "velocity_change": 0.0,
+      "price_change": 0.0
+    },
+    {
+      "query": "rick owens detroit cut",
+      "brand": "Rick Owens",
+      "score": 0.967,
+      "direction": "stable",
+      "sources": [
+        "grailed_velocity"
+      ],
+      "velocity_change": 0.0,
+      "price_change": 0.0
+    },
+    {
+      "query": "balenciaga speedhunters hoodie",
+      "brand": "Balenciaga",
+      "score": 0.967,
+      "direction": "stable",
+      "sources": [
+        "grailed_velocity"
+      ],
+      "velocity_change": 0.0,
+      "price_change": 0.0
+    },
+    {
+      "query": "rick owens ramones",
+      "brand": "Rick Owens",
+      "score": 0.967,
+      "direction": "stable",
+      "sources": [
+        "grailed_velocity"
+      ],
+      "velocity_change": 0.0,
+      "price_change": 0.0
+    },
+    {
+      "query": "supreme box logo hooded",
+      "brand": "Supreme",
+      "score": 0.667,
+      "direction": "stable",
+      "sources": [
+        "grailed_velocity"
+      ],
+      "velocity_change": 0.0,
+      "price_change": 0.0
+    },
+    {
+      "query": "balenciaga denim jacket",
+      "brand": "Balenciaga",
+      "score": 0.333,
+      "direction": "stable",
+      "sources": [
+        "grailed_velocity"
+      ],
+      "velocity_change": 0.0,
+      "price_change": 0.0
+    }
+  ]
+}

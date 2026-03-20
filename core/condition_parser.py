@@ -18,11 +18,11 @@ logger = logging.getLogger("condition_parser")
 # ══════════════════════════════════════════════════════════════════════
 
 CONDITION_TIERS = {
-    "DEADSTOCK": 1.0,
-    "NEAR_DEADSTOCK": 0.90,
-    "GENTLY_USED": 0.70,
-    "USED": 0.50,
-    "POOR": 0.30,
+    "DEADSTOCK": 1.0,        # New with tags, unworn — 95-100% of market
+    "NEAR_DEADSTOCK": 0.90,  # Excellent/like new — 85-94% of market
+    "GENTLY_USED": 0.75,     # Very good, minimal wear — 70-84% of market
+    "USED": 0.55,            # Good, visible wear — 50-69% of market
+    "POOR": 0.35,            # Fair, significant wear/damage — 30-49% of market
 }
 
 # Patterns for each tier — checked in order from best to worst.
@@ -41,6 +41,7 @@ CONDITION_PATTERNS = {
     ],
     "GENTLY_USED": [
         r"\bgently\s+used\b", r"\blightly\s+worn\b", r"\bworn\s+a\s+few\s+times\b",
+        r"\bvery\s+good\s+condition\b", r"\bgreat\s+condition\b",
         r"\bminor\s+wear\b", r"\b9\s*/\s*10\b", r"\b8\s*/\s*10\b",
         r"\bpre-?owned\b",
     ],
@@ -51,9 +52,11 @@ CONDITION_PATTERNS = {
     ],
     "POOR": [
         r"\bbeater\b", r"\bthrashed\b", r"\bwell\s+loved\b", r"\bheavily\s+worn\b",
-        r"\bstained\b", r"\bdamaged\b", r"\bripped\b", r"\btorn\b", r"\bholes\b",
+        r"\bstained?\b", r"\bstains\b", r"\bdamaged?\b", r"\bripped\b", r"\btorn\b", r"\bholes?\b",
         r"\bcracked\b", r"\bsole\s+separation\b", r"\bfaded\b", r"\bpilling\b",
+        r"\bfair\s+condition\b", r"\bpoor\s+condition\b",
         r"\b5\s*/\s*10\b", r"\b4\s*/\s*10\b", r"\b3\s*/\s*10\b",
+        r"\bmissing\s+(?:button|zipper|hardware)\b", r"\byellowing\b", r"\bodor\b", r"\bsmell\b",
     ],
 }
 
@@ -182,10 +185,11 @@ def parse_condition(title: str, description: str = "", brand: str = "", category
         if detected_tier:
             break
 
-    # Default: if nothing detected, assume GENTLY_USED (conservative)
+    # Default: if nothing detected, assume USED (conservative — unstated condition
+    # is a red flag; legitimate sellers state condition explicitly)
     if not detected_tier:
-        detected_tier = "GENTLY_USED"
-        matched_term = "no condition stated"
+        detected_tier = "USED"
+        matched_term = "no condition stated (conservative default)"
 
     base_multiplier = CONDITION_TIERS[detected_tier]
 

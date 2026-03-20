@@ -1,1 +1,668 @@
-{}
+{
+  "alexander mcqueen skull scarf": {
+    "data": {
+      "price": 91.35714285714286,
+      "source": "grailed"
+    },
+    "timestamp": 1773934795.909794,
+    "query": "alexander mcqueen skull scarf",
+    "hit_count": 0
+  },
+  "balenciaga track runner": {
+    "data": {
+      "price": 326.0,
+      "source": "grailed"
+    },
+    "timestamp": 1773936497.882723,
+    "query": "balenciaga track runner",
+    "hit_count": 0
+  },
+  "balenciaga runner burgundy": {
+    "data": {
+      "price": 365.3333333333333,
+      "source": "grailed"
+    },
+    "timestamp": 1773936499.14886,
+    "query": "balenciaga runner burgundy",
+    "hit_count": 0
+  },
+  "maison margiela mm6 box logo": {
+    "data": {
+      "price": 546.1428571428571,
+      "source": "grailed"
+    },
+    "timestamp": 1773937163.078889,
+    "query": "maison margiela mm6 box logo",
+    "hit_count": 0
+  },
+  "maison margiela paint splatter": {
+    "data": {
+      "price": 415.90909090909093,
+      "source": "grailed"
+    },
+    "timestamp": 1773937168.887031,
+    "query": "maison margiela paint splatter",
+    "hit_count": 0
+  },
+  "maison margiela boots": {
+    "data": {
+      "price": 455.0,
+      "source": "grailed"
+    },
+    "timestamp": 1773937172.212107,
+    "query": "maison margiela boots",
+    "hit_count": 0
+  },
+  "maison margiela hoodie": {
+    "data": {
+      "price": 490.2,
+      "source": "grailed"
+    },
+    "timestamp": 1773937178.614733,
+    "query": "maison margiela hoodie",
+    "hit_count": 0
+  },
+  "prada": {
+    "data": {
+      "price": 226.47826086956522,
+      "source": "grailed"
+    },
+    "timestamp": 1773937343.930159,
+    "query": "prada",
+    "hit_count": 0
+  },
+  "prada america cup soft rubber": {
+    "data": {
+      "price": 466.0,
+      "source": "grailed"
+    },
+    "timestamp": 1773937344.7082722,
+    "query": "prada america cup soft rubber",
+    "hit_count": 0
+  },
+  "chrome hearts black horseshoe short sleeve": {
+    "data": {
+      "price": 395.77777777777777,
+      "source": "grailed"
+    },
+    "timestamp": 1773937366.98298,
+    "query": "chrome hearts black horseshoe short sleeve",
+    "hit_count": 0
+  },
+  "maison margiela high top gat": {
+    "data": {
+      "price": 259.0,
+      "source": "grailed"
+    },
+    "timestamp": 1773937396.018013,
+    "query": "maison margiela high top gat",
+    "hit_count": 0
+  },
+  "balenciaga arena hightop black": {
+    "data": {
+      "price": 318.46153846153845,
+      "source": "grailed"
+    },
+    "timestamp": 1773937417.373371,
+    "query": "balenciaga arena hightop black",
+    "hit_count": 0
+  },
+  "balenciaga arena low black pebbled": {
+    "data": {
+      "price": 270.8888888888889,
+      "source": "grailed"
+    },
+    "timestamp": 1773937418.55881,
+    "query": "balenciaga arena low black pebbled",
+    "hit_count": 0
+  },
+  "y-3": {
+    "data": {
+      "price": 84.1923076923077,
+      "source": "grailed"
+    },
+    "timestamp": 1773937507.953598,
+    "query": "y-3",
+    "hit_count": 0
+  },
+  "prada jacket": {
+    "data": {
+      "price": 219.28571428571428,
+      "source": "grailed"
+    },
+    "timestamp": 1773937586.2819939,
+    "query": "prada jacket",
+    "hit_count": 0
+  },
+  "balenciaga trainers": {
+    "data": {
+      "price": 287.6666666666667,
+      "source": "grailed"
+    },
+    "timestamp": 1773937612.620182,
+    "query": "balenciaga trainers",
+    "hit_count": 0
+  },
+  "balenciaga 3xl sneaker": {
+    "data": {
+      "price": 412.3333333333333,
+      "source": "grailed"
+    },
+    "timestamp": 1773937663.6521258,
+    "query": "balenciaga 3xl sneaker",
+    "hit_count": 0
+  },
+  "kapital century denim": {
+    "data": {
+      "price": 272.0,
+      "source": "grailed"
+    },
+    "timestamp": 1773937802.8288279,
+    "query": "kapital century denim",
+    "hit_count": 0
+  },
+  "kapital denim": {
+    "data": {
+      "price": 166.0,
+      "source": "grailed"
+    },
+    "timestamp": 1773937826.957643,
+    "query": "kapital denim",
+    "hit_count": 0
+  },
+  "kapital denim jeans": {
+    "data": {
+      "price": 209.0,
+      "source": "grailed"
+    },
+    "timestamp": 1773937829.869348,
+    "query": "kapital denim jeans",
+    "hit_count": 0
+  },
+  "walter van beirendonck jacket": {
+    "data": {
+      "price": 360.75,
+      "source": "grailed"
+    },
+    "timestamp": 1773938201.0009441,
+    "query": "walter van beirendonck jacket",
+    "hit_count": 1
+  },
+  "ann demeulemeester coat": {
+    "data": {
+      "price": 657.5,
+      "source": "grailed"
+    },
+    "timestamp": 1773941092.236477,
+    "query": "ann demeulemeester coat",
+    "hit_count": 0
+  },
+  "ann demeulemeester": {
+    "data": {
+      "price": 290.5238095238095,
+      "source": "grailed"
+    },
+    "timestamp": 1773941119.329175,
+    "query": "ann demeulemeester",
+    "hit_count": 0
+  },
+  "ann demeulemeester denim jacket": {
+    "data": {
+      "price": 153.0,
+      "source": "grailed"
+    },
+    "timestamp": 1773941124.65871,
+    "query": "ann demeulemeester denim jacket",
+    "hit_count": 0
+  },
+  "kapital boro pants": {
+    "data": {
+      "price": 250.0,
+      "source": "grailed"
+    },
+    "timestamp": 1773941493.141071,
+    "query": "kapital boro pants",
+    "hit_count": 0
+  },
+  "kapital denim pants": {
+    "data": {
+      "price": 329.8333333333333,
+      "source": "grailed"
+    },
+    "timestamp": 1773941521.469861,
+    "query": "kapital denim pants",
+    "hit_count": 0
+  },
+  "kapital": {
+    "data": {
+      "price": 167.1,
+      "source": "grailed"
+    },
+    "timestamp": 1773941524.9968152,
+    "query": "kapital",
+    "hit_count": 0
+  },
+  "chrome hearts": {
+    "data": {
+      "price": 822.695652173913,
+      "source": "grailed"
+    },
+    "timestamp": 1773941925.1562219,
+    "query": "chrome hearts",
+    "hit_count": 0
+  },
+  "saint laurent boots": {
+    "data": {
+      "price": 296.8333333333333,
+      "source": "grailed"
+    },
+    "timestamp": 1773942817.5012732,
+    "query": "saint laurent boots",
+    "hit_count": 0
+  },
+  "number nine accessories": {
+    "data": {
+      "price": 79.4,
+      "source": "grailed"
+    },
+    "timestamp": 1773943742.724452,
+    "query": "number nine accessories",
+    "hit_count": 0
+  },
+  "saint laurent wyatt boots": {
+    "data": {
+      "price": 611.2727272727273,
+      "source": "grailed"
+    },
+    "timestamp": 1773948370.3412962,
+    "query": "saint laurent wyatt boots",
+    "hit_count": 0
+  },
+  "rick owens cargo": {
+    "data": {
+      "price": 343.93333333333334,
+      "source": "grailed"
+    },
+    "timestamp": 1773948396.4118972,
+    "query": "rick owens cargo",
+    "hit_count": 0
+  },
+  "rick owens": {
+    "data": {
+      "price": 368.0,
+      "source": "grailed"
+    },
+    "timestamp": 1773948420.6714292,
+    "query": "rick owens",
+    "hit_count": 0
+  },
+  "saint laurent hedi slimane": {
+    "data": {
+      "price": 238.33333333333334,
+      "source": "grailed"
+    },
+    "timestamp": 1773948881.528713,
+    "query": "saint laurent hedi slimane",
+    "hit_count": 0
+  },
+  "saint laurent denim denim": {
+    "data": {
+      "price": 110.0,
+      "source": "grailed"
+    },
+    "timestamp": 1773948906.687249,
+    "query": "saint laurent denim denim",
+    "hit_count": 0
+  },
+  "rick owens memphis": {
+    "data": {
+      "price": 400.0,
+      "source": "grailed"
+    },
+    "timestamp": 1773948908.910038,
+    "query": "rick owens memphis",
+    "hit_count": 1
+  },
+  "maison margiela gat low": {
+    "data": {
+      "price": 392.5,
+      "source": "grailed"
+    },
+    "timestamp": 1773948949.622704,
+    "query": "maison margiela gat low",
+    "hit_count": 0
+  },
+  "prada leather sneakers": {
+    "data": {
+      "price": 66.33333333333333,
+      "source": "grailed"
+    },
+    "timestamp": 1773949021.0579672,
+    "query": "prada leather sneakers",
+    "hit_count": 0
+  },
+  "prada americas cup blue leather": {
+    "data": {
+      "price": 198.14285714285714,
+      "source": "grailed"
+    },
+    "timestamp": 1773949022.86324,
+    "query": "prada americas cup blue leather",
+    "hit_count": 0
+  },
+  "maison margiela gat": {
+    "data": {
+      "price": 395.75,
+      "source": "grailed"
+    },
+    "timestamp": 1773949026.9603698,
+    "query": "maison margiela gat",
+    "hit_count": 0
+  },
+  "maison margiela black gats": {
+    "data": {
+      "price": 408.0,
+      "source": "grailed"
+    },
+    "timestamp": 1773949074.885922,
+    "query": "maison margiela black gats",
+    "hit_count": 0
+  },
+  "maison margiela": {
+    "data": {
+      "price": 494.55555555555554,
+      "source": "grailed"
+    },
+    "timestamp": 1773949081.808457,
+    "query": "maison margiela",
+    "hit_count": 0
+  },
+  "balenciaga arena": {
+    "data": {
+      "price": 259.3333333333333,
+      "source": "grailed"
+    },
+    "timestamp": 1773949096.9791832,
+    "query": "balenciaga arena",
+    "hit_count": 0
+  },
+  "balenciaga arena low black cracked": {
+    "data": {
+      "price": 248.33333333333334,
+      "source": "grailed"
+    },
+    "timestamp": 1773949125.1741152,
+    "query": "balenciaga arena low black cracked",
+    "hit_count": 0
+  },
+  "balenciaga": {
+    "data": {
+      "price": 361.4761904761905,
+      "source": "grailed"
+    },
+    "timestamp": 1773949139.204802,
+    "query": "balenciaga",
+    "hit_count": 0
+  },
+  "balenciaga arena high grey": {
+    "data": {
+      "price": 236.0,
+      "source": "grailed"
+    },
+    "timestamp": 1773949140.179331,
+    "query": "balenciaga arena high grey",
+    "hit_count": 0
+  },
+  "balenciaga leather shoes": {
+    "data": {
+      "price": 265.0,
+      "source": "grailed"
+    },
+    "timestamp": 1773949141.50449,
+    "query": "balenciaga leather shoes",
+    "hit_count": 0
+  },
+  "balenciaga 3xl": {
+    "data": {
+      "price": 384.6216216216216,
+      "source": "grailed"
+    },
+    "timestamp": 1773949842.289362,
+    "query": "balenciaga 3xl",
+    "hit_count": 1
+  },
+  "balenciaga gradient sneaker": {
+    "data": {
+      "price": 467.84615384615387,
+      "source": "grailed"
+    },
+    "timestamp": 1773949874.4952252,
+    "query": "balenciaga gradient sneaker",
+    "hit_count": 0
+  },
+  "balenciaga sneakers": {
+    "data": {
+      "price": 193.33333333333334,
+      "source": "grailed"
+    },
+    "timestamp": 1773949892.399086,
+    "query": "balenciaga sneakers",
+    "hit_count": 0
+  },
+  "chrome hearts beanie": {
+    "data": {
+      "price": 360.7,
+      "source": "grailed"
+    },
+    "timestamp": 1773950047.190079,
+    "query": "chrome hearts beanie",
+    "hit_count": 0
+  },
+  "needles butterfly jacket": {
+    "data": {
+      "price": 204.16666666666666,
+      "source": "grailed"
+    },
+    "timestamp": 1773950812.704447,
+    "query": "needles butterfly jacket",
+    "hit_count": 0
+  },
+  "walter van beirendonck shirt": {
+    "data": {
+      "price": 106.125,
+      "source": "grailed"
+    },
+    "timestamp": 1773951197.452245,
+    "query": "walter van beirendonck shirt",
+    "hit_count": 0
+  },
+  "alexander mcqueen leather jacket": {
+    "data": {
+      "price": 1145.111111111111,
+      "source": "grailed"
+    },
+    "timestamp": 1773952270.326302,
+    "query": "alexander mcqueen leather jacket",
+    "hit_count": 0
+  },
+  "alexander mcqueen leather leather jacket": {
+    "data": {
+      "price": 1145.111111111111,
+      "source": "grailed"
+    },
+    "timestamp": 1773952306.375838,
+    "query": "alexander mcqueen leather leather jacket",
+    "hit_count": 0
+  },
+  "balenciaga runner": {
+    "data": {
+      "price": 468.9428571428571,
+      "source": "grailed"
+    },
+    "timestamp": 1773953340.42928,
+    "query": "balenciaga runner",
+    "hit_count": 0
+  },
+  "balenciaga runner sneaker multicolor": {
+    "data": {
+      "price": 578.125,
+      "source": "grailed"
+    },
+    "timestamp": 1773953360.2527812,
+    "query": "balenciaga runner sneaker multicolor",
+    "hit_count": 0
+  },
+  "balenciaga speed sneakers": {
+    "data": {
+      "price": 228.0,
+      "source": "grailed"
+    },
+    "timestamp": 1773953387.669657,
+    "query": "balenciaga speed sneakers",
+    "hit_count": 0
+  },
+  "balenciaga speed trainers": {
+    "data": {
+      "price": 173.33333333333334,
+      "source": "grailed"
+    },
+    "timestamp": 1773953402.452738,
+    "query": "balenciaga speed trainers",
+    "hit_count": 0
+  },
+  "balenciaga runner low top black": {
+    "data": {
+      "price": 540.2,
+      "source": "grailed"
+    },
+    "timestamp": 1773953558.781356,
+    "query": "balenciaga runner low top black",
+    "hit_count": 0
+  },
+  "saint laurent paris oil": {
+    "data": {
+      "price": 341.14285714285717,
+      "source": "grailed"
+    },
+    "timestamp": 1773953574.489289,
+    "query": "saint laurent paris oil",
+    "hit_count": 0
+  },
+  "saint laurent paris denim denim": {
+    "data": {
+      "price": 226.33333333333334,
+      "source": "grailed"
+    },
+    "timestamp": 1773953610.820035,
+    "query": "saint laurent paris denim denim",
+    "hit_count": 0
+  },
+  "saint laurent paris sunglasses": {
+    "data": {
+      "price": 139.75,
+      "source": "grailed"
+    },
+    "timestamp": 1773953625.421972,
+    "query": "saint laurent paris sunglasses",
+    "hit_count": 0
+  },
+  "saint laurent": {
+    "data": {
+      "price": 59.5,
+      "source": "grailed"
+    },
+    "timestamp": 1773953641.6754718,
+    "query": "saint laurent",
+    "hit_count": 0
+  },
+  "saint laurent paris sneakers": {
+    "data": {
+      "price": 220.0,
+      "source": "grailed"
+    },
+    "timestamp": 1773953657.582548,
+    "query": "saint laurent paris sneakers",
+    "hit_count": 0
+  },
+  "saint laurent paris jeans": {
+    "data": {
+      "price": 167.72727272727272,
+      "source": "grailed"
+    },
+    "timestamp": 1773953687.2527869,
+    "query": "saint laurent paris jeans",
+    "hit_count": 0
+  },
+  "saint laurent paris button down": {
+    "data": {
+      "price": 153.66666666666666,
+      "source": "grailed"
+    },
+    "timestamp": 1773953688.36344,
+    "query": "saint laurent paris button down",
+    "hit_count": 0
+  },
+  "saint laurent paris shirt": {
+    "data": {
+      "price": 131.42857142857142,
+      "source": "grailed"
+    },
+    "timestamp": 1773953701.4824169,
+    "query": "saint laurent paris shirt",
+    "hit_count": 0
+  },
+  "prada sneakers": {
+    "data": {
+      "price": 160.36363636363637,
+      "source": "grailed"
+    },
+    "timestamp": 1773954495.156194,
+    "query": "prada sneakers",
+    "hit_count": 0
+  },
+  "dior homme denim denim": {
+    "data": {
+      "price": 189.0,
+      "source": "grailed"
+    },
+    "timestamp": 1773955631.4175391,
+    "query": "dior homme denim denim",
+    "hit_count": 0
+  },
+  "prada leather jacket": {
+    "data": {
+      "price": 421.0,
+      "source": "grailed"
+    },
+    "timestamp": 1773955633.683221,
+    "query": "prada leather jacket",
+    "hit_count": 0
+  },
+  "prada leather leather jacket": {
+    "data": {
+      "price": 487.2857142857143,
+      "source": "grailed"
+    },
+    "timestamp": 1773955653.396499,
+    "query": "prada leather leather jacket",
+    "hit_count": 0
+  },
+  "balenciaga sandals": {
+    "data": {
+      "price": 250.66666666666666,
+      "source": "grailed"
+    },
+    "timestamp": 1773955711.700455,
+    "query": "balenciaga sandals",
+    "hit_count": 0
+  },
+  "chrome hearts trucker hat": {
+    "data": {
+      "price": 290.0,
+      "source": "grailed"
+    },
+    "timestamp": 1773956192.993344,
+    "query": "chrome hearts trucker hat",
+    "hit_count": 0
+  }
+}

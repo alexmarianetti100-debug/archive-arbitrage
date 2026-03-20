@@ -1,0 +1,41 @@
+{
+  "last_run": "2026-03-18T14:32:12.749034",
+  "stats": {
+    "queries": 20,
+    "total_found": 950,
+    "saved": 180,
+    "skipped_margin": 18,
+    "skipped_auth": 0,
+    "skipped_pricing": 746,
+    "skipped_demand": 6,
+    "image_id_hits": 90,
+    "demand_checks": 184,
+    "alerts_discord": 33,
+    "alerts_telegram": 180,
+    "by_source": {
+      "grailed": 43,
+      "ebay": 52,
+      "poshmark": 84,
+      "fashionphile": 1
+    },
+    "by_brand": {
+      "Post": 5,
+      "comme des garcons": 26,
+      "cdg": 1,
+      "rick owens": 15,
+      "Rick": 1,
+      "balenciaga": 20,
+      "ie": 5,
+      "White'S": 19,
+      "off-white": 1,
+      "off white": 1,
+      "celine": 2,
+      "On": 11,
+      "prada": 32,
+      "Nicks": 18,
+      "Brut": 12,
+      "lv": 6,
+      "Aime": 5
+    }
+  }
+}

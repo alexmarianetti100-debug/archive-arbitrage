@@ -1,0 +1,53 @@
+{
+  "timestamp": "2026-03-09T17:40:13.608117",
+  "scrapers": {
+    "grailed": {
+      "scraper_name": "grailed",
+      "requests_total": 2,
+      "requests_success": 2,
+      "requests_failed": 0,
+      "success_rate": 1.0,
+      "average_latency_ms": 550.0,
+      "last_success": "2026-03-09T17:40:13.607323",
+      "last_failure": null,
+      "last_error": null,
+      "consecutive_failures": 0
+    },
+    "ebay": {
+      "scraper_name": "ebay",
+      "requests_total": 2,
+      "requests_success": 1,
+      "requests_failed": 1,
+      "success_rate": 0.5,
+      "average_latency_ms": 1200.0,
+      "last_success": "2026-03-09T17:40:13.607394",
+      "last_failure": "2026-03-09T17:40:13.607450",
+      "last_error": "Timeout",
+      "consecutive_failures": 1
+    },
+    "poshmark": {
+      "scraper_name": "poshmark",
+      "requests_total": 1,
+      "requests_success": 1,
+      "requests_failed": 0,
+      "success_rate": 1.0,
+      "average_latency_ms": 800.0,
+      "last_success": "2026-03-09T17:40:13.607510",
+      "last_failure": null,
+      "last_error": null,
+      "consecutive_failures": 0
+    },
+    "vinted": {
+      "scraper_name": "vinted",
+      "requests_total": 6,
+      "requests_success": 0,
+      "requests_failed": 6,
+      "success_rate": 0.0,
+      "average_latency_ms": 0.0,
+      "last_success": null,
+      "last_failure": "2026-03-09T17:40:13.607965",
+      "last_error": "Connection error 6",
+      "consecutive_failures": 6
+    }
+  }
+}

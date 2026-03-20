@@ -53,12 +53,19 @@ REJECT_KEYWORDS = [
     r"\bprimark\b", r"\basos\b",
 
     # Lookalikes / "style" / "type" / "inspired by" — NOT the real thing
-    r"\blike\s+margiela\b", r"\blike\s+raf\b", r"\blike\s+rick\b",
-    r"\bmargiela\s+style\b", r"\breplica\s+style\b",
-    r"\b(?:type|inspired)\s*(?:by)?\s*(?:margiela|raf|rick|dior|gaultier)\b",
+    r"\blike\s+(?:margiela|raf|rick|chrome\s*hearts|dior|gaultier|balenciaga|prada)\b",
+    r"\b(?:margiela|chrome\s*hearts|raf|rick|dior|gaultier)\s+style\b",
+    r"\breplica\s+style\b",
+    r"\b(?:type|inspired)\s*(?:by)?\s*(?:margiela|raf|rick|dior|gaultier|chrome\s*hearts|balenciaga|prada|gucci)\b",
     r"\bstyle\s+(?:of|like)\b",
-    r"\bgerman\s+army\s+trainer\b(?!.*\bmargiela\b)",  # actual military GATs without Margiela branding
-    r"\bbw\s+sport\b(?!.*\bmargiela\b)",  # BW Sport military shoes (not Margiela)
+    r"\b(?:chrome\s*hearts|ch)\s+style\b",
+    r"\binspired\s+(?:by\s+)?(?:chrome|ch|hearts)\b",
+    r"\bgerman\s+army\s+trainer\b(?!.*\bmargiela\b)",
+    r"\bbw\s+sport\b(?!.*\bmargiela\b)",
+    # Obvious fakes / unbranded claiming brand
+    r"\bunbranded\b.*\b(?:chrome|rick|raf|margiela|dior)\b",
+    r"\b(?:chrome|rick|raf|margiela|dior)\b.*\bunbranded\b",
+    r"\bno\s+brand\b",
 ]
 
 REJECT_PATTERNS = [re.compile(p, re.IGNORECASE) for p in REJECT_KEYWORDS]
@@ -95,14 +102,11 @@ DESIRABLE_KEYWORDS = {
     "platform": 0.8, "creepers": 0.8, "sneakers": 0.7,
     "derby": 0.7, "loafers": 0.6,
     
-    # Bags
-    "bag": 0.7, "backpack": 0.7, "tote": 0.6, "messenger": 0.6,
-    
     # Jewelry & accessories (high value)
     "necklace": 0.8, "pendant": 0.8, "cross pendant": 1.0,
     "ring": 0.7, "bracelet": 0.7, "chain": 0.7,
     "sterling": 0.7, "925": 0.7,
-    "belt": 0.7, "wallet": 0.6,
+    "belt": 0.7,
     "eyewear": 0.7, "sunglasses": 0.7,
     
     # Headwear

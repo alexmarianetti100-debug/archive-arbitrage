@@ -2,8 +2,25 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ═══════════════════════════════════════════════
+   ARCHIVEARB — Terminal Aesthetic
+   Bloomberg Terminal × Dover Street Market
+   ═══════════════════════════════════════════════ */
+
 :root {
   color-scheme: dark;
+  --void: #050505;
+  --bg: #0a0a0a;
+  --surface: #0f0f0f;
+  --border: #1e1e1e;
+  --green: #00ff87;
+  --amber: #ffb700;
+  --blue: #00d4ff;
+  --red: #ff3b30;
+  --accent: #c8ff00;
+  --text-1: #e8e6e3;
+  --text-2: #6b6b6b;
+  --text-3: #3a3a3a;
 }
 
 * {
@@ -15,33 +32,224 @@ html {
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #0a0a0a;
-  color: #ffffff;
+  background-color: var(--void);
+  color: var(--text-1);
+  overflow-x: hidden;
 }
 
-/* Custom scrollbar */
+/* ── Scrollbar: Razor thin ───────────────────── */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 4px;
+  height: 4px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #111827;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #374151;
-  border-radius: 4px;
+  background: #1e1e1e;
+  border-radius: 0;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #4b5563;
+  background: #2a2a2a;
 }
 
-/* Line clamp utilities */
+/* ── Typography utilities ────────────────────── */
+.font-editorial {
+  font-family: 'Instrument Serif', Georgia, serif;
+}
+
+.font-terminal {
+  font-family: 'DM Mono', ui-monospace, SFMono-Regular, monospace;
+}
+
+.text-gradient-green {
+  background: linear-gradient(135deg, #00ff87, #00d4ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-amber {
+  background: linear-gradient(135deg, #ffb700, #ff6b00);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-accent {
+  background: linear-gradient(135deg, #c8ff00, #00ff87);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Terminal data display ───────────────────── */
+.data-mono {
+  font-family: 'DM Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.data-value {
+  font-family: 'DM Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+/* ── Surface treatments ──────────────────────── */
+.surface-terminal {
+  background: #0f0f0f;
+  border: 1px solid #1e1e1e;
+  position: relative;
+}
+
+.surface-terminal::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(255, 255, 255, 0.006) 2px,
+    rgba(255, 255, 255, 0.006) 4px
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+.surface-glass {
+  background: rgba(15, 15, 15, 0.8);
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.surface-inset {
+  background: #080808;
+  border: 1px solid #141414;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* ── Glow effects ────────────────────────────── */
+.glow-green {
+  box-shadow: 0 0 20px rgba(0, 255, 135, 0.08),
+              inset 0 1px 0 rgba(0, 255, 135, 0.05);
+}
+
+.glow-amber {
+  box-shadow: 0 0 20px rgba(255, 183, 0, 0.08),
+              inset 0 1px 0 rgba(255, 183, 0, 0.05);
+}
+
+.glow-accent {
+  box-shadow: 0 0 20px rgba(200, 255, 0, 0.08),
+              inset 0 1px 0 rgba(200, 255, 0, 0.05);
+}
+
+/* ── Grade badges ────────────────────────────── */
+.grade-badge {
+  font-family: 'DM Mono', monospace;
+  font-weight: 500;
+  font-size: 0.6875rem;
+  letter-spacing: 0.05em;
+  padding: 0.125rem 0.5rem;
+  border-width: 1px;
+}
+
+.grade-a {
+  color: #00ff87;
+  background: rgba(0, 255, 135, 0.08);
+  border-color: rgba(0, 255, 135, 0.2);
+}
+
+.grade-b {
+  color: #00d4ff;
+  background: rgba(0, 212, 255, 0.08);
+  border-color: rgba(0, 212, 255, 0.2);
+}
+
+.grade-c {
+  color: #ffb700;
+  background: rgba(255, 183, 0, 0.08);
+  border-color: rgba(255, 183, 0, 0.2);
+}
+
+.grade-d {
+  color: #4a4a4a;
+  background: rgba(74, 74, 74, 0.08);
+  border-color: rgba(74, 74, 74, 0.3);
+}
+
+/* ── Decorative elements ─────────────────────── */
+.corner-marks::before,
+.corner-marks::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-color: rgba(255, 255, 255, 0.1);
+  border-style: solid;
+}
+
+.corner-marks::before {
+  top: -1px;
+  left: -1px;
+  border-width: 1px 0 0 1px;
+}
+
+.corner-marks::after {
+  bottom: -1px;
+  right: -1px;
+  border-width: 0 1px 1px 0;
+}
+
+/* ── Horizontal rule with terminal feel ──────── */
+.divider-terminal {
+  border: none;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #1e1e1e 15%, #1e1e1e 85%, transparent);
+}
+
+/* ── Price ticker style ──────────────────────── */
+.price-positive {
+  color: #00ff87;
+}
+
+.price-negative {
+  color: #ff3b30;
+}
+
+.price-neutral {
+  color: #6b6b6b;
+}
+
+/* ── Platform badges ─────────────────────────── */
+.platform-badge {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0.125rem 0.375rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* ── Line clamp ──────────────────────────────── */
+.line-clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 .line-clamp-2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -49,58 +257,36 @@ body {
   overflow: hidden;
 }
 
-/* Animation utilities */
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slideUp {
-  from { 
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to { 
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-fade-in {
-  animation: fadeIn 0.2s ease-out;
-}
-
-.animate-slide-up {
-  animation: slideUp 0.3s ease-out;
-}
-
-/* Focus styles */
+/* ── Focus styles ────────────────────────────── */
 button:focus-visible,
 a:focus-visible,
 input:focus-visible {
-  outline: 2px solid #8b5cf6;
+  outline: 1px solid var(--accent);
   outline-offset: 2px;
 }
 
-/* Selection */
+/* ── Selection ───────────────────────────────── */
 ::selection {
-  background-color: rgba(139, 92, 246, 0.3);
+  background-color: rgba(200, 255, 0, 0.2);
   color: #ffffff;
 }
 
-/* Smooth transitions for interactive elements */
+/* ── Smooth transitions ──────────────────────── */
 button,
-a,
-input {
-  transition: all 0.2s ease;
+a {
+  transition: all 0.15s ease;
 }
 
-/* Prevent text selection on UI elements */
+input {
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* ── No select on UI ─────────────────────────── */
 .no-select {
   user-select: none;
 }
 
-/* Loading skeleton animation */
+/* ── Loading skeleton ────────────────────────── */
 @keyframes skeleton {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
@@ -109,10 +295,74 @@ input {
 .animate-skeleton {
   background: linear-gradient(
     90deg,
-    #1f2937 25%,
-    #374151 50%,
-    #1f2937 75%
+    #141414 25%,
+    #1e1e1e 50%,
+    #141414 75%
   );
   background-size: 200% 100%;
   animation: skeleton 1.5s ease-in-out infinite;
 }
+
+/* ── Recharts customization ──────────────────── */
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line {
+  stroke: #1a1a1a !important;
+}
+
+.recharts-text {
+  font-family: 'DM Mono', monospace !important;
+  font-size: 10px !important;
+  fill: #4a4a4a !important;
+}
+
+.recharts-tooltip-wrapper {
+  outline: none !important;
+}
+
+/* ── Staggered animation delays ──────────────── */
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+.stagger-5 { animation-delay: 0.25s; }
+.stagger-6 { animation-delay: 0.3s; }
+
+/* ── Table styles ────────────────────────────── */
+.table-terminal {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.table-terminal thead th {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.625rem;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #4a4a4a;
+  padding: 0.625rem 0.75rem;
+  border-bottom: 1px solid #1e1e1e;
+  text-align: left;
+  position: sticky;
+  top: 0;
+  background: #0f0f0f;
+  z-index: 5;
+}
+
+.table-terminal tbody td {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  border-bottom: 1px solid #121212;
+  color: #e8e6e3;
+}
+
+.table-terminal tbody tr {
+  transition: background-color 0.1s ease;
+}
+
+.table-terminal tbody tr:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+

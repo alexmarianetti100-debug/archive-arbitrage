@@ -1,0 +1,93 @@
+{
+  "www.vinted.lu|/|v_udt": {
+    "name": "v_udt",
+    "value": "TUhkcWFXSWxndjVpcTh0Qi9sZjBvRFl3YXZGcC0tQzI4SHpBeSsvNnErbWtuUi0tRjVZaWxORzA5a3lQSXNHS0IzaVErZz09",
+    "domain": "www.vinted.lu",
+    "path": "/",
+    "secure": false,
+    "expires": 1807415340,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  },
+  "www.vinted.lu|/|anon_id": {
+    "name": "anon_id",
+    "value": "ea1cba0c-7d2f-4155-a82e-9c3f88941937",
+    "domain": "www.vinted.lu",
+    "path": "/",
+    "secure": false,
+    "expires": 1807415340,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  },
+  "www.vinted.lu|/|anonymous-locale": {
+    "name": "anonymous-locale",
+    "value": "fr",
+    "domain": "www.vinted.lu",
+    "path": "/",
+    "secure": false,
+    "expires": 1807415340,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  },
+  ".www.vinted.lu|/|non_dot_com_www_domain_cookie_buster": {
+    "name": "non_dot_com_www_domain_cookie_buster",
+    "value": "1",
+    "domain": ".www.vinted.lu",
+    "path": "/",
+    "secure": false,
+    "expires": 1775447355,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  },
+  ".www.vinted.lu|/|refresh_token_web": {
+    "name": "refresh_token_web",
+    "value": "eyJraWQiOiJFNTdZZHJ1SHBsQWp1MmNObzFEb3JIM2oyN0J1NS1zX09QNVB3UGlobjVNIiwiYWxnIjoiUFMyNTYifQ.eyJhcHBfaWQiOjQsImF1ZCI6ImZyLmNvcmUuYXBpIiwiY2xpZW50X2lkIjoid2ViIiwiZXhwIjoxNzczNDYwMTU1LCJpYXQiOjE3NzI4NTUzNTUsImlzcyI6InZpbnRlZC1pYW0tc2VydmljZSIsInB1cnBvc2UiOiJyZWZyZXNoIiwic2NvcGUiOiJwdWJsaWMiLCJzaWQiOiI2NTgzNzgxOS0xNzcyODU1MzU1In0.nXrlJ4elDyNgWRY2739YjuI9JiuswS0Xf1_rByvd3UUyGjHx1GTebSbQ7Sr-KY0hkOixiK5cNMWCEwSjvPI-Wbt7NdEHRlmmkiBKswccYSKnMR-WN47Y14IrjwlgTRUEny1Kz8BKoyx8FCiEJ0Pl_GWE12zgIEvOodf63tmVHTI7zxce-VigtH8VIK4epYR6P9Er6U7d1juBjzIiGfQijNGu9K5dqsSI44IZD4zBjgDoq1IK2C5JOnGfiSARgHENRxkQcTVkdaHnFIe3zxAjgRcFSpJzWf_wBruBRSRTdpZp5vN_DAikmS2ezr65jabMdoS1bchIlbahvFv1IxHeWg",
+    "domain": ".www.vinted.lu",
+    "path": "/",
+    "secure": true,
+    "expires": 1773460155,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  },
+  ".vinted.lu|/|access_token_web": {
+    "name": "access_token_web",
+    "value": "eyJraWQiOiJFNTdZZHJ1SHBsQWp1MmNObzFEb3JIM2oyN0J1NS1zX09QNVB3UGlobjVNIiwiYWxnIjoiUFMyNTYifQ.eyJhcHBfaWQiOjQsImF1ZCI6ImZyLmNvcmUuYXBpIiwiY2xpZW50X2lkIjoid2ViIiwiZXhwIjoxNzcyODYyNTU1LCJpYXQiOjE3NzI4NTUzNTUsImlzcyI6InZpbnRlZC1pYW0tc2VydmljZSIsInB1cnBvc2UiOiJhY2Nlc3MiLCJzY29wZSI6InB1YmxpYyIsInNpZCI6IjY1ODM3ODE5LTE3NzI4NTUzNTUifQ.HjNDvaQVGp6QfHtUC_tD0F1_nymdJbSTGgBk81gYVEabNc4enmkWrqRhtNQach0LsRjRt7pSdvXpfUjhym-oGGsxECGdxpElws5YHYW50Ka1Cm5AnJ28-6ZXPPRk9wzbpN6G29XwuScYLL2RYJKRPrwY6kWU-UIrmlz0L5cGp_EPHDGEhJzGbpq2GYNpKdW0dXw-pbqTzF776RuRw8YYvaTHNUst4cLZtJFr8n_gjw_m-iPcp3NopVuMkdM2m0qMYEpFqOLlKLAh3rauYx6flGUnIvYiJAty92SV5VSl9GcF4wXUVyla_hLRiHOpc-hNYl8GjxvXd1baBsJCY1k8MA",
+    "domain": ".vinted.lu",
+    "path": "/",
+    "secure": true,
+    "expires": 1773460155,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  },
+  ".vinted.lu|/|__cf_bm": {
+    "name": "__cf_bm",
+    "value": "9gva.2PT9Xup9jfxBxcvE1.Dh0nRxwGPwBGHzWusX.8-1772855355-1.0.1.1-ngVyOE.SCsrPqCYtIgPnt4vouoKfSv_4QzqUiVEy8jKGLBW1UiYCehpATntG3.wPXM8faS9q7NkDsx5a499mugIJtXXpDAgrvfHIJ9.xeZWjTCRGYlwv8klPuKgqG2sA",
+    "domain": ".vinted.lu",
+    "path": "/",
+    "secure": true,
+    "expires": 1772857155,
+    "discard": false,
+    "comment": null,
+    "comment_url": null,
+    "rest": {},
+    "rfc2109": false
+  }
+}

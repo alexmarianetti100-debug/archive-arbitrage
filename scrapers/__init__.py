@@ -14,6 +14,9 @@ from .shopgoodwill import ShopGoodwillScraper
 from .grailed import GrailedScraper
 from .nobids import NoBidsScraper
 from .gem import GemScraper
+from .therealreal import TheRealRealScraper
+from .fashionphile import FashionphileScraper
+from .secondstreet import SecondStreetScraper
 
 # Vinted (pip install vinted_scraper)
 try:
@@ -51,6 +54,9 @@ __all__ = [
     "GrailedScraper",
     "NoBidsScraper",
     "GemScraper",
+    "TheRealRealScraper",
+    "FashionphileScraper",
+    "SecondStreetScraper",
     
     # Brand data
     "ARCHIVE_BRANDS",
