@@ -660,6 +660,52 @@ def _map_grade(fire_level: int, quality_score: float) -> str:
     return "D"
 
 
+async def compute_comp_phashes(comps: list, max_concurrent: int = 5) -> dict:
+    """Batch compute pHashes for comp images. Returns {index: phash_hex_string}.
+
+    Only hashes comps that have images but no phash yet. Downloads images
+    concurrently with a semaphore to limit bandwidth.
+    """
+    try:
+        import imagehash
+        from PIL import Image
+        import io
+        import httpx
+    except ImportError:
+        return {}
+
+    sem = asyncio.Semaphore(max_concurrent)
+    results = {}
+
+    async def _hash_one(idx: int, url: str):
+        async with sem:
+            try:
+                async with httpx.AsyncClient(timeout=10) as client:
+                    resp = await client.get(url)
+                if resp.status_code != 200:
+                    return
+                img = Image.open(io.BytesIO(resp.content))
+                if img.mode != 'RGB':
+                    img = img.convert('RGB')
+                results[idx] = str(imagehash.phash(img))
+            except Exception:
+                pass
+
+    tasks = []
+    for i, comp in enumerate(comps):
+        if getattr(comp, 'phash', None):
+            continue  # Already has phash
+        images = getattr(comp, 'images', None) or []
+        url = images[0] if images else getattr(comp, 'image_url', None)
+        if url:
+            tasks.append(_hash_one(i, url))
+
+    if tasks:
+        await asyncio.gather(*tasks)
+
+    return results
+
+
 def compute_weighted_price(
     item_title: str,
     brand: str,
@@ -672,13 +718,31 @@ def compute_weighted_price(
     Returns a new SoldData with recalculated prices, or None if no comps
     are similar enough (hard gate: 0 comps above 0.5 similarity).
     """
-    from scrapers.comp_matcher import parse_title, score_comp_similarity, image_similarity_boost
+    from scrapers.comp_matcher import parse_title, score_comp_similarity, image_similarity_boost, is_exact_match
     from db.sqlite_models import get_comp_quality_scores, get_pair_quality_scores_batch
 
     if not sold_items:
         return None
 
     listing_fp = parse_title(brand, item_title)
+
+    # ── Hard gate: is_exact_match() pre-filter ──
+    # Reject comps that fail brand/model/type/line/material checks before scoring.
+    # This catches mismatches that soft scoring alone might let through at ~0.5.
+    filtered_items = []
+    for comp in sold_items:
+        comp_fp = parse_title(brand, comp.title)
+        if is_exact_match(listing_fp, comp_fp):
+            filtered_items.append(comp)
+        else:
+            logger.debug(
+                f"    🚫 is_exact_match rejected: '{comp.title[:50]}' "
+                f"(model: {comp_fp.model or 'none'}, type: {comp_fp.item_type or 'none'})"
+            )
+    if not filtered_items:
+        logger.info(f"    ❌ All comps rejected by is_exact_match for '{item_title[:50]}'")
+        return None
+    sold_items = filtered_items
     context_model = listing_fp.model or listing_fp.item_type or "unknown"
 
     # Look up global quality scores in one batch
@@ -1522,6 +1586,22 @@ class GapHunter:
                     )
                 except Exception:
                     pass  # Duplicate or constraint error — skip
+
+            # ── Compute pHashes for comp images (async batch) ──
+            try:
+                phash_results = await compute_comp_phashes(valid_comps[:15])
+                if phash_results:
+                    from db.sqlite_models import update_sold_comp_phash
+                    for idx, phash_hex in phash_results.items():
+                        vc = valid_comps[idx]
+                        vc.phash = phash_hex  # Attach to comp object for downstream use
+                        source = getattr(vc, 'source', 'grailed')
+                        source_id = getattr(vc, 'source_id', '')
+                        if source_id:
+                            update_sold_comp_phash(source, source_id, phash_hex)
+                    logger.debug(f"  📷 Computed {len(phash_results)} pHashes for '{query}' comps")
+            except Exception as e:
+                logger.debug(f"  ⚠️ pHash computation failed: {e}")
 
             # ── Comp confidence based on count ──
             comp_confidence = "high" if len(prices) >= 12 else "medium" if len(prices) >= 5 else "low"
