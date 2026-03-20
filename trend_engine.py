@@ -452,7 +452,7 @@ LONGTAIL_TARGETS = [
     "comme des garcons homme plus jacket", "comme des garcons noir jacket",
     "comme des garcons shirt jacket",
     # Mihara Yasuhiro
-    "mihara yasuhiro boots", "mihara yasuhiro sneakers platform",
+    "mihara yasuhiro sneakers platform",
 ]
 
 
