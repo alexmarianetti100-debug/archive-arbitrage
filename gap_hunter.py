@@ -765,6 +765,11 @@ def compute_weighted_price(
         # Downweight fallback: keep all, weight by similarity
         final = scored
 
+    # Cap at 10 best comps — enough for confidence, few enough that each matters
+    # Sort by similarity first to keep the best, then re-sort by price for median
+    final.sort(key=lambda x: x[1], reverse=True)
+    final = final[:10]
+
     # Compute weighted median
     final.sort(key=lambda x: x[0].price)
     total_weight = sum(s for _, s in final)
@@ -802,6 +807,12 @@ def compute_weighted_price(
     result.comp_urls = [getattr(c, 'url', None) for c in surviving_comps]
     result.comp_sizes = [getattr(c, 'size', None) for c in surviving_comps]
     result._similarity_scores = similarity_scores
+    # Identity fields for direct persistence (bypass link_item_to_sold_comps)
+    result.comp_sources = [getattr(c, 'source', 'grailed') for c in surviving_comps]
+    result.comp_source_ids = [getattr(c, 'source_id', '') for c in surviving_comps]
+    result.comp_conditions = [getattr(c, 'condition', None) for c in surviving_comps]
+    result.comp_sold_dates = [getattr(c, 'sold_date', None) for c in surviving_comps]
+    result.comp_phashes = [getattr(c, 'phash', None) for c in surviving_comps]
     result._confidence = getattr(sold_data, '_confidence', 'medium')
     result._cv = getattr(sold_data, '_cv', None)
     result._hyper_pricing = getattr(sold_data, '_hyper_pricing', False)
@@ -2402,16 +2413,28 @@ class GapHunter:
                 downside_bonus = max(0.0, downside_profit) * 0.10
                 mos_score = max(0.0, downside_profit) + pricing_bonus + downside_bonus
 
-                # Build comp snapshots for frontend persistence
+                # Build comp snapshots with full identity for direct persistence
                 _titles = getattr(effective_sold, 'comp_titles', None) or []
                 _prices = getattr(effective_sold, 'comp_prices', None) or []
                 _urls = getattr(effective_sold, 'comp_urls', None) or []
+                _sources = getattr(effective_sold, 'comp_sources', None) or []
+                _source_ids = getattr(effective_sold, 'comp_source_ids', None) or []
+                _conditions = getattr(effective_sold, 'comp_conditions', None) or []
+                _sold_dates = getattr(effective_sold, 'comp_sold_dates', None) or []
+                _phashes = getattr(effective_sold, 'comp_phashes', None) or []
+                _sim_scores = getattr(effective_sold, '_similarity_scores', None) or []
                 _snapshots = []
-                for _i, _t in enumerate(_titles[:15]):
+                for _i, _t in enumerate(_titles[:10]):
                     _snapshots.append({
                         "title": _t,
                         "price": _prices[_i] if _i < len(_prices) else effective_sold.avg_price,
                         "url": _urls[_i] if _i < len(_urls) else None,
+                        "source": _sources[_i] if _i < len(_sources) else "grailed",
+                        "source_id": _source_ids[_i] if _i < len(_source_ids) else "",
+                        "condition": _conditions[_i] if _i < len(_conditions) else None,
+                        "sold_date": _sold_dates[_i] if _i < len(_sold_dates) else None,
+                        "phash": _phashes[_i] if _i < len(_phashes) else None,
+                        "similarity_score": _sim_scores[_i] if _i < len(_sim_scores) else None,
                     })
 
                 deals.append(GapDeal(
@@ -3003,15 +3026,17 @@ class GapHunter:
                 finally:
                     conn.close()
 
-                # Link item to sold comps from DB
-                # Note: similarity_scores not passed because link_item_to_sold_comps
-                # fetches comps in DB order (id DESC) which doesn't match the price-sorted
-                # order from compute_weighted_price. Synthetic rank-based scores are used instead.
-                from db.sqlite_models import link_item_to_sold_comps
-                comp_count_saved = link_item_to_sold_comps(persisted_id, deal.query)
-                if comp_count_saved == 0:
-                    logger.warning(f"    ⚠️ No sold_comps for '{deal.query}' — trying brand fallback")
-                    comp_count_saved = link_item_to_sold_comps(persisted_id, brand or "")
+                # Persist scored comps directly from compute_weighted_price() results
+                from db.sqlite_models import persist_scored_comps, link_item_to_sold_comps
+                if deal.comp_snapshots:
+                    comp_count_saved = persist_scored_comps(persisted_id, deal.comp_snapshots)
+                    if comp_count_saved == 0:
+                        logger.warning(f"    ⚠️ No scored comps resolved — falling back to DB search")
+                        comp_count_saved = link_item_to_sold_comps(persisted_id, deal.query)
+                else:
+                    comp_count_saved = link_item_to_sold_comps(persisted_id, deal.query)
+                    if comp_count_saved == 0:
+                        comp_count_saved = link_item_to_sold_comps(persisted_id, brand or "")
 
                 logger.info(f"    💾 Persisted to DB: item #{persisted_id}, grade {grade}, {comp_count_saved} comps [v2-snapshots]")
             except Exception as e:

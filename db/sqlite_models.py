@@ -1190,6 +1190,84 @@ def get_item_comps(item_id: int) -> List[Dict[str, Any]]:
     return comps
 
 
+def persist_scored_comps(item_id: int, snapshots: list, context_model: str = "unknown") -> int:
+    """Persist pre-scored comps directly to item_comps.
+
+    Uses real similarity scores from compute_weighted_price() instead of
+    re-searching the DB and assigning synthetic scores.
+
+    Returns number of comps linked.
+    """
+    if not snapshots:
+        return 0
+
+    conn = _get_conn()
+    c = conn.cursor()
+
+    # Resolve source+source_id → sold_comp.id in one batch query
+    pairs_to_resolve = [
+        (s.get("source", "grailed"), s.get("source_id", ""))
+        for s in snapshots
+        if s.get("source_id")
+    ]
+
+    sold_comp_ids = {}
+    if pairs_to_resolve:
+        placeholders = " OR ".join(
+            ["(source = ? AND source_id = ?)"] * len(pairs_to_resolve)
+        )
+        params = []
+        for source, source_id in pairs_to_resolve:
+            params.extend([source, source_id])
+        c.execute(
+            f"SELECT id, source, source_id FROM sold_comps WHERE {placeholders}",
+            params,
+        )
+        for row in c.fetchall():
+            sold_comp_ids[(row["source"], row["source_id"])] = row["id"]
+
+    conn.close()
+
+    # Build item_comp entries with real scores
+    entries = []
+    for rank, snap in enumerate(snapshots[:10], start=1):
+        source = snap.get("source", "grailed")
+        source_id = snap.get("source_id", "")
+        sc_id = sold_comp_ids.get((source, source_id))
+
+        if sc_id is None:
+            continue
+
+        sim = snap.get("similarity_score")
+        if sim is None:
+            sim = max(0.5, 1.0 - rank * 0.03)
+
+        sold_date = snap.get("sold_date")
+        if sold_date is not None and not isinstance(sold_date, str):
+            try:
+                sold_date = sold_date.isoformat()
+            except (AttributeError, TypeError):
+                sold_date = str(sold_date)
+
+        entries.append({
+            "sold_comp_id": sc_id,
+            "similarity_score": sim,
+            "rank": rank,
+            "snapshot_title": snap.get("title"),
+            "snapshot_price": snap.get("price"),
+            "snapshot_condition": snap.get("condition"),
+            "snapshot_source": source,
+            "snapshot_sold_date": sold_date,
+            "snapshot_url": snap.get("url"),
+        })
+
+    if not entries:
+        return 0
+
+    save_item_comps(item_id, entries, context_model=context_model)
+    return len(entries)
+
+
 def link_item_to_sold_comps(
     item_id: int,
     search_key: str,
