@@ -3114,9 +3114,28 @@ class GapHunter:
                 finally:
                     conn.close()
 
-                # Persist scored comps directly from compute_weighted_price() results
-                from db.sqlite_models import persist_scored_comps, link_item_to_sold_comps
+                # Ensure every scored comp has a sold_comps row so persist_scored_comps() can resolve them
+                from db.sqlite_models import persist_scored_comps, link_item_to_sold_comps, save_sold_comp
                 if deal.comp_snapshots:
+                    for snap in deal.comp_snapshots:
+                        if snap.get("source_id"):
+                            sold_date = snap.get("sold_date")
+                            if sold_date is not None and not isinstance(sold_date, str):
+                                try:
+                                    sold_date = sold_date.isoformat()
+                                except (AttributeError, TypeError):
+                                    sold_date = str(sold_date) if sold_date else None
+                            save_sold_comp(deal.query, {
+                                "source": snap.get("source", "grailed"),
+                                "source_id": snap.get("source_id"),
+                                "title": snap.get("title"),
+                                "brand": brand,
+                                "sold_price": snap.get("price"),
+                                "sold_url": snap.get("url"),
+                                "condition": snap.get("condition"),
+                                "sold_date": sold_date,
+                                "image_url": snap.get("image_url"),
+                            })
                     comp_count_saved = persist_scored_comps(persisted_id, deal.comp_snapshots)
                     if comp_count_saved == 0:
                         logger.warning(f"    ⚠️ No scored comps resolved — falling back to DB search")
