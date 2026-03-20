@@ -3398,6 +3398,8 @@ class GapHunter:
                                     self.downside_net_profit = japan_deal.net_profit * 0.7
                                     self.margin_of_safety_score = japan_deal.margin_percent
                                     self._hyper_pricing = False
+                                    self.comp_snapshots = None  # No scored comps — use fallback linking
+                                    self.similarity_scores = None
                             
                             item = MockItem(deal)
                             mock_deal = MockDeal(deal, item)
