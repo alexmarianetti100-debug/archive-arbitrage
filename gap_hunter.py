@@ -3147,7 +3147,7 @@ class GapHunter:
 
                 logger.info(f"    💾 Persisted to DB: item #{persisted_id}, grade {grade}, {comp_count_saved} comps [v2-snapshots]")
             except Exception as e:
-                logger.warning(f"    ⚠️ DB persist failed: {e}")
+                logger.exception(f"    ⚠️ DB persist failed: {e}")
 
             # Track deal prediction for accuracy analysis
             try:
