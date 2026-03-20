@@ -88,108 +88,112 @@ DEAD_QUERY_MAX_DEALS = 0    # …with zero deals → excluded from rotation
 # Based on successful sellers like 4gseller and archivethreads
 
 CORE_TARGETS = [
-    # Rick Owens — footwear + outerwear (proven performers)
+    # Rick Owens — footwear + outerwear
     "rick owens dunks",
     "rick owens leather jacket",
     "rick owens stooges",
     "rick owens kiss boots",
-    "rick owens geobasket",
+    "rick owens sneakers",
     "rick owens champion",
-    # Rick Owens — pants (broad category queries that match seller titles)
-    "rick owens creatch cargo",
+    # Rick Owens — pants + bags
     "rick owens cargo pants",
-    "rick owens drawstring pants",
     "rick owens drkshdw pants",
-    # Chrome Hearts — jewelry (highest liquidity)
+    "rick owens bag",
+    # Chrome Hearts — high-volume categories (not style-specific)
     "chrome hearts ring",
-    "chrome hearts cross ring",
     "chrome hearts bracelet",
     "chrome hearts necklace",
-    "chrome hearts cross pendant",
-    "chrome hearts forever ring",
-    "chrome hearts plus ring",
-    "chrome hearts fuck you ring",
     "chrome hearts dagger pendant",
-    "chrome hearts scroll ring",
+    "chrome hearts paper chain",
     "chrome hearts floral cross",
-    "chrome hearts paperchain",
-    "chrome hearts tiny e",
+    "chrome hearts tiny ring",
+    "chrome hearts tee",
+    "chrome hearts hat",
+    "chrome hearts wallet",
     # Margiela
-    "margiela tabi boots",
-    "margiela replica sneakers",
+    "maison margiela tabi boots",
+    "maison margiela replica gat",
+    "maison margiela boots",
+    "maison margiela leather jacket",
     # Saint Laurent (Hedi era)
     "saint laurent wyatt boots",
     "saint laurent leather jacket",
-    # Vetements (high-margin archive brand, previously zero coverage)
+    "saint laurent paris oil",
+    # Vetements
     "vetements hoodie",
     "vetements total fucking darkness",
     "vetements raincoat",
-    # JPG (mesh/tattoo/corset are liquid)
-    "jean paul gaultier mesh top",
+    "vetements polizei hoodie",
+    # JPG
+    "jean paul gaultier mesh",
     "jean paul gaultier tattoo",
     "jean paul gaultier corset",
     # Raf Simons (archive)
     "raf simons consumed hoodie",
     "raf simons riot riot riot",
+    # Balenciaga (proven performers)
+    "balenciaga runner",
+    "balenciaga skater sweatpants",
     # Dior Homme (Hedi era)
     "dior homme leather jacket",
+    "dior homme jacket",
     # Number Nine
-    "number nine leather",
+    "number nine leather jacket",
     # Prada
     "prada monolith boots",
     "prada derby",
     "prada america's cup",
     # Helmut Lang (archive)
-    "helmut lang leather",
+    "helmut lang leather jacket",
     # ERD
     "enfants riches deprimes hoodie",
     "enfants riches deprimes leather jacket",
+    # Bottega Veneta
+    "bottega veneta intrecciato",
+    "bottega veneta bag",
     # Other archive
     "undercover bomber jacket",
+    "undercover tee",
     "vivienne westwood orb",
     "ann demeulemeester boots",
 ]
 
 # ── Extended luxury targets (high-value accessories and watches) ─
 EXTENDED_TARGETS = [
-    # Chrome Hearts jewelry (specific models)
+    # Chrome Hearts jewelry (only high-volume, no style-specific ring names)
     "chrome hearts mini cross", "chrome hearts baby fat pendant",
-    "chrome hearts star ring", "chrome hearts bubblegum ring",
-    "chrome hearts rolling stones", "chrome hearts foti",
-    "chrome hearts cross ball bracelet", "chrome hearts double floral",
-    "chrome hearts maltese cross", "chrome hearts cemetery cross",
-    "chrome hearts keeper ring", "chrome hearts spinner ring",
-    "chrome hearts morning star bracelet", "chrome hearts horseshoe ring",
-    "chrome hearts belt", "chrome hearts diamond",
+    "chrome hearts belt", "chrome hearts diamond ring",
 
-    # Chrome Hearts clothing
+    # Chrome Hearts clothing (proven performers)
     "chrome hearts cross patch jeans", "chrome hearts cross patch flannel",
     "chrome hearts zip up hoodie", "chrome hearts shorts",
-    "chrome hearts deadly doll", "chrome hearts matty boy hoodie",
-    "chrome hearts matty boy tee", "chrome hearts trucker jacket",
-    "chrome hearts denim jacket", "chrome hearts track pants",
-    "chrome hearts leather cross patch", "chrome hearts cross patch hat",
+    "chrome hearts deadly doll tank", "chrome hearts matty boy hoodie",
+    "chrome hearts trucker jacket", "chrome hearts denim jacket",
+    "chrome hearts track pants", "chrome hearts leather cross patch",
+    "chrome hearts cross patch hat",
 
     # Chrome Hearts eyewear (telemetry-proven)
-    "chrome hearts vagilante glasses", "chrome hearts sneakers", "chrome hearts boots",
+    "chrome hearts vagilante glasses", "chrome hearts trypoleagain glasses",
+    "chrome hearts see you tea", "chrome hearts gittin any frame",
+    "chrome hearts glitter friends family",
+    "chrome hearts sneakers", "chrome hearts boots",
 
     # Rick Owens (outerwear + footwear expansion)
     "rick owens coat", "rick owens hoodie", "rick owens bomber",
     "rick owens denim jacket", "rick owens biker jacket",
-    "rick owens drkshdw", "rick owens level tee", "rick owens intarsia",
-    "rick owens island dunk", "rick owens drkshdw jumbo lace",
-    "rick owens tractor boots", "rick owens fogachine", "rick owens tecuatl",
+    "rick owens level tee", "rick owens drkshdw jumbo lace",
+    "rick owens tractor boots", "rick owens grained leather sneakers",
 
-    # Vetements (new — high-margin archive brand)
-    "vetements dhl", "vetements metal hoodie", "vetements champion",
-    "vetements oversized hoodie", "vetements bomber jacket",
-    "vetements leather jacket", "vetements sweatpants",
+    # Vetements (expanded)
+    "vetements dhl", "vetements dhl tee", "vetements metal hoodie",
+    "vetements champion", "vetements oversized hoodie",
+    "vetements bomber jacket", "vetements leather jacket",
+    "vetements sweatpants", "vetements staff hoodie",
 
     # Margiela
-    "margiela deconstructed blazer", "margiela glam slam",
-    "margiela artisanal jacket", "margiela artisanal",
-    "margiela duvet coat", "margiela deconstructed",
-    "maison margiela tabi loafers", "maison margiela future",
+    "maison margiela deconstructed blazer", "maison margiela glam slam",
+    "maison margiela artisanal", "maison margiela duvet coat",
+    "maison margiela deconstructed", "maison margiela tabi loafers",
 
     # Helmut Lang (year-based + feature-based)
     "helmut lang painter jeans", "helmut lang flak jacket",
@@ -202,7 +206,7 @@ EXTENDED_TARGETS = [
     "raf simons leather jacket", "raf simons denim jacket",
     "raf simons nebraska", "raf simons parka", "raf simons bomber jacket",
     "raf simons fishtail parka", "raf simons power corruption lies",
-    "raf simons peter saville", "raf simons ozweego", "raf simons kollaps",
+    "raf simons peter saville", "raf simons kollaps",
 
     # JPG (expanded)
     "jean paul gaultier tattoo top", "jean paul gaultier sailor",
@@ -210,16 +214,14 @@ EXTENDED_TARGETS = [
     "jean paul gaultier sheer", "jean paul gaultier cyberbaba",
     "jean paul gaultier maille", "jean paul gaultier boots",
 
-    # Dior Homme (Hedi era focus)
+    # Dior Homme (Hedi era — using collection names not season codes)
     "dior homme boots", "dior homme jeans", "dior homme bomber",
-    "dior homme navigate bomber", "dior homme fw03", "dior homme fw07",
-    "dior homme luster denim", "dior homme waxed jeans",
+    "dior homme navigate", "dior homme luster denim", "dior homme waxed jeans",
 
-    # Balenciaga (archive pieces with margin)
-    "balenciaga speed", "balenciaga leather jacket",
-    "balenciaga political campaign", "balenciaga speedhunters",
-    "balenciaga destroyed hoodie", "balenciaga leather biker",
-    "balenciaga arena high top", "balenciaga hummer boots",
+    # Balenciaga (archive pieces with proven margin)
+    "balenciaga leather jacket", "balenciaga political campaign",
+    "balenciaga speedhunters hoodie", "balenciaga destroyed hoodie",
+    "balenciaga leather biker", "balenciaga hummer boots",
     "balenciaga lamborghini", "balenciaga lost tape flared",
 
     # Saint Laurent
@@ -246,9 +248,10 @@ EXTENDED_TARGETS = [
     "enfants riches deprimes sweater", "enfants riches deprimes flannel",
     "enfants riches deprimes bomber",
 
-    # Wacko Maria (new — missing from system entirely)
-    "wacko maria leopard", "wacko maria hawaiian",
-    "wacko maria leather jacket",
+    # Wacko Maria
+    "wacko maria leopard", "wacko maria hawaiian", "wacko maria shirt",
+    "wacko maria leather jacket", "wacko maria varsity jacket",
+    "wacko maria knit cardigan",
 
     # Ann Demeulemeester
     "ann demeulemeester leather jacket", "ann demeulemeester leather boots",
@@ -256,7 +259,7 @@ EXTENDED_TARGETS = [
 
     # CCP
     "carol christian poell leather jacket", "carol christian poell coat",
-    "carol christian poell drip rubber",
+    "carol christian poell drip sneaker",
 
     # Vivienne Westwood
     "vivienne westwood orb necklace", "vivienne westwood armor ring",
@@ -286,6 +289,7 @@ EXTENDED_TARGETS = [
     # Prada
     "prada re-nylon", "prada nylon jacket", "prada leather jacket",
     "prada chocolate loafers", "prada leather loafers",
+    "prada cotton velvet blouson",
 
     # Celine (Hedi era)
     "celine leather jacket", "celine teddy jacket", "celine boots",
@@ -306,14 +310,14 @@ EXTENDED_TARGETS = [
     "guidi boots", "guidi back zip boots", "guidi horse leather",
     "guidi 988", "guidi 995", "guidi 986",
 
-    # Acne Studios (outerwear only)
+    # Acne Studios
     "acne studios leather jacket", "acne studios velocite jacket",
 
     # The Soloist
     "soloist leather jacket", "takahiromiyashita soloist",
 
     # Louis Vuitton
-    "louis vuitton murakami", "louis vuitton trainer",
+    "louis vuitton murakami bag", "louis vuitton trainer",
 
     # Alexander McQueen
     "alexander mcqueen leather jacket", "alexander mcqueen skull ring",
@@ -331,19 +335,16 @@ LONGTAIL_TARGETS = [
     "kapital kountry denim", "kapital century denim",
     # Raf Simons deep archive
     "raf simons knit sweater", "raf simons antwerp jacket",
-    "raf simons 2001", "raf simons 2002", "raf simons virginia creepers",
+    "raf simons 2001", "raf simons 2002",
     "raf simons peter saville joy division",
     # Number (N)ine
     "number nine quilted",
     # Undercover deep cuts
     "undercover scab tour", "undercover witch cell division",
-    # Ann Demeulemeester
-    "ann demeulemeester coat", "ann demeulemeester blazer",
     # Carol Christian Poell
     "carol christian poell boots",
     # Dries Van Noten
     "dries van noten printed jacket",
-    # Margiela artisanal (in EXTENDED already)
     # Thierry Mugler
     "thierry mugler coat",
     # Vetements niche
