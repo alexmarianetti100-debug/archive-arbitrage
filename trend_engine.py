@@ -88,317 +88,235 @@ DEAD_QUERY_MAX_DEALS = 0    # …with zero deals → excluded from rotation
 # Based on successful sellers like 4gseller and archivethreads
 
 CORE_TARGETS = [
-    # Archive Fashion (proven performers)
+    # Rick Owens — footwear + outerwear (proven performers)
     "rick owens dunks",
     "rick owens leather jacket",
+    "rick owens stooges",
+    "rick owens kiss boots",
     "rick owens geobasket",
-    # Rick Owens pants — mainline (high-volume resale)
-    "rick owens creatch cargo pants",
-    "rick owens bauhaus cargo pants",
-    "rick owens bolan banana pants",
-    "rick owens bolan pants",
-    "rick owens astaires pants",
-    "rick owens bela pants",
-    "rick owens drawstring long pants",
-    "rick owens drawstring cropped pants",
-    "rick owens dietrich pants",
-    "rick owens berlin drawstring pants",
-    "rick owens geth jeans",
-    "rick owens geth cargo pants",
-    "rick owens mastodon cargo pants",
-    "rick owens motopants",
-    "rick owens karloff pants",
-    "rick owens joris pants",
-    "rick owens bias pants",
-    "rick owens stefan cargo pants",
-    "rick owens hustler pants",
-    "rick owens dropped crotch pants",
-    "rick owens babel cargo pants",
-    "rick owens pod shorts",
-    "rick owens headon pants",
-    "rick owens pannier cargo pants",
-    "rick owens tecuatl track pants",
-    # Rick Owens pants — DRKSHDW
-    "rick owens drkshdw detroit jeans",
-    "rick owens drkshdw tyrone jeans",
-    "rick owens drkshdw memphis jeans",
-    "rick owens drkshdw prisoner pants",
-    "rick owens drkshdw pusher pants",
-    "rick owens drkshdw pod pants",
-    "rick owens drkshdw creatch cargo",
-    "rick owens drkshdw torrance jeans",
-    "rick owens drkshdw collapse pants",
-    "margiela tabi boots",
-    "margiela tabi heels",
-    "margiela replica sneakers",
-    "saint laurent wyatt boots",
-    "saint laurent leather jacket",
-    "saint laurent teddy jacket",
+    "rick owens champion",
+    # Rick Owens — pants (broad category queries that match seller titles)
+    "rick owens creatch cargo",
+    "rick owens cargo pants",
+    "rick owens drawstring pants",
+    "rick owens drkshdw pants",
+    # Chrome Hearts — jewelry (highest liquidity)
     "chrome hearts ring",
+    "chrome hearts cross ring",
     "chrome hearts bracelet",
     "chrome hearts necklace",
     "chrome hearts cross pendant",
     "chrome hearts forever ring",
     "chrome hearts plus ring",
+    "chrome hearts fuck you ring",
     "chrome hearts dagger pendant",
     "chrome hearts scroll ring",
     "chrome hearts floral cross",
     "chrome hearts paperchain",
     "chrome hearts tiny e",
-    "dior b23 sneakers",
-    "dior oblique jacket",
-    "balenciaga track sneakers",
-    "balenciaga triple s",
-    "balenciaga runner",
-    "bottega veneta puddle boots",
-    "gucci horsebit loafers",
-    "gucci rhyton sneakers",
-    "gucci ace sneakers",
-    "prada monolith boots",
-    "prada derby shoes",
-    "prada america's cup",
-    "louis vuitton trainer",
-    "chanel espadrilles",
-    "chanel slingbacks",
-    "helmut lang leather jacket",
-    "helmut lang astro biker",
-    "raf simons leather jacket",
-    "raf simons riot bomber",
-    "raf simons consumed",
-    "number nine leather jacket",
+    # Margiela
+    "margiela tabi boots",
+    "margiela replica sneakers",
+    # Saint Laurent (Hedi era)
+    "saint laurent wyatt boots",
+    "saint laurent leather jacket",
+    # Vetements (high-margin archive brand, previously zero coverage)
+    "vetements hoodie",
+    "vetements total fucking darkness",
+    "vetements raincoat",
+    # JPG (mesh/tattoo/corset are liquid)
     "jean paul gaultier mesh top",
+    "jean paul gaultier tattoo",
     "jean paul gaultier corset",
+    # Raf Simons (archive)
+    "raf simons consumed hoodie",
+    "raf simons riot riot riot",
+    # Dior Homme (Hedi era)
     "dior homme leather jacket",
-    "ann demeulemeester boots",
-    "undercover jacket",
+    # Number Nine
+    "number nine leather",
+    # Prada
+    "prada monolith boots",
+    "prada derby",
+    "prada america's cup",
+    # Helmut Lang (archive)
+    "helmut lang leather",
+    # ERD
+    "enfants riches deprimes hoodie",
+    "enfants riches deprimes leather jacket",
+    # Other archive
+    "undercover bomber jacket",
     "vivienne westwood orb",
-    "vivienne westwood armor ring",
-    "vivienne westwood corset",
-    "comme des garcons jacket",
-    "carol christian poell boots",
-    "boris bidjan saberi coat",
+    "ann demeulemeester boots",
 ]
 
 # ── Extended luxury targets (high-value accessories and watches) ─
 EXTENDED_TARGETS = [
-    # Chrome Hearts (extensive jewelry line)
-    "chrome hearts ch cross",
-    "chrome hearts mini cross",
-    "chrome hearts babyfat",
-    "chrome hearts star ring",
-    "chrome hearts bubblegum",
-    "chrome hearts rolling stones",
-    "chrome hearts foti",
-    "chrome hearts eye",
-    "chrome hearts crossball",
-    "chrome hearts forever",
-    "chrome hearts love ring",
-    "chrome hearts nail ring",
-    "chrome hearts double floral",
-    "chrome hearts maltese cross",
-    "chrome hearts cemetery",
-    "chrome hearts beverly hills",
-    "chrome hearts hollywood",
-    "chrome hearts paris",
-    "chrome hearts tokyo",
-    "chrome hearts online exclusive",
+    # Chrome Hearts jewelry (specific models)
+    "chrome hearts mini cross", "chrome hearts baby fat pendant",
+    "chrome hearts star ring", "chrome hearts bubblegum ring",
+    "chrome hearts rolling stones", "chrome hearts foti",
+    "chrome hearts cross ball bracelet", "chrome hearts double floral",
+    "chrome hearts maltese cross", "chrome hearts cemetery cross",
+    "chrome hearts keeper ring", "chrome hearts spinner ring",
+    "chrome hearts morning star bracelet", "chrome hearts horseshoe ring",
+    "chrome hearts belt", "chrome hearts diamond",
 
-    # Chrome Hearts clothing (high liquidity)
+    # Chrome Hearts clothing
     "chrome hearts cross patch jeans", "chrome hearts cross patch flannel",
     "chrome hearts zip up hoodie", "chrome hearts shorts",
-    "chrome hearts deadly doll", "chrome hearts deadly doll tank",
-    "chrome hearts matty boy hoodie", "chrome hearts matty boy tee",
-    "chrome hearts trucker jacket", "chrome hearts denim jacket",
-    "chrome hearts thermal", "chrome hearts track pants",
-    "chrome hearts leather cross patch",
-    # Chrome Hearts telemetry-proven eyewear/footwear
-    "chrome hearts pony hair triple", "chrome hearts paper jam triple",
-    "chrome hearts gittin any frame", "chrome hearts glitter friends family",
-    "chrome hearts vagilante glasses", "chrome hearts sneakers", "chrome hearts boots",
-    "chrome hearts tiny ring", "chrome hearts cross patch hat", "chrome hearts baby rib tank",
+    "chrome hearts deadly doll", "chrome hearts matty boy hoodie",
+    "chrome hearts matty boy tee", "chrome hearts trucker jacket",
+    "chrome hearts denim jacket", "chrome hearts track pants",
+    "chrome hearts leather cross patch", "chrome hearts cross patch hat",
 
-    # Archive Fashion (extended)
-    "rick owens coat", "rick owens knit", "rick owens hoodie", "rick owens geobasket",
-    "rick owens bomber", "rick owens drkshdw", "rick owens bauhaus", "rick owens level tee",
-    "rick owens intarsia", "rick owens dustulator",
-    "margiela paint splatter", "margiela deconstructed blazer", "margiela numbers tee",
-    "margiela replica sneakers", "margiela glam slam", "margiela artisanal jacket",
-    # Helmut Lang (reformulated — year-based + feature-based)
-    "helmut lang leather", "helmut lang painter jeans",
-    "helmut lang flak jacket", "helmut lang bondage pants",
+    # Chrome Hearts eyewear (telemetry-proven)
+    "chrome hearts vagilante glasses", "chrome hearts sneakers", "chrome hearts boots",
+
+    # Rick Owens (outerwear + footwear expansion)
+    "rick owens coat", "rick owens hoodie", "rick owens bomber",
+    "rick owens denim jacket", "rick owens biker jacket",
+    "rick owens drkshdw", "rick owens level tee", "rick owens intarsia",
+    "rick owens island dunk", "rick owens drkshdw jumbo lace",
+    "rick owens tractor boots", "rick owens fogachine", "rick owens tecuatl",
+
+    # Vetements (new — high-margin archive brand)
+    "vetements dhl", "vetements metal hoodie", "vetements champion",
+    "vetements oversized hoodie", "vetements bomber jacket",
+    "vetements leather jacket", "vetements sweatpants",
+
+    # Margiela
+    "margiela deconstructed blazer", "margiela glam slam",
+    "margiela artisanal jacket", "margiela artisanal",
+    "margiela duvet coat", "margiela deconstructed",
+    "maison margiela tabi loafers", "maison margiela future",
+
+    # Helmut Lang (year-based + feature-based)
+    "helmut lang painter jeans", "helmut lang flak jacket",
+    "helmut lang bondage pants", "helmut lang bondage jacket",
     "helmut lang 1998", "helmut lang 1999",
     "helmut lang bondage strap", "helmut lang reflective", "helmut lang raw denim",
+
     # Raf Simons (season + collection queries)
-    "raf simons consumed hoodie", "raf simons tape bomber", "raf simons sterling ruby",
+    "raf simons tape bomber", "raf simons sterling ruby",
     "raf simons leather jacket", "raf simons denim jacket",
-    "raf simons riot riot riot", "raf simons nebraska", "raf simons parka",
-    "raf simons 2002", "raf simons 2001", "raf simons fishtail parka",
-    "raf simons power corruption lies",
+    "raf simons nebraska", "raf simons parka", "raf simons bomber jacket",
+    "raf simons fishtail parka", "raf simons power corruption lies",
+    "raf simons peter saville", "raf simons ozweego", "raf simons kollaps",
+
     # JPG (expanded)
-    "jean paul gaultier mesh top", "jean paul gaultier tattoo top", "jean paul gaultier corset",
-    "jean paul gaultier sailor", "jean paul gaultier denim",
+    "jean paul gaultier tattoo top", "jean paul gaultier sailor",
     "jean paul gaultier leather jacket", "jean paul gaultier leather pants",
-    "jean paul gaultier sheer", "jean paul gaultier femme",
-    # Dior Homme (expanded)
-    "dior homme boots", "dior homme jeans", "dior homme bomber", "dior homme tuxedo",
-    "dior homme navigate", "dior homme fw03", "dior homme fw07",
-    "dior homme kris van assche", "dior homme bee embroidered",
-    # Balenciaga (expanded)
-    "balenciaga speed trainer", "balenciaga leather jacket",
-    "balenciaga political campaign", "balenciaga skater sweatpants",
-    "balenciaga speedhunters", "balenciaga destroyed hoodie", "balenciaga leather biker",
-    "balenciaga arena high top",
-    "balenciaga oversized denim", "balenciaga campaign hoodie",
-    "saint laurent chain boots", "saint laurent teddy jacket",
-    # Bottega Veneta (expanded)
-    "bottega veneta orbit sneaker", "bottega veneta haddock leather boots",
-    "bottega veneta chelsea boots",
-    "bottega veneta tire boots", "bottega veneta leather jacket",
-    # Number Nine (expanded)
-    "number nine skull cashmere", "number nine kurt cobain", "number nine heart skull",
+    "jean paul gaultier sheer", "jean paul gaultier cyberbaba",
+    "jean paul gaultier maille", "jean paul gaultier boots",
+
+    # Dior Homme (Hedi era focus)
+    "dior homme boots", "dior homme jeans", "dior homme bomber",
+    "dior homme navigate bomber", "dior homme fw03", "dior homme fw07",
+    "dior homme luster denim", "dior homme waxed jeans",
+
+    # Balenciaga (archive pieces with margin)
+    "balenciaga speed", "balenciaga leather jacket",
+    "balenciaga political campaign", "balenciaga speedhunters",
+    "balenciaga destroyed hoodie", "balenciaga leather biker",
+    "balenciaga arena high top", "balenciaga hummer boots",
+    "balenciaga lamborghini", "balenciaga lost tape flared",
+
+    # Saint Laurent
+    "saint laurent chain wyatt", "saint laurent teddy jacket",
+    "saint laurent leather boots",
+
+    # Bottega Veneta
+    "bottega veneta chelsea boots", "bottega veneta tire boots",
+    "bottega veneta leather jacket",
+
+    # Number Nine
+    "number nine skull cashmere", "number nine skull",
     "number nine cargo pants", "number nine denim", "number nine hoodie",
-    # Undercover (expanded)
-    "undercover bomber jacket", "undercover 85 bomber", "undercover arts and crafts",
-    "undercover leather jacket", "undercover but beautiful", "undercover bones",
-    "undercover denim jacket",
-    "comme des garcons jacket", "comme des garcons coat",
-    # Ann Demeulemeester (expanded)
-    "ann demeulemeester coat", "ann demeulemeester blazer",
-    "ann demeulemeester leather jacket", "ann demeulemeester leather boots",
-    "ann demeulemeester lace up boots",
-    # CCP (expanded)
-    "carol christian poell leather jacket", "carol christian poell coat",
-    "carol christian poell drip rubber", "carol christian poell sneakers",
-    # Vivienne Westwood (expanded)
-    "vivienne westwood orb necklace", "vivienne westwood armor ring",
-    "vivienne westwood corset", "vivienne westwood pearl necklace",
-    # Julius (expanded)
-    "julius cargo pants", "julius boots", "julius bomber jacket", "julius gas mask hoodie",
-    "julius leather jacket", "julius denim jacket", "julius coat",
-    # BBS
-    "boris bidjan saberi leather", "boris bidjan saberi coat", "boris bidjan saberi jacket",
-    # Thierry Mugler (expanded)
-    "thierry mugler leather jacket", "thierry mugler blazer", "thierry mugler dress",
-    "thierry mugler vintage",
-    # Alexander McQueen (expanded)
-    "alexander mcqueen bumster", "alexander mcqueen leather jacket",
-    "alexander mcqueen skull ring", "alexander mcqueen blazer",
-    # Kapital (specific — replaced dead "kapital jacket")
-    "kapital boro jacket", "kapital kountry", "kapital denim", "kapital knit",
-    "kapital kountry coat", "kapital denim jacket",
-    # Visvim (expanded)
-    "visvim fbt", "visvim virgil boots", "visvim jacket", "visvim lhamo coat",
-    "visvim bomber jacket",
-    # Hysteric Glamour
-    "hysteric glamour leather jacket", "hysteric glamour denim jacket",
-    "hysteric glamour jeans", "hysteric glamour tee", "hysteric glamour kurt cobain",
-    # Prada (telemetry-proven additions)
-    "prada re-nylon", "prada cotton velvet blouson",
-    # Celine (telemetry)
-    "celine paris ribbed long",
-    "sacai leather jacket", "sacai bomber", "sacai blazer",
-    "prada nylon jacket", "prada leather jacket", "prada re-nylon", "prada americas cup",
-    "enfants riches deprimes", "enfants riches deprimes hoodie", "enfants riches deprimes tee",
-    "enfants riches deprimes long sleeve", "enfants riches deprimes leather jacket",
+
+    # Undercover
+    "undercover 85 bomber", "undercover arts and crafts",
+    "undercover leather jacket", "undercover but beautiful",
+    "undercover bones", "undercover scab", "undercover bug denim",
+
+    # ERD (full line)
+    "enfants riches deprimes tee", "enfants riches deprimes long sleeve",
     "enfants riches deprimes denim jacket", "enfants riches deprimes jeans",
     "enfants riches deprimes hat", "enfants riches deprimes belt",
     "enfants riches deprimes sweater", "enfants riches deprimes flannel",
     "enfants riches deprimes bomber",
-    "mihara yasuhiro sneakers",
-    "kiko kostadinov", "a-cold-wall jacket", "craig green jacket", "stone island jacket",
+
+    # Wacko Maria (new — missing from system entirely)
+    "wacko maria leopard", "wacko maria hawaiian",
+    "wacko maria leather jacket",
+
+    # Ann Demeulemeester
+    "ann demeulemeester leather jacket", "ann demeulemeester leather boots",
+    "ann demeulemeester lace up boots",
+
+    # CCP
+    "carol christian poell leather jacket", "carol christian poell coat",
+    "carol christian poell drip rubber",
+
+    # Vivienne Westwood
+    "vivienne westwood orb necklace", "vivienne westwood armor ring",
+    "vivienne westwood corset", "vivienne westwood pearl necklace",
+
+    # Julius
+    "julius cargo pants", "julius boots", "julius bomber jacket",
+    "julius gas mask hoodie", "julius leather jacket",
+
+    # BBS
+    "boris bidjan saberi leather", "boris bidjan saberi jacket",
+
+    # Thierry Mugler
+    "thierry mugler leather jacket", "thierry mugler blazer",
+
+    # Kapital
+    "kapital boro jacket", "kapital kountry", "kapital denim",
+    "kapital kountry coat", "kapital denim jacket",
+
+    # Visvim
+    "visvim fbt", "visvim virgil boots", "visvim lhamo coat",
+
+    # Hysteric Glamour
+    "hysteric glamour leather jacket", "hysteric glamour denim jacket",
+    "hysteric glamour jeans", "hysteric glamour tee", "hysteric glamour archive",
+
+    # Prada
+    "prada re-nylon", "prada nylon jacket", "prada leather jacket",
+    "prada chocolate loafers", "prada leather loafers",
 
     # Celine (Hedi era)
-    "celine sneakers", "celine leather jacket", "celine teddy jacket", "celine boots", "celine western boots",
-    "celine varsity jacket", "celine denim jacket", "celine bomber jacket", "celine triomphe belt",
-    "celine chain boots",
+    "celine leather jacket", "celine teddy jacket", "celine boots",
+    "celine western boots", "celine varsity jacket", "celine triomphe belt",
 
     # Haider Ackermann
-    "haider ackermann leather jacket", "haider ackermann blazer", "haider ackermann velvet blazer",
-    "haider ackermann silk bomber", "haider ackermann coat", "haider ackermann pants",
+    "haider ackermann leather jacket", "haider ackermann blazer",
+    "haider ackermann velvet blazer", "haider ackermann silk bomber",
 
     # Dries Van Noten
     "dries van noten embroidered jacket", "dries van noten velvet blazer",
-    "dries van noten floral jacket", "dries van noten coat", "dries van noten leather jacket",
-    "dries van noten bomber",
+    "dries van noten floral jacket", "dries van noten coat",
 
-    # Sacai (expanded)
-    "sacai leather jacket", "sacai bomber jacket", "sacai blazer", "sacai coat",
-    "sacai deconstructed jacket",
-
-    # Margiela artisanal
-    "margiela artisanal", "margiela duvet coat", "margiela white label jacket",
-    "margiela deconstructed",
+    # Sacai
+    "sacai leather jacket", "sacai bomber jacket", "sacai coat",
 
     # Guidi
-    "guidi boots", "guidi back zip boots", "guidi horse leather", "guidi jacket",
+    "guidi boots", "guidi back zip boots", "guidi horse leather",
     "guidi 988", "guidi 995", "guidi 986",
 
-    # Lemaire
-    "lemaire jacket", "lemaire coat", "lemaire leather jacket", "lemaire twisted shirt",
-    "lemaire boots",
-
     # Acne Studios (outerwear only)
-    "acne studios leather jacket", "acne studios velocite jacket", "acne studios shearling",
-    "acne studios boots",
-
-    # Simone Rocha
-    "simone rocha dress", "simone rocha jacket", "simone rocha pearl",
-    "simone rocha embellished",
-
-    # Brunello Cucinelli
-    "brunello cucinelli cashmere jacket", "brunello cucinelli leather jacket",
-    "brunello cucinelli cashmere sweater", "brunello cucinelli coat",
+    "acne studios leather jacket", "acne studios velocite jacket",
 
     # The Soloist
-    "soloist jacket", "soloist leather jacket", "takahiromiyashita soloist", "soloist boots",
+    "soloist leather jacket", "takahiromiyashita soloist",
 
-    # Raf Simons footwear (reformulated)
-    "raf simons ozweego", "raf simons response trail", "raf simons detroit runner",
-
-    # Chrome Hearts accessories & high-value
-    "chrome hearts belt", "chrome hearts diamond",
-    "chrome hearts cemetery cross",
-
-    # Louis Vuitton (strict auth)
+    # Louis Vuitton
     "louis vuitton murakami", "louis vuitton trainer",
 
-    # Chanel (strict auth)
-
-    # Balenciaga bags & Demna departure archive
-    "balenciaga paris sneaker", "balenciaga demna archive",
-
-    # Bottega Veneta bags
-
-    # Prada loafers (trending category)
-    "prada chocolate loafers", "prada leather loafers",
-
-    # Margiela footwear expansion
-    "maison margiela tabi loafers", "maison margiela future",
-
-    # Saint Laurent footwear
-    "saint laurent leather boots",
-
-    # Rick Owens season-specific
-    "rick owens fogachine", "rick owens tecuatl", "rick owens dustulator",
-    "rick owens tractor boots",
-
-    # Dior Homme deep archive
-    "dior homme fw03 leather", "dior homme jewelry hedi slimane",
-
-    # Raf Simons deep archive
-    "raf simons kollaps",
-
-    # Helmut Lang specific
-    "helmut lang painter jeans",
-
-    # Kapital broader
-    "kapital boro",
-
-    # Number Nine specific motif
-    "number nine skull",
-
-    # Undercover new collab
-    "undercover twin peaks",
+    # Alexander McQueen
+    "alexander mcqueen leather jacket", "alexander mcqueen skull ring",
 ]
 
 # ── Long-tail pool ─────────────────────────────────────────────────────────────
@@ -407,52 +325,33 @@ EXTENDED_TARGETS = [
 # These always circulate in the rotation at LONGTAIL_PER_CYCLE slots/cycle.
 LONGTAIL_TARGETS = [
     # Helmut Lang deep cuts
-    "helmut lang archive jacket", "helmut lang nylon jacket", "helmut lang bondage pants",
-    "helmut lang flak jacket", "helmut lang astro biker", "helmut lang painter jeans",
+    "helmut lang archive jacket", "helmut lang nylon jacket",
     "helmut lang mesh top", "helmut lang leather shirt",
     # Kapital
-    "kapital boro jacket", "kapital kountry denim", "kapital knit hoodie",
-    "kapital century denim", "kapital boro pants",
-    # Needles
-    "needles butterfly jacket",
-    # Walter Van Beirendonck
-    "walter van beirendonck jacket", "walter van beirendonck shirt",
-    # Raf Simons deep cuts
-    "raf simons consumed hoodie", "raf simons tape bomber", "raf simons denim jacket",
-    "raf simons knit sweater", "raf simons antwerp jacket", "raf simons riot bomber",
+    "kapital kountry denim", "kapital century denim",
+    # Raf Simons deep archive
+    "raf simons knit sweater", "raf simons antwerp jacket",
     "raf simons 2001", "raf simons 2002", "raf simons virginia creepers",
+    "raf simons peter saville joy division",
     # Number (N)ine
-    "number nine leather jacket", "number nine skull cashmere", "number nine kurt cobain",
-    "number nine quilted", "number nine heart skull",
+    "number nine quilted",
     # Undercover deep cuts
-    "undercover but beautiful", "undercover arts and crafts", "undercover scab tour",
-    "undercover witch cell division", "undercover leather jacket",
+    "undercover scab tour", "undercover witch cell division",
     # Ann Demeulemeester
-    "ann demeulemeester coat", "ann demeulemeester blazer", "ann demeulemeester shirt",
-    "ann demeulemeester leather boots",
+    "ann demeulemeester coat", "ann demeulemeester blazer",
     # Carol Christian Poell
-    "carol christian poell leather jacket", "carol christian poell coat",
-    "carol christian poell boots", "carol christian poell drip rubber",
-    # Julius
-    "julius leather jacket", "julius boots", "julius cargo pants", "julius gas mask hoodie",
-    # Boris Bidjan Saberi
-    "boris bidjan saberi jacket", "boris bidjan saberi leather",
+    "carol christian poell boots",
     # Dries Van Noten
-    "dries van noten embroidered jacket", "dries van noten velvet jacket",
     "dries van noten printed jacket",
-    # Jean Colonna
-    "jean colonna jacket", "jean colonna leather",
-    # Maison Martin Margiela artisanal
-    "margiela artisanal jacket", "margiela deconstructed blazer", "margiela numbers label",
+    # Margiela artisanal (in EXTENDED already)
     # Thierry Mugler
-    "thierry mugler jacket", "thierry mugler leather jacket", "thierry mugler coat",
-    # Alexander McQueen archive
-    "alexander mcqueen bumster", "alexander mcqueen skull scarf", "alexander mcqueen leather jacket",
-    # Comme des Garçons deep cuts
-    "comme des garcons homme plus jacket", "comme des garcons noir jacket",
-    "comme des garcons shirt jacket",
-    # Mihara Yasuhiro
-    "mihara yasuhiro sneakers platform",
+    "thierry mugler coat",
+    # Vetements niche
+    "vetements inside out", "vetements haute couture",
+    # Wacko Maria niche
+    "wacko maria guilty parties", "wacko maria tim lehi",
+    # Visvim niche
+    "visvim ring",
 ]
 
 
