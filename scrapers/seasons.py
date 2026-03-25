@@ -232,6 +232,21 @@ ICONIC_SEASONS = {
         (r"leather", 1.4, "Leather piece"),
         (r"japan|tokyo", 1.3, "Japan exclusive"),
         (r"vintage|90s|2000s", 1.5, "Vintage"),
+        # Piece-specific (March 2026 optimization)
+        (r"baby.?fat", 1.8, "Baby Fat — most popular pendant"),
+        (r"paper.?chain", 1.8, "Paper Chain — #1 telemetry performer"),
+        (r"matty.?boy", 1.6, "Matty Boy collab"),
+        (r"deadly.?doll", 1.6, "Deadly Doll — high deal efficiency"),
+        (r"sex.?records", 1.7, "Sex Records — #1 Matty Boy design"),
+        (r"fuck.?you", 1.5, "Fuck You — novelty fast seller"),
+        (r"cross.?patch", 1.7, "Cross Patch — grail denim/hoodie/hat"),
+        (r"trypoleagain|vagilante|see.?you.?tea", 1.8, "Top eyewear models"),
+        (r"pony.?hair", 1.6, "Pony Hair trucker — money hat"),
+        (r"filigree", 1.5, "Filigree — collector piece"),
+        (r"keeper", 1.4, "Keeper ring — classic CH"),
+        (r"fleur.?knee", 1.3, "Fleur Knee jeans"),
+        (r"rolling.?stones", 1.5, "Rolling Stones collab"),
+        (r"las.?vegas|tokyo|aspen|paris", 1.4, "City exclusive"),
     ],
 
     # =========================================================================

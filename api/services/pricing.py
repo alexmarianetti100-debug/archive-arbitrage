@@ -98,7 +98,7 @@ BRAND_MARKET_ESTIMATES = {
     # === OTHER ===
     "enfants riches deprimes": {"jacket": 2000, "leather jacket": 2500, "denim jacket": 1000, "bomber": 1200, "flannel": 600, "pants": 450, "jeans": 500, "shirt": 450, "tee": 500, "long sleeve": 450, "hoodie": 750, "sweater": 650, "hat": 400, "belt": 700, "earring": 250, "default": 450},
     "erd": {"jacket": 2000, "leather jacket": 2500, "denim jacket": 1000, "bomber": 1200, "flannel": 600, "pants": 450, "jeans": 500, "shirt": 450, "tee": 500, "long sleeve": 450, "hoodie": 750, "sweater": 650, "hat": 400, "belt": 700, "earring": 250, "default": 450},
-    "chrome hearts": {"jacket": 2000, "pants": 800, "shirt": 600, "tee": 400, "hoodie": 1000, "default": 800},
+    "chrome hearts": {"jacket": 2000, "pants": 800, "shirt": 600, "tee": 350, "hoodie": 1000, "boots": 1500, "hat": 550, "default": 500},
     "celine": {"jacket": 800, "leather jacket": 1200, "boots": 300, "belt": 200, "default": 400},
     "haider ackermann": {"jacket": 400, "leather jacket": 600, "blazer": 200, "coat": 350, "pants": 150, "default": 250},
     "dries van noten": {"jacket": 300, "leather jacket": 400, "coat": 300, "blazer": 200, "default": 200},

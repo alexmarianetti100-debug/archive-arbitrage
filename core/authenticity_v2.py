@@ -133,11 +133,14 @@ BRAND_RULES = {
         "tag_details": "Rick Owens tags have specific font, 'RICK OWENS' on mainline, 'DRKSHDW' on diffusion",
     },
     "chrome hearts": {
-        "price_floor": 150,
-        "price_typical_min": 300,
-        "auth_keywords": ["925", "sterling", "made in usa", "hollywood"],
-        "rep_misspellings": [],
-        "high_rep_categories": ["jewelry", "ring", "pendant", "cross"],
+        "price_floor": 100,
+        "price_typical_min": 200,
+        "auth_keywords": [
+            "925", "sterling", "made in usa", "hollywood",
+            "scroll work", "cross", "floral",
+        ],
+        "rep_misspellings": ["chrome heart", "chromhearts", "crome hearts"],
+        "high_rep_categories": ["jewelry", "ring", "pendant", "cross", "trucker hat", "logo tee"],
         "tag_details": "Authentic CH has .925 stamp, scroll work details, proper weight",
     },
     "balenciaga": {

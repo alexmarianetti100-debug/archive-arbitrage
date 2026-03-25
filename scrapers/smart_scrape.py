@@ -88,14 +88,14 @@ GRAIL_SEARCHES = [
     "undercover davf",
     "undercover psycho color",
     
-    # Chrome Hearts
-    "chrome hearts cross pendant",
-    "chrome hearts cemetery",
-    "chrome hearts dagger",
-    "chrome hearts floral cross",
-    "chrome hearts eyewear",
-    "chrome hearts leather",
-    "chrome hearts trucker hat",
+    # Chrome Hearts (piece-specific)
+    "chrome hearts baby fat cross pendant",
+    "chrome hearts forever ring",
+    "chrome hearts paper chain bracelet",
+    "chrome hearts trypoleagain glasses",
+    "chrome hearts cross patch hoodie",
+    "chrome hearts horseshoe tee",
+    "chrome hearts cross patch jeans",
     
     # JPG
     "jean paul gaultier mesh",

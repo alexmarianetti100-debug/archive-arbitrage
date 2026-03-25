@@ -131,6 +131,23 @@ PLATFORM_FEES = {
 DEFAULT_SELL_PLATFORM = os.getenv("DEFAULT_SELL_PLATFORM", "grailed")
 DEFAULT_SELL_FEE = PLATFORM_FEES.get(DEFAULT_SELL_PLATFORM, 0.142)
 
+# Buy-side cost defaults
+BUY_SHIPPING_DOMESTIC = float(os.getenv("BUY_SHIPPING_DOMESTIC", "15.0"))
+BUY_SHIPPING_JAPAN = float(os.getenv("BUY_SHIPPING_JAPAN", "45.0"))
+JAPAN_SERVICE_FEE_RATE = float(os.getenv("JAPAN_SERVICE_FEE_RATE", "0.05"))
+BUY_TAX_RATE = float(os.getenv("BUY_TAX_RATE", "0.0"))
+
+JAPAN_SOURCES = {"japan_buyee", "rakuma", "mercari_jp", "yahoo_auctions_jp", "buyee"}
+
+
+def estimate_buy_costs(buy_price: float, source: str = "") -> float:
+    """Estimate buy-side costs (shipping, service fees, tax)."""
+    source_lower = source.lower() if source else ""
+    if source_lower in JAPAN_SOURCES or "japan" in source_lower or "buyee" in source_lower:
+        return BUY_SHIPPING_JAPAN + (buy_price * JAPAN_SERVICE_FEE_RATE)
+    return BUY_SHIPPING_DOMESTIC + (buy_price * BUY_TAX_RATE)
+
+
 # ── Pricing Engine (centralized cache) ──
 _pricing_engine = None
 
@@ -225,7 +242,7 @@ ARCHIVE_ITEM_KEYWORDS = ['archive', 'vintage', 'rick owens', 'margiela', 'raf si
                          'helmut lang', 'number nine', 'carol christian poell',
                          'boris bidjan saberi', 'undercover',
                          'comme des garcons', 'ann demeulemeester',
-                         'chrome hearts', 'julius', 'kapital', 'visvim',
+                         'chrome hearts', 'julius', 'kapital',
                          'vivienne westwood', 'enfants riches deprimes', 'erd',
                          'jean paul gaultier', 'gaultier', 'guidi',
                          'haider ackermann', 'dries van noten', 'hysteric glamour',
@@ -329,22 +346,36 @@ DEPOP_SKIP_BRANDS: set[str] = {
 # ── Minimum believable authentic prices per brand+category ──
 REP_PRICE_CEILINGS = {
     "chrome hearts": {
-        "trucker hat": 350,
-        "cross pendant": 350,
-        "dagger pendant": 400,
-        "floral cross": 400,
-        "cross ring": 300,
-        "ring": 250,         # minimum for ANY CH ring
-        "bracelet": 400,
-        "necklace": 300,
-        "chain": 350,
-        "pendant": 300,
-        "leather jacket": 2500,
-        "denim jacket": 1000,
-        "eyewear": 350,
-        "hoodie": 450,
-        "cemetery": 600,
-        "tee": 250,          # CH tees never sell under $250 authentic
+        # Pendants
+        "cross pendant": 350, "baby fat": 300, "tiny e": 175,
+        "dagger pendant": 400, "floral cross": 450, "nail cross": 400,
+        "cemetery cross": 500, "filigree cross": 700, "pendant": 300,
+        # Rings
+        "cross ring": 300, "ring": 250, "forever ring": 275,
+        "spacer ring": 150, "scroll band": 275, "fuck you ring": 350,
+        "plus ring": 300, "keeper ring": 400, "cemetery ring": 550,
+        "dagger ring": 350, "sbt band": 300,
+        # Bracelets
+        "bracelet": 400, "paper chain": 450, "roller cross bracelet": 450,
+        "plus bracelet": 400, "fancy link": 550, "morning star": 500,
+        "bead bracelet": 300,
+        # Chains/Necklaces
+        "necklace": 300, "chain": 350, "paper chain necklace": 450,
+        "fancy chain": 700, "ball chain": 300, "ne chain": 400,
+        # Earrings
+        "earring": 125, "stud earring": 100, "hoop earring": 175,
+        # Apparel
+        "hoodie": 450, "zip up": 500, "cross patch hoodie": 600,
+        "tee": 250, "tank": 175,
+        # Denim
+        "jeans": 500, "cross patch jeans": 1000, "flannel": 800,
+        "fleur knee": 300, "denim jacket": 1000,
+        # Eyewear
+        "glasses": 350, "sunglasses": 400,
+        # Accessories
+        "trucker hat": 350, "hat": 300, "beanie": 200,
+        "belt": 350, "wallet": 500, "converse": 300,
+        "leather": 1200, "boots": 800, "sneakers": 500,
     },
     "rick owens": {
         "geobasket": 300,
@@ -799,10 +830,20 @@ def compute_weighted_price(
             rejection_reasons=comp_reasons,
         )
 
-        # Image similarity boost (neutral when either hash is missing)
+        # Image similarity — hard reject visually different items
         comp_phash = getattr(comp, 'phash', None)
         img_boost = image_similarity_boost(listing_phash, comp_phash)
+        if img_boost == 0.0:
+            logger.info(
+                f"    ❌ Image mismatch: '{comp.title[:50]}' "
+                f"(visually different item)"
+            )
+            continue  # Hard reject — cologne ≠ shoes
         similarity = similarity * img_boost
+        if listing_phash and comp_phash and img_boost != 1.0:
+            logger.info(
+                f"    📷 Image boost: {img_boost:.1f}x for '{comp.title[:40]}'"
+            )
 
         scored.append((comp, similarity))
 
@@ -919,6 +960,7 @@ class GapHunter:
         self._last_query_metrics: Dict[str, int] = {}
         self._item_comp_cache: Dict[str, Optional[SoldData]] = {}  # per-item comp cache (cleared each cycle)
         self._raw_items_cache: Dict[str, list] = {}  # raw sold items parallel to sold_cache
+        self._progress_callback = None  # Optional async callback for UI progress events
 
         # Initialize seller manager (replaces manual blocklist handling)
         from core.seller_manager import SellerManager
@@ -1106,6 +1148,54 @@ class GapHunter:
         except Exception as e:
             logger.debug(f"Image hash failed for {image_url}: {e}")
             return None
+
+    async def _hydrate_comp_phashes(self, comps: list):
+        """Load cached pHashes from DB, compute missing ones, and persist new hashes.
+
+        Modifies comp objects in-place by setting .phash attribute.
+        """
+        try:
+            from db.sqlite_models import get_sold_comp_phashes_batch, update_sold_comp_phash
+
+            # Build lookup pairs for comps that don't already have phash
+            pairs_to_lookup = []
+            for comp in comps:
+                if getattr(comp, 'phash', None):
+                    continue
+                src = getattr(comp, 'source', 'grailed')
+                sid = getattr(comp, 'source_id', '')
+                if sid:
+                    pairs_to_lookup.append((src, sid))
+
+            # Batch fetch cached pHashes from DB
+            if pairs_to_lookup:
+                cached = get_sold_comp_phashes_batch(pairs_to_lookup)
+                for comp in comps:
+                    if getattr(comp, 'phash', None):
+                        continue
+                    key = (getattr(comp, 'source', 'grailed'), getattr(comp, 'source_id', ''))
+                    if key in cached:
+                        comp.phash = cached[key]
+
+            # Compute pHashes for comps still missing them
+            missing = [c for c in comps if not getattr(c, 'phash', None)]
+            if missing:
+                phash_results = await compute_comp_phashes(missing)
+                for idx, phash_hex in phash_results.items():
+                    comp = missing[idx]
+                    comp.phash = phash_hex
+                    # Persist to DB for future cache hits
+                    sid = getattr(comp, 'source_id', '')
+                    if sid:
+                        try:
+                            update_sold_comp_phash(getattr(comp, 'source', 'grailed'), sid, phash_hex)
+                        except Exception:
+                            pass
+
+                if phash_results:
+                    logger.info(f"    📷 Hydrated {len(phash_results)} comp pHashes (DB cache: {len(pairs_to_lookup) - len(missing)}/{len(pairs_to_lookup)})")
+        except Exception as e:
+            logger.warning(f"    ⚠️ pHash hydration failed: {e}")
 
     def _check_image_duplicates(self, image_hash: str, seller: str, item_url: str, title: str) -> bool:
         """Check if image appears across multiple sellers. Return True if likely rep."""
@@ -1830,6 +1920,18 @@ class GapHunter:
         if not brand:
             return (generic_sold, "", False)
 
+        # ── Compute listing pHash for image similarity scoring ──
+        listing_phash = None
+        try:
+            listing_images = getattr(item, 'images', None) or []
+            listing_img_url = listing_images[0] if listing_images else None
+            if listing_img_url:
+                listing_phash = await self._get_image_hash(listing_img_url)
+                if listing_phash:
+                    logger.info(f"    📷 Listing pHash: {listing_phash[:8]}...")
+        except Exception:
+            pass  # pHash failure must never block deal processing
+
         try:
             fp = parse_title(brand, item.title)
         except Exception as e:
@@ -1867,7 +1969,9 @@ class GapHunter:
                 if time.time() - cached.timestamp < SOLD_CACHE_TTL and cached.count >= 3:
                     raw = self._raw_items_cache.get(cache_key, [])
                     if raw:
-                        weighted = compute_weighted_price(item.title, brand, raw, cached)
+                        # Hydrate comp pHashes from DB cache + compute missing
+                        await self._hydrate_comp_phashes(raw)
+                        weighted = compute_weighted_price(item.title, brand, raw, cached, listing_phash=listing_phash)
                         if weighted is not None:
                             self._item_comp_cache[cache_key] = weighted
                             logger.info(
@@ -1891,7 +1995,9 @@ class GapHunter:
                 sold, raw_items = result, []
 
             if sold and sold.count >= 3 and raw_items:
-                weighted = compute_weighted_price(item.title, brand, raw_items, sold)
+                # Hydrate comp pHashes from DB cache + compute missing
+                await self._hydrate_comp_phashes(raw_items)
+                weighted = compute_weighted_price(item.title, brand, raw_items, sold, listing_phash=listing_phash)
                 if weighted is not None:
                     self._item_comp_cache[cache_key] = weighted
                     logger.info(
@@ -1924,17 +2030,31 @@ class GapHunter:
                 db_comps = search_comps_by_embedding(listing_emb, brand=brand, limit=20)
                 db_comps = [c for c in db_comps if c.get("similarity", 0) >= 0.4]
                 if db_comps:
+                    # Batch lookup cached pHashes for DB comps
+                    try:
+                        from db.sqlite_models import get_sold_comp_phashes_batch
+                        db_phash_pairs = [
+                            (dc.get("source", dc.get("platform", "grailed")), dc.get("source_id", ""))
+                            for dc in db_comps
+                        ]
+                        db_phashes = get_sold_comp_phashes_batch(db_phash_pairs)
+                    except Exception:
+                        db_phashes = {}
+
                     db_items = []
                     for dc in db_comps:
+                        src = dc.get("source", dc.get("platform", "grailed"))
+                        sid = dc.get("source_id", "")
                         db_items.append(SimpleNamespace(
                             title=dc.get("title", ""),
                             price=dc.get("sold_price", 0),
-                            source=dc.get("source", dc.get("platform", "grailed")),
-                            source_id=dc.get("source_id", ""),
+                            source=src,
+                            source_id=sid,
                             url=dc.get("url", ""),
                             size=dc.get("size"),
                             condition=dc.get("condition"),
                             raw_data={},
+                            phash=db_phashes.get((src, sid)),
                         ))
                     # Deduplicate
                     seen_ids = set()
@@ -1945,7 +2065,7 @@ class GapHunter:
                             seen_ids.add(key)
                             merged.append(c)
                     if len(merged) >= 3:
-                        weighted = compute_weighted_price(item.title, brand, merged, generic_sold)
+                        weighted = compute_weighted_price(item.title, brand, merged, generic_sold, listing_phash=listing_phash)
                         if weighted is not None:
                             logger.info(
                                 f"    🎯 Item comps (DB embeddings): {len(merged)} comps → "
@@ -2405,14 +2525,62 @@ class GapHunter:
                 logger.debug(f"    Skipped unknown brand: {item.title[:50]}")
                 continue
 
-            # ── Per-item comp lookup: get sold data specific to THIS listing ──
-            effective_sold, item_comp_query, is_item_specific = await self.get_item_specific_comps(
-                item, detected_brand, sold_data
-            )
-            if is_item_specific:
-                self.stats["item_specific_comp_hits"] = self.stats.get("item_specific_comp_hits", 0) + 1
+            # ── Product catalog fast-path: exact product match ──
+            # If the item matches a known product with guaranteed/high confidence,
+            # use product-based pricing (exact comps) instead of fuzzy comp search.
+            _product_match = None
+            try:
+                from scrapers.product_fingerprint import parse_title_to_fingerprint
+                from db.sqlite_models import get_product_by_fingerprint, get_product_pricing
+                _fp = parse_title_to_fingerprint(detected_brand, item.title)
+                if _fp.confidence == "high" and _fp.fingerprint_hash:
+                    _product = get_product_by_fingerprint(_fp.fingerprint_hash)
+                    if _product:
+                        _pricing = get_product_pricing(_product.id)
+                        if _pricing and _pricing["confidence_tier"] in ("guaranteed", "high"):
+                            # Category cross-check: item category must match product
+                            _product_type = _product.item_type or ""
+                            if _fp.item_type and _product_type and _fp.item_type != _product_type:
+                                logger.info(
+                                    f"    🚫 Category mismatch: item is '{_fp.item_type}' "
+                                    f"but product is '{_product_type}' — skipping product path"
+                                )
+                            else:
+                                _product_match = _pricing
+                                _product_match["product_id"] = _product.id
+                                _product_match["fingerprint_hash"] = _fp.fingerprint_hash
+                                logger.info(
+                                    f"    🏷️ Product match: '{_fp.canonical_name}' → "
+                                    f"product_id={_product.id} ({_pricing['confidence_tier'].upper()}, "
+                                    f"{_pricing['comp_count']} comps ({_pricing.get('recent_comp_count', 0)} recent), "
+                                    f"${_pricing['median_price']:.0f} median [{_pricing.get('data_freshness', 'unknown').upper()}])"
+                                )
+            except Exception as e:
+                logger.debug(f"    Product catalog lookup failed: {e}")
+
+            if _product_match:
+                # Use product-based pricing — exact comps, no fuzzy matching needed
+                effective_sold = SoldData(
+                    query=item_comp_query if 'item_comp_query' in dir() else query,
+                    avg_price=_product_match["avg_price"],
+                    median_price=_product_match["median_price"],
+                    min_price=_product_match["min_price"],
+                    max_price=_product_match["max_price"],
+                    count=_product_match["comp_count"],
+                    timestamp=time.time(),
+                )
+                item_comp_query = f"[product:{_product_match['product_id']}]"
+                is_item_specific = True
+                self.stats["product_catalog_hits"] = self.stats.get("product_catalog_hits", 0) + 1
             else:
-                self.stats["item_specific_comp_misses"] = self.stats.get("item_specific_comp_misses", 0) + 1
+                # ── Per-item comp lookup: get sold data specific to THIS listing ──
+                effective_sold, item_comp_query, is_item_specific = await self.get_item_specific_comps(
+                    item, detected_brand, sold_data
+                )
+                if is_item_specific:
+                    self.stats["item_specific_comp_hits"] = self.stats.get("item_specific_comp_hits", 0) + 1
+                else:
+                    self.stats["item_specific_comp_misses"] = self.stats.get("item_specific_comp_misses", 0) + 1
 
             # Calculate gap against Grailed resale value (no platform discount).
             # We buy on any platform and resell on Grailed — the reference is what
@@ -2460,8 +2628,9 @@ class GapHunter:
             expected_sell_price = reference_price * sell_multiplier
             downside_sell_price = downside_reference * sell_multiplier
             shipping_est = estimate_shipping(item, reference_price=reference_price) * 1.20  # 20% buffer
-            profit = expected_sell_price - item.price - shipping_est
-            downside_profit = downside_sell_price - item.price - shipping_est
+            buy_costs = estimate_buy_costs(item.price, getattr(item, 'source', ''))
+            profit = expected_sell_price - item.price - shipping_est - buy_costs
+            downside_profit = downside_sell_price - item.price - shipping_est - buy_costs
             real_margin = profit / item.price if item.price > 0 else 0
 
             # ── Implausible gap sanity check ──────────────────────────────────
@@ -2548,6 +2717,11 @@ class GapHunter:
                     comp_snapshots=_snapshots,
                     similarity_scores=getattr(effective_sold, '_similarity_scores', None),
                 ))
+                # Attach product catalog metadata if matched
+                if _product_match:
+                    deals[-1]._product_id = _product_match["product_id"]
+                    deals[-1]._product_confidence = _product_match["confidence_tier"]
+                    deals[-1]._pricing_method = "product_catalog"
             else:
                 if debug_near_misses:
                     closeness = max(
@@ -2634,7 +2808,15 @@ class GapHunter:
         item = deal.item
         brand = self._detect_brand(item.title)
         category = self._detect_category(item.title)
-        
+
+        # ── Hard gate: only surface deals with exact product catalog matches ──
+        # Items without a guaranteed/high product match are noise — they don't
+        # have enough exact comps to guarantee profitability.
+        if not getattr(deal, '_product_id', None):
+            logger.debug(f"    ⛔ Skipped (no product catalog match): {item.title[:50]}")
+            self.stats["no_catalog_skipped"] = self.stats.get("no_catalog_skipped", 0) + 1
+            return False
+
         # ── Japan Deal Special Handling ──
         if is_japan_deal and hasattr(item, '_japan_data'):
             japan_data = item._japan_data
@@ -3114,9 +3296,13 @@ class GapHunter:
                 finally:
                     conn.close()
 
-                # Ensure every scored comp has a sold_comps row so persist_scored_comps() can resolve them
-                from db.sqlite_models import persist_scored_comps, link_item_to_sold_comps, save_sold_comp
-                if deal.comp_snapshots:
+                # ── Product catalog: link comps by product_id if available ──
+                from db.sqlite_models import persist_scored_comps, link_item_to_sold_comps, save_sold_comp, link_item_to_product_comps
+                _deal_product_id = getattr(deal, '_product_id', None)
+                if _deal_product_id:
+                    comp_count_saved = link_item_to_product_comps(persisted_id, _deal_product_id)
+                    logger.info(f"    🏷️ Linked {comp_count_saved} product comps (product_id={_deal_product_id})")
+                elif deal.comp_snapshots:
                     for snap in deal.comp_snapshots:
                         if snap.get("source_id"):
                             sold_date = snap.get("sold_date")
@@ -3161,7 +3347,7 @@ class GapHunter:
                     item_title=item.title,
                     item_url=item.url,
                     predicted_price=deal.sold_avg,
-                    prediction_method="hyper" if is_hyper else "standard",
+                    prediction_method=getattr(deal, '_pricing_method', "hyper" if is_hyper else "standard"),
                     cv=cv,
                     confidence_level=confidence,
                     num_comps=deal.sold_count,
@@ -3194,6 +3380,19 @@ class GapHunter:
         # Note: _raw_items_cache NOT cleared here — its lifecycle matches sold_cache
         # (TTL-based expiry). Clearing it would break weighted pricing on cached queries.
         cycle_start = time.time()
+
+        # ── Refresh product catalog stats ──
+        try:
+            from core.catalog_refresh import refresh_product_catalog
+            _refresh = refresh_product_catalog()
+            if _refresh["new_comps_mapped"] > 0 or _refresh["new_products"] > 0:
+                logger.info(
+                    f"📊 Catalog refreshed: {_refresh['new_comps_mapped']} new comps, "
+                    f"{_refresh['new_products']} new products, "
+                    f"{_refresh['guaranteed_count']} guaranteed"
+                )
+        except Exception as e:
+            logger.debug(f"Catalog refresh skipped: {e}")
         
         # ── Periodic data pruning ──
         if self.cycles_since_prune >= 10:
@@ -3277,6 +3476,20 @@ class GapHunter:
         for i, query in enumerate(targets):
             if not self.running:
                 break
+
+            # Emit progress for UI
+            if self._progress_callback:
+                try:
+                    await self._progress_callback({
+                        "phase": "scanning",
+                        "query": query,
+                        "query_index": i + 1,
+                        "query_total": len(targets),
+                        "message": f"Scanning {i+1}/{len(targets)}: {query}",
+                        "deals_so_far": total_deals,
+                    })
+                except Exception:
+                    pass
 
             # Get sold data (use hyper-accurate pricing)
             sold = await self.get_hyper_sold_data(query)
@@ -3402,8 +3615,70 @@ class GapHunter:
                                     self.similarity_scores = None
                             
                             item = MockItem(deal)
+
+                            # ── Get properly scored comps via compute_weighted_price() ──
+                            # Instead of falling to the dumb link_item_to_sold_comps text-search,
+                            # run through the full 5-layer scoring stack (title sim + model mismatch
+                            # + quality + rejection amplification + image matching).
+                            # This prevents cross-category mismatches (e.g., fragrance vs shoes).
+                            generic_sold = SoldData(
+                                query=deal.title.lower().strip(),
+                                avg_price=deal.us_market_price,
+                                median_price=deal.us_market_price,
+                                min_price=deal.us_market_price * 0.7,
+                                max_price=deal.us_market_price * 1.3,
+                                count=10,
+                                timestamp=time.time(),
+                            )
+                            effective_sold, item_comp_query, is_item_specific = await self.get_item_specific_comps(
+                                item, deal.brand.lower(), generic_sold
+                            )
+
+                            # Build comp snapshots from scored results
+                            _comp_snapshots = None
+                            _sim_scores = None
+                            if is_item_specific and effective_sold and effective_sold.count >= 3:
+                                _titles = getattr(effective_sold, 'comp_titles', [])
+                                _prices = getattr(effective_sold, 'comp_prices', [])
+                                _urls = getattr(effective_sold, 'comp_urls', [])
+                                _sources = getattr(effective_sold, 'comp_sources', [])
+                                _source_ids = getattr(effective_sold, 'comp_source_ids', [])
+                                _conditions = getattr(effective_sold, 'comp_conditions', [])
+                                _sold_dates = getattr(effective_sold, 'comp_sold_dates', [])
+                                _phashes = getattr(effective_sold, 'comp_phashes', [])
+                                _image_urls = getattr(effective_sold, 'comp_image_urls', [])
+                                _sim_scores = getattr(effective_sold, '_similarity_scores', [])
+                                _comp_snapshots = []
+                                for _i, _t in enumerate(_titles[:10]):
+                                    _comp_snapshots.append({
+                                        "title": _t,
+                                        "price": _prices[_i] if _i < len(_prices) else effective_sold.avg_price,
+                                        "url": _urls[_i] if _i < len(_urls) else None,
+                                        "source": _sources[_i] if _i < len(_sources) else "grailed",
+                                        "source_id": _source_ids[_i] if _i < len(_source_ids) else "",
+                                        "condition": _conditions[_i] if _i < len(_conditions) else None,
+                                        "sold_date": _sold_dates[_i] if _i < len(_sold_dates) else None,
+                                        "phash": _phashes[_i] if _i < len(_phashes) else None,
+                                        "image_url": _image_urls[_i] if _i < len(_image_urls) else None,
+                                        "similarity_score": _sim_scores[_i] if _i < len(_sim_scores) else None,
+                                    })
+                                # Update deal pricing from scored comps
+                                deal_sold_avg = effective_sold.avg_price
+                                deal_sold_count = effective_sold.count
+                                logger.info(f"    🗾📷 Japan comps scored: {deal_sold_count} comps, "
+                                           f"avg=${deal_sold_avg:.0f} (was ${deal.us_market_price:.0f})")
+                            else:
+                                deal_sold_avg = deal.us_market_price
+                                deal_sold_count = 10
+                                if is_item_specific:
+                                    logger.info(f"    🗾⚠️ Japan comps scored but insufficient — using estimate")
+
                             mock_deal = MockDeal(deal, item)
-                            
+                            mock_deal.sold_avg = deal_sold_avg
+                            mock_deal.sold_count = deal_sold_count
+                            mock_deal.comp_snapshots = _comp_snapshots
+                            mock_deal.similarity_scores = _sim_scores
+
                             # Process like a regular deal
                             logger.debug(f"    Calling process_deal for Japan deal...")
                             process_result = await self.process_deal(mock_deal, is_japan_deal=True)
@@ -3694,7 +3969,7 @@ class GapHunter:
             "alexander mcqueen", "celine",
             "neighborhood", "wtaps", "human made", "sacai",
             "roen", "soloist", "takahiromiyashita", "bape",
-            "visvim", "wacko maria",
+            "wacko maria",
             "givenchy", "gucci", "versace", "dries van noten",
             "mihara yasuhiro", "burberry", "y-3",
             "balenciaga", "saint laurent", "prada", "bottega veneta",
@@ -3758,7 +4033,7 @@ if __name__ == "__main__":
                           "ann demeulemeester", "celine",
                           "balenciaga", "saint laurent", "prada", "bottega veneta",
                           "givenchy", "gucci", "versace", "dries van noten",
-                          "stone island", "needles", "visvim", "mihara yasuhiro",
+                          "stone island", "needles", "mihara yasuhiro",
                           "neighborhood", "wtaps", "human made", "sacai", "roen",
                           "soloist", "bape", "wacko maria", "burberry",
                           "haider ackermann", "guidi", "lemaire", "acne studios",

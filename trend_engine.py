@@ -99,17 +99,17 @@ CORE_TARGETS = [
     "rick owens cargo pants",
     "rick owens drkshdw pants",
     "rick owens bag",
-    # Chrome Hearts — high-volume categories (not style-specific)
-    "chrome hearts ring",
-    "chrome hearts bracelet",
-    "chrome hearts necklace",
-    "chrome hearts dagger pendant",
-    "chrome hearts paper chain",
-    "chrome hearts floral cross",
-    "chrome hearts tiny ring",
+    # Chrome Hearts — piece-specific (10 CORE queries, ~14% allocation)
+    "chrome hearts baby fat cross pendant",
+    "chrome hearts tiny e",
+    "chrome hearts forever ring",
+    "chrome hearts paper chain bracelet",
     "chrome hearts tee",
-    "chrome hearts hat",
-    "chrome hearts wallet",
+    "chrome hearts cross patch hoodie",
+    "chrome hearts cross patch jeans",
+    "chrome hearts trypoleagain glasses",
+    "chrome hearts vagilante glasses",
+    "chrome hearts paper chain",
     # Margiela
     "maison margiela tabi boots",
     "maison margiela replica gat",
@@ -164,23 +164,39 @@ CORE_TARGETS = [
 
 # ── Extended luxury targets (high-value accessories and watches) ─
 EXTENDED_TARGETS = [
-    # Chrome Hearts jewelry (only high-volume, no style-specific ring names)
-    "chrome hearts mini cross", "chrome hearts baby fat pendant",
-    "chrome hearts belt", "chrome hearts diamond ring",
+    # Chrome Hearts piece-specific jewelry (EXTENDED)
+    "chrome hearts floral cross pendant", "chrome hearts dagger pendant",
+    "chrome hearts cemetery cross pendant", "chrome hearts nail cross pendant",
+    "chrome hearts spacer ring", "chrome hearts fuck you ring",
+    "chrome hearts scroll band ring", "chrome hearts plus ring",
+    "chrome hearts keeper ring", "chrome hearts cemetery ring",
+    "chrome hearts dagger ring", "chrome hearts floral cross ring",
+    "chrome hearts roller cross bracelet", "chrome hearts plus bracelet",
+    "chrome hearts fancy link bracelet", "chrome hearts morning star bracelet",
+    "chrome hearts paper chain necklace", "chrome hearts ball chain necklace",
+    "chrome hearts fancy chain necklace",
+    "chrome hearts plus stud earring", "chrome hearts cross stud earring",
+    "chrome hearts hoop earring",
 
-    # Chrome Hearts clothing (proven performers)
-    "chrome hearts cross patch jeans", "chrome hearts cross patch flannel",
-    "chrome hearts zip up hoodie", "chrome hearts shorts",
-    "chrome hearts deadly doll tank", "chrome hearts matty boy hoodie",
-    "chrome hearts trucker jacket", "chrome hearts denim jacket",
-    "chrome hearts track pants", "chrome hearts leather cross patch",
-    "chrome hearts cross patch hat",
+    # Chrome Hearts piece-specific apparel (EXTENDED)
+    "chrome hearts horseshoe tee", "chrome hearts scroll tee",
+    "chrome hearts fuck you tee",
+    "chrome hearts matty boy sex records", "chrome hearts matty boy chomper",
+    "chrome hearts deadly doll", "chrome hearts cemetery tee",
+    "chrome hearts hollywood tee",
+    "chrome hearts cemetery hoodie",
+    "chrome hearts matty boy sex records hoodie", "chrome hearts fuck you hoodie",
+    "chrome hearts neck logo long sleeve", "chrome hearts thermal",
+    "chrome hearts crewneck", "chrome hearts sweatpants",
+    "chrome hearts shorts", "chrome hearts track pants",
+    "chrome hearts long sleeve",
 
-    # Chrome Hearts eyewear (telemetry-proven)
-    "chrome hearts vagilante glasses", "chrome hearts trypoleagain glasses",
-    "chrome hearts see you tea", "chrome hearts gittin any frame",
-    "chrome hearts glitter friends family",
-    "chrome hearts sneakers", "chrome hearts boots",
+    # Chrome Hearts denim/eyewear/accessories (EXTENDED)
+    "chrome hearts cross patch flannel", "chrome hearts denim jacket",
+    "chrome hearts see you tea", "chrome hearts gittin any glasses",
+    "chrome hearts paper jam glasses", "chrome hearts penetranus sunglasses",
+    "chrome hearts pony hair trucker", "chrome hearts cross patch hat",
+    "chrome hearts beanie", "chrome hearts belt", "chrome hearts converse",
 
     # Rick Owens (outerwear + footwear expansion)
     "rick owens coat", "rick owens hoodie", "rick owens bomber",
@@ -366,6 +382,16 @@ LONGTAIL_TARGETS = [
     # ERD collector/grail pieces
     "enfants riches deprimes frozen beauties flannel",
     "enfants riches deprimes le rosey tee",
+    # Chrome Hearts collector/niche pieces
+    "chrome hearts filigree cross pendant",
+    "chrome hearts sbt band ring",
+    "chrome hearts bead bracelet",
+    "chrome hearts ne chain necklace",
+    "chrome hearts star stud earring",
+    "chrome hearts fleur knee jeans",
+    "chrome hearts bone prone glasses",
+    "chrome hearts rolling stones",
+    "chrome hearts boots",
 ]
 
 

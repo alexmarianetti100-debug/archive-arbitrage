@@ -44,17 +44,15 @@ BLUE_CHIP_JEWELRY = [
     BlueChipTarget("cartier juste un clou", "jewelry", 0.20, 0.35, 10, 3500, "required", 9, "Nail design"),
     BlueChipTarget("cartier trinity", "jewelry", 0.15, 0.25, 10, 1200, "required", 9, "Three gold bands"),
     
-    # Chrome Hearts - Cult following, high margins
-    BlueChipTarget("chrome hearts cross pendant", "jewelry", 0.35, 0.50, 8, 800, "preferred", 9, "Most popular CH"),
-    BlueChipTarget("chrome hearts forever ring", "jewelry", 0.30, 0.45, 10, 600, "preferred", 9, "Classic band"),
-    BlueChipTarget("chrome hearts dagger pendant", "jewelry", 0.35, 0.50, 6, 1000, "preferred", 8, "Statement piece"),
-    BlueChipTarget("chrome hearts floral cross", "jewelry", 0.30, 0.45, 6, 1200, "preferred", 8, "Detailed design"),
-    BlueChipTarget("chrome hearts scroll ring", "jewelry", 0.30, 0.45, 8, 700, "preferred", 9, "Entry ring"),
-    BlueChipTarget("chrome hearts paperchain", "jewelry", 0.25, 0.40, 8, 1500, "preferred", 9, "Bracelet"),
-    BlueChipTarget("chrome hearts tiny e", "jewelry", 0.30, 0.45, 10, 400, "preferred", 10, "Affordable entry"),
-    BlueChipTarget("chrome hearts ch cross", "jewelry", 0.35, 0.50, 6, 900, "preferred", 8, "Large cross"),
-    BlueChipTarget("chrome hearts babyfat", "jewelry", 0.30, 0.45, 8, 500, "preferred", 9, "Popular pendant"),
-    BlueChipTarget("chrome hearts plus ring", "jewelry", 0.30, 0.45, 8, 550, "preferred", 9, "Plus design"),
+    # Chrome Hearts — Piece-specific blue chips (March 2026 optimization)
+    BlueChipTarget("chrome hearts baby fat cross pendant", "jewelry", 0.30, 0.45, 8, 550, "preferred", 9, "Most popular CH pendant"),
+    BlueChipTarget("chrome hearts tiny e", "jewelry", 0.30, 0.45, 10, 350, "preferred", 10, "Highest volume entry pendant"),
+    BlueChipTarget("chrome hearts forever ring", "jewelry", 0.30, 0.45, 10, 500, "preferred", 9, "Most popular CH ring"),
+    BlueChipTarget("chrome hearts fuck you ring", "jewelry", 0.30, 0.45, 8, 700, "preferred", 9, "Novelty fast seller"),
+    BlueChipTarget("chrome hearts cemetery ring", "jewelry", 0.30, 0.50, 6, 1200, "preferred", 8, "Best margin-to-liquidity ring"),
+    BlueChipTarget("chrome hearts paper chain bracelet", "jewelry", 0.25, 0.40, 8, 1400, "preferred", 9, "#1 telemetry performer"),
+    BlueChipTarget("chrome hearts paper chain necklace", "jewelry", 0.25, 0.40, 6, 1800, "preferred", 9, "Length-dependent pricing"),
+    BlueChipTarget("chrome hearts plus stud earring", "jewelry", 0.30, 0.45, 8, 275, "preferred", 9, "Entry-level jewelry"),
     
     # Tiffany - Entry luxury
     BlueChipTarget("tiffany t bracelet", "jewelry", 0.18, 0.30, 12, 1500, "preferred", 9, "Modern design"),
@@ -67,19 +65,14 @@ BLUE_CHIP_JEWELRY = [
     BlueChipTarget("bvlgari b zero ring", "jewelry", 0.18, 0.30, 10, 1500, "required", 9, "Logo ring"),
     BlueChipTarget("bvlgari divas dream", "jewelry", 0.20, 0.35, 6, 2500, "required", 8, "Fan design"),
     
-    # More Chrome Hearts variants
-    BlueChipTarget("chrome hearts forever ring", "jewelry", 0.30, 0.45, 10, 400, "preferred", 9, "Classic band, crosses"),
-    BlueChipTarget("chrome hearts cross pendant", "jewelry", 0.28, 0.42, 10, 350, "preferred", 9, "Bail cross, most popular"),
-    BlueChipTarget("chrome hearts baby fat", "jewelry", 0.25, 0.40, 8, 450, "preferred", 9, "Cross pendant, small"),
-    BlueChipTarget("chrome hearts tiny e", "jewelry", 0.25, 0.40, 8, 300, "preferred", 9, "E cross pendant"),
-    BlueChipTarget("chrome hearts paperchain", "jewelry", 0.22, 0.35, 10, 800, "preferred", 9, "Bracelet, paperclip links"),
-    BlueChipTarget("chrome hearts rollercross", "jewelry", 0.25, 0.40, 8, 600, "preferred", 8, "Bracelet, cross links"),
-    BlueChipTarget("chrome hearts cemetery", "jewelry", 0.28, 0.42, 6, 1200, "preferred", 8, "Ring, crosses around band"),
-    BlueChipTarget("chrome hearts floral cross", "jewelry", 0.25, 0.40, 6, 500, "preferred", 8, "Fleur details on cross"),
-    BlueChipTarget("chrome hearts dagger", "jewelry", 0.22, 0.35, 8, 550, "preferred", 8, "Sword pendant"),
-    BlueChipTarget("chrome hearts plus bracelet", "jewelry", 0.20, 0.32, 8, 700, "preferred", 8, "Plus sign links"),
-    BlueChipTarget("chrome hearts scroll band", "jewelry", 0.20, 0.30, 10, 400, "preferred", 8, "Ring, engraved scroll"),
-    BlueChipTarget("chrome hearts beverly hills", "jewelry", 0.22, 0.35, 6, 900, "preferred", 7, "Exclusive location piece"),
+    # Chrome Hearts fashion blue chips
+    BlueChipTarget("chrome hearts horseshoe tee", "fashion", 0.30, 0.45, 10, 450, "preferred", 9, "Core CH tee"),
+    BlueChipTarget("chrome hearts cross patch hoodie", "fashion", 0.25, 0.40, 6, 1500, "preferred", 8, "Grail hoodie"),
+    BlueChipTarget("chrome hearts cross patch jeans", "fashion", 0.25, 0.40, 5, 5000, "preferred", 7, "Big ticket denim"),
+    BlueChipTarget("chrome hearts cross patch flannel", "fashion", 0.25, 0.40, 5, 2500, "preferred", 7, "Sweet spot denim"),
+    BlueChipTarget("chrome hearts trypoleagain glasses", "fashion", 0.30, 0.50, 6, 800, "preferred", 9, "Best deal efficiency — 19 deals/9 runs"),
+    BlueChipTarget("chrome hearts vagilante glasses", "fashion", 0.25, 0.40, 5, 1500, "preferred", 8, "Appreciated significantly"),
+    BlueChipTarget("chrome hearts pony hair trucker", "fashion", 0.25, 0.40, 6, 800, "preferred", 7, "Money hat"),
     
     # More Tiffany & Co
     BlueChipTarget("tiffany t bracelet", "jewelry", 0.20, 0.32, 10, 1200, "required", 9, "T wire design, iconic"),
