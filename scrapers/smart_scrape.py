@@ -137,10 +137,16 @@ GRAIL_SEARCHES = [
     "mugler corset",
     "mugler robot",
     
-    # ERD
+    # ERD (generic + piece-specific)
     "enfants riches deprimes",
     "erd hoodie",
     "erd tee",
+    "enfants riches deprimes classic logo hoodie",
+    "enfants riches deprimes classic logo tee",
+    "enfants riches deprimes safety pin earring",
+    "enfants riches deprimes bennys video hoodie",
+    "enfants riches deprimes menendez hoodie",
+    "enfants riches deprimes viper room hat",
     
     # Hysteric Glamour
     "hysteric glamour vintage",

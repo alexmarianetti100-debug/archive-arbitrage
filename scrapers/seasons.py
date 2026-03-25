@@ -273,26 +273,7 @@ ICONIC_SEASONS = {
         (r"200[0-5]|(aw|fw|ss).?0[0-5]", 1.4, "Early 2000s Kapital"),
     ],
 
-    # === VISVIM ===
-    "visvim": [
-        # Grail footwear and pieces
-        (r"fbt|folk.?blues.?trail", 3.0, "FBT"),
-        (r"elk(?!in)|elk.?leather", 2.8, "Elk leather piece"),
-        (r"christo", 2.5, "Christo sandal"),
-        (r"ict|iris.?country.?trail", 2.0, "ICT"),
-
-        # Premium materials/tech
-        (r"gore.?tex|goretex", 1.8, "Gore-Tex piece"),
-        (r"grizzly|bears?coat", 1.8, "Grizzly/Bear Coat"),
-        (r"virgil.?folk|folk", 1.5, "Folk piece"),
-        (r"noragi|dotera|sanjuro|kimono", 2.0, "Japanese silhouette"),
-        (r"kofu|damaged|distressed", 1.6, "Kofu/Damaged piece"),
-
-        # General archive
-        (r"200[0-8]|(aw|fw|ss).?0[0-8]", 1.3, "2000s archive"),
-    ],
-
-    # === WTAPS ===
+# === WTAPS ===
     "wtaps": [
         # Iconic lines
         (r"jungle|jgr|jngl", 2.5, "Jungle piece"),
@@ -1106,6 +1087,19 @@ ICONIC_SEASONS = {
 
         # General
         (r"sample|1.?of|one.?of", 2.5, "Sample/1-of-1"),
+        # Piece-specific multipliers (March 2026 research)
+        (r"classic.?logo", 2.2, "Classic Logo — most liquid ERD piece"),
+        (r"benny.?s?.?video", 2.0, "Benny's Video — cult film reference"),
+        (r"menendez", 2.0, "Menendez Murder Trial — trend-driven"),
+        (r"viper.?room", 2.5, "Viper Room — C&D, extreme provenance"),
+        (r"teenage.?snuff", 1.8, "Teenage Snuff — consistent seller"),
+        (r"flowers?.?of.?anger", 1.8, "Flowers of Anger LS"),
+        (r"god.?with.?revolver", 1.9, "God With Revolver zip"),
+        (r"spanish.?elegy", 2.3, "Spanish Elegy moto — premium leather"),
+        (r"rose.?buckle", 1.8, "Rose Buckle studded belt"),
+        (r"frozen.?beaut", 2.8, "Frozen Beauties — only 50 made"),
+        (r"le.?rosey", 2.5, "Le Rosey — first ERD design ever"),
+        (r"bohemian.?scum", 1.6, "Bohemian Scum tee"),
     ],
 
     # === PALACE ===
@@ -1179,8 +1173,7 @@ BRAND_ALIASES = {
     "hysteric": "hysteric glamour",
     "hys": "hysteric glamour",
     "hg": "hysteric glamour",
-    "vis": "visvim",
-    "nbhd": "neighborhood",
+"nbhd": "neighborhood",
     "a bathing ape": "bape",
     "bathing ape": "bape",
     "ape": "bape",
@@ -1358,8 +1351,7 @@ if __name__ == "__main__":
         # === Japanese Archive ===
         ("hysteric glamour", "Hysteric Glamour 1993 Courtney Love Guitar Girl tee"),
         ("kapital", "Kapital Century Denim 5P boro patchwork"),
-        ("visvim", "Visvim FBT Elk leather sz10"),
-        ("wtaps", "WTAPS Jungle LS 2003 olive"),
+("wtaps", "WTAPS Jungle LS 2003 olive"),
         ("neighborhood", "Neighborhood Savage skull tee 2004"),
         ("bape", "BAPE KAWS 1st Camo Shark Hoodie"),
         ("human made", "Human Made Nigo heart logo tee 2005"),
@@ -1674,8 +1666,7 @@ if __name__ == "__main__":
         # Variations
         ("Rick Owens F/W 18", ("FW", 2018)),
         ("Raf Simons A/W '01", ("FW", 2001)),
-        ("Visvim S/S 2010", ("SS", 2010)),
-        ("WTAPS Fall-Winter 2008", ("FW", 2008)),
+("WTAPS Fall-Winter 2008", ("FW", 2008)),
         ("Kapital Spring Summer 2015", ("SS", 2015)),
         ("Number (N)ine 2005", (None, 2005)),  # Year only
         ("Archive 1998 Helmut Lang", (None, 1998)),  # Year only

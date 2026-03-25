@@ -215,9 +215,13 @@ BRAND_RULES = {
     },
     "enfants riches deprimes": {
         "price_floor": 150,
-        "price_typical_min": 300,
-        "auth_keywords": ["erd", "henri alexander levy", "made in usa"],
-        "rep_misspellings": ["enfant riche deprime"],
+        "price_typical_min": 350,
+        "auth_keywords": [
+            "erd", "henri alexander levy", "made in usa", "made in la",
+            "hand distressed", "cigarette burns", "thrashed",
+            "henri levy", "los angeles",
+        ],
+        "rep_misspellings": ["enfant riche deprime", "enfant riches", "enfants riche"],
         "high_rep_categories": [],
     },
     "comme des garcons": {

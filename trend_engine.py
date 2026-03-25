@@ -145,9 +145,13 @@ CORE_TARGETS = [
     "prada america's cup",
     # Helmut Lang (archive)
     "helmut lang leather jacket",
-    # ERD
+    # ERD (generic + piece-specific grails)
     "enfants riches deprimes hoodie",
     "enfants riches deprimes leather jacket",
+    "enfants riches deprimes classic logo hoodie",
+    "enfants riches deprimes classic logo tee",
+    "enfants riches deprimes safety pin earring",
+    "enfants riches deprimes classic logo long sleeve",
     # Bottega Veneta
     "bottega veneta intrecciato",
     "bottega veneta bag",
@@ -241,12 +245,23 @@ EXTENDED_TARGETS = [
     "undercover leather jacket", "undercover but beautiful",
     "undercover bones", "undercover scab", "undercover bug denim",
 
-    # ERD (full line)
+    # ERD (generic categories)
     "enfants riches deprimes tee", "enfants riches deprimes long sleeve",
     "enfants riches deprimes denim jacket", "enfants riches deprimes jeans",
     "enfants riches deprimes hat", "enfants riches deprimes belt",
     "enfants riches deprimes sweater", "enfants riches deprimes flannel",
     "enfants riches deprimes bomber",
+    # ERD piece-specific (trending + premium + existing family additions)
+    "enfants riches deprimes bennys video hoodie",
+    "enfants riches deprimes menendez hoodie",
+    "enfants riches deprimes viper room hat",
+    "enfants riches deprimes teenage snuff tee",
+    "enfants riches deprimes flowers of anger",
+    "enfants riches deprimes bohemian scum tee",
+    "enfants riches deprimes spanish elegy jacket",
+    "enfants riches deprimes god with revolver",
+    "enfants riches deprimes menendez pants",
+    "enfants riches deprimes rose buckle belt",
 
     # Wacko Maria
     "wacko maria leopard", "wacko maria hawaiian", "wacko maria shirt",
@@ -278,9 +293,6 @@ EXTENDED_TARGETS = [
     # Kapital
     "kapital boro jacket", "kapital kountry", "kapital denim",
     "kapital kountry coat", "kapital denim jacket",
-
-    # Visvim
-    "visvim fbt", "visvim virgil boots", "visvim lhamo coat",
 
     # Hysteric Glamour
     "hysteric glamour leather jacket", "hysteric glamour denim jacket",
@@ -351,8 +363,9 @@ LONGTAIL_TARGETS = [
     "vetements inside out", "vetements haute couture",
     # Wacko Maria niche
     "wacko maria guilty parties", "wacko maria tim lehi",
-    # Visvim niche
-    "visvim ring",
+    # ERD collector/grail pieces
+    "enfants riches deprimes frozen beauties flannel",
+    "enfants riches deprimes le rosey tee",
 ]
 
 

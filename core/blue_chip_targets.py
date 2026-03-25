@@ -364,19 +364,20 @@ BLUE_CHIP_FASHION = [
     BlueChipTarget("number nine shirt", "fashion", 0.20, 0.32, 6, 350, "preferred", 7, "Floral, western"),
     BlueChipTarget("number nine boots", "fashion", 0.20, 0.30, 5, 550, "preferred", 6, "Chelsea, archive"),
     
+    # Enfants Riches Déprimés — Piece-specific blue chips
+    BlueChipTarget("enfants riches deprimes classic logo hoodie", "fashion", 0.30, 0.45, 6, 1600, "preferred", 9, "Most liquid ERD piece"),
+    BlueChipTarget("enfants riches deprimes classic logo tee", "fashion", 0.35, 0.50, 8, 900, "preferred", 9, "Highest volume ERD listing"),
+    BlueChipTarget("enfants riches deprimes safety pin earring", "fashion", 0.30, 0.45, 6, 400, "preferred", 9, "Most iconic ERD accessory"),
+    BlueChipTarget("enfants riches deprimes bennys video hoodie", "fashion", 0.25, 0.40, 5, 2000, "preferred", 8, "Film reference, cult following"),
+    BlueChipTarget("enfants riches deprimes menendez hoodie", "fashion", 0.30, 0.45, 5, 1400, "preferred", 8, "Trend-driven, true crime wave"),
+    BlueChipTarget("enfants riches deprimes viper room hat", "fashion", 0.35, 0.55, 4, 10000, "preferred", 7, "C&D piece, wide price range"),
+    BlueChipTarget("enfants riches deprimes spanish elegy jacket", "fashion", 0.25, 0.40, 4, 6000, "preferred", 7, "Premium moto leather"),
+    BlueChipTarget("enfants riches deprimes frozen beauties flannel", "fashion", 0.30, 0.50, 3, 4500, "preferred", 6, "Only 50 made, Kanye co-sign"),
+
     # The Soloist - Miyashita's current line
     BlueChipTarget("soloist jacket", "fashion", 0.20, 0.32, 5, 900, "preferred", 7, "Deconstructed"),
     BlueChipTarget("soloist shirt", "fashion", 0.18, 0.28, 5, 550, "preferred", 7, "Patchwork"),
     BlueChipTarget("soloist coat", "fashion", 0.18, 0.28, 4, 1200, "preferred", 6, "Long, dramatic"),
-    
-    # Visvim - Japanese Americana
-    BlueChipTarget("visvim christo", "fashion", 0.25, 0.40, 8, 450, "preferred", 9, "Sandals, iconic"),
-    BlueChipTarget("visvim fbt", "fashion", 0.22, 0.35, 8, 550, "preferred", 8, "Moccasin sneaker"),
-    BlueChipTarget("visvim jacket", "fashion", 0.20, 0.32, 6, 1200, "preferred", 7, "Kofu, natural dye"),
-    BlueChipTarget("visvim shirt", "fashion", 0.20, 0.30, 8, 550, "preferred", 8, "Chambray, indigo"),
-    BlueChipTarget("visvim backpack", "fashion", 0.18, 0.28, 6, 800, "preferred", 7, "Leather, natural"),
-    BlueChipTarget("visvim virgil", "fashion", 0.20, 0.32, 6, 650, "preferred", 7, "Boots, folk"),
-    BlueChipTarget("visvim ict", "fashion", 0.18, 0.28, 5, 900, "preferred", 7, "Indigo camping trailer"),
     
     # Kapital - Japanese boro/denim
     BlueChipTarget("kapital boro", "fashion", 0.22, 0.35, 6, 800, "preferred", 8, "Patchwork, indigo"),

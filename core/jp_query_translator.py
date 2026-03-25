@@ -59,8 +59,7 @@ BRAND_TRANSLATIONS: dict[str, tuple[str, str, str, float]] = {
     "sacai":                    ("サカイ", "Sacai", "fashion", 0.8),
     "julius":                   ("ユリウス", "Julius", "fashion", 0.8),
     "kapital":                  ("キャピタル", "Kapital", "fashion", 0.8),
-    "visvim":                   ("ビズビム", "Visvim", "fashion", 0.8),
-    "hysteric glamour":         ("ヒステリックグラマー", "Hysteric Glamour", "fashion", 0.6),
+"hysteric glamour":         ("ヒステリックグラマー", "Hysteric Glamour", "fashion", 0.6),
     "thierry mugler":           ("ティエリーミュグレー", "Thierry Mugler", "fashion", 0.8),
     "guidi":                    ("グイディ", "Guidi", "fashion", 1.0),
     "lemaire":                  ("ルメール", "Lemaire", "fashion", 0.8),
@@ -389,6 +388,22 @@ PRODUCT_TRANSLATIONS: dict[str, str] = {
     "jumbo lace":           "ジャンボレース",
     "grained leather sneakers": "グレインレザースニーカー",
     "cargo":                "カーゴ",
+    # ── ERD piece-specific ───────────────────────────────────────────────────
+    "classic logo hoodie":      "クラシックロゴフーディー",
+    "classic logo tee":         "クラシックロゴTシャツ",
+    "classic logo long sleeve": "クラシックロゴロングスリーブ",
+    "safety pin earring":       "セーフティピンイヤリング",
+    "bennys video":             "ベニーズビデオ",
+    "menendez":                 "メネンデス",
+    "viper room":               "バイパールーム",
+    "teenage snuff":            "ティーンエイジスナッフ",
+    "flowers of anger":         "フラワーズオブアンガー",
+    "god with revolver":        "ゴッドウィズリボルバー",
+    "spanish elegy":            "スパニッシュエレジー",
+    "rose buckle belt":         "ローズバックルベルト",
+    "bohemian scum":            "ボヘミアンスカム",
+    "frozen beauties":          "フローズンビューティーズ",
+    "le rosey":                 "ル・ロゼ",
 }
 
 # ═══════════════════════════════════════════════════════════════════════════════

@@ -42,8 +42,7 @@ BRAND_MARKET_ESTIMATES = {
     "yohji yamamoto": {"jacket": 500, "pants": 250, "shirt": 200, "tee": 120, "default": 250},
     "issey miyake": {"jacket": 350, "pants": 200, "shirt": 150, "tee": 100, "default": 200},
     "kapital": {"jacket": 400, "pants": 250, "shirt": 150, "tee": 100, "default": 200},
-    "visvim": {"jacket": 600, "pants": 300, "shirt": 250, "tee": 150, "default": 300},
-    "wtaps": {"jacket": 350, "pants": 200, "shirt": 150, "tee": 100, "hoodie": 200, "default": 180},
+"wtaps": {"jacket": 350, "pants": 200, "shirt": 150, "tee": 100, "hoodie": 200, "default": 180},
     "neighborhood": {"jacket": 350, "pants": 200, "shirt": 150, "tee": 90, "hoodie": 180, "default": 170},
     "bape": {"jacket": 400, "pants": 200, "shirt": 150, "tee": 120, "hoodie": 300, "default": 200},
     "human made": {"jacket": 350, "pants": 180, "shirt": 140, "tee": 100, "hoodie": 200, "default": 160},
@@ -97,8 +96,8 @@ BRAND_MARKET_ESTIMATES = {
     "our legacy": {"jacket": 350, "pants": 200, "shirt": 150, "tee": 80, "default": 170},
     
     # === OTHER ===
-    "enfants riches deprimes": {"jacket": 1500, "denim jacket": 800, "bomber": 1200, "pants": 400, "jeans": 500, "shirt": 400, "tee": 400, "long sleeve": 300, "hoodie": 500, "sweater": 600, "flannel": 400, "hat": 200, "belt": 500, "default": 400},
-    "erd": {"jacket": 1500, "denim jacket": 800, "bomber": 1200, "pants": 400, "jeans": 500, "shirt": 400, "tee": 400, "long sleeve": 300, "hoodie": 500, "sweater": 600, "flannel": 400, "hat": 200, "belt": 500, "default": 400},
+    "enfants riches deprimes": {"jacket": 2000, "leather jacket": 2500, "denim jacket": 1000, "bomber": 1200, "flannel": 600, "pants": 450, "jeans": 500, "shirt": 450, "tee": 500, "long sleeve": 450, "hoodie": 750, "sweater": 650, "hat": 400, "belt": 700, "earring": 250, "default": 450},
+    "erd": {"jacket": 2000, "leather jacket": 2500, "denim jacket": 1000, "bomber": 1200, "flannel": 600, "pants": 450, "jeans": 500, "shirt": 450, "tee": 500, "long sleeve": 450, "hoodie": 750, "sweater": 650, "hat": 400, "belt": 700, "earring": 250, "default": 450},
     "chrome hearts": {"jacket": 2000, "pants": 800, "shirt": 600, "tee": 400, "hoodie": 1000, "default": 800},
     "celine": {"jacket": 800, "leather jacket": 1200, "boots": 300, "belt": 200, "default": 400},
     "haider ackermann": {"jacket": 400, "leather jacket": 600, "blazer": 200, "coat": 350, "pants": 150, "default": 250},
@@ -333,6 +332,7 @@ class PricingService:
         brand: Optional[str] = None,
         title: str = "",
         shipping_cost: float = 0,
+        listing_image_url: Optional[str] = None,
     ) -> PriceRecommendation:
         """
         Calculate recommended selling price using smart comp matching.
@@ -354,7 +354,7 @@ class PricingService:
         if brand and title:
             try:
                 comp_result = await asyncio.wait_for(
-                    find_best_comps(brand, title),
+                    find_best_comps(brand, title, listing_image_url=listing_image_url),
                     timeout=30,
                 )
                 
