@@ -153,9 +153,7 @@ GRAIL_SEARCHES = [
     "hysteric glamour courtney love",
     "hysteric glamour skull",
     
-    # CDG
-    "comme des garcons homme plus",
-    "cdg homme plus",
+    # CDG — removed (margins not there, all sub-labels demoted)
     
     # Issey Miyake
     "issey miyake homme plisse",

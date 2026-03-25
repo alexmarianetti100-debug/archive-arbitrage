@@ -40,6 +40,7 @@ from core.authenticity_v2 import AuthenticityCheckerV2, format_auth_bar, format_
 from core.desirability import check_desirability, get_desirability_emoji
 from telegram_bot import send_deal_to_subscribers, init_telegram_db
 from db.sqlite_models import init_db, save_item, Item
+from core.deal_tracker import DealPrediction, record_prediction
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(name)s] %(message)s')
 logger = logging.getLogger("monitor")
@@ -52,6 +53,17 @@ POLL_INTERVAL = int(os.getenv("MONITOR_POLL_INTERVAL", "60"))  # seconds
 MIN_PROFIT = float(os.getenv("ALERT_MIN_PROFIT", "50"))
 MIN_MARGIN = float(os.getenv("ALERT_MIN_MARGIN", "0.25"))
 MAX_BRANDS_PER_CYCLE = int(os.getenv("MONITOR_MAX_BRANDS", "51"))
+
+DEFAULT_SELL_PLATFORM = os.getenv("DEFAULT_SELL_PLATFORM", "grailed")
+PLATFORM_FEES = {
+    "grailed": 0.142, "poshmark": 0.20, "ebay": 0.13,
+    "depop": 0.10, "mercari": 0.10,
+}
+DEFAULT_SELL_FEE = PLATFORM_FEES.get(DEFAULT_SELL_PLATFORM, 0.142)
+
+# Buy-side costs
+BUY_SHIPPING_DOMESTIC = float(os.getenv("BUY_SHIPPING_DOMESTIC", "15.0"))
+JAPAN_SOURCES = {"japan_buyee", "rakuma", "mercari_jp", "yahoo_auctions_jp", "buyee"}
 
 # State file to persist seen IDs across restarts
 STATE_FILE = os.path.join(os.path.dirname(__file__), "data", "monitor_state.json")
@@ -67,7 +79,7 @@ TIER_A_BRANDS = [
 # Group B: High demand, checked every 2nd cycle
 TIER_B_BRANDS = [
     "enfants riches deprimes", "hysteric glamour",
-    "comme des garcons", "issey miyake", "thierry mugler",
+    "issey miyake", "thierry mugler",
     "balenciaga", "saint laurent", "prada", "gucci",
     "kapital", "julius", "ann demeulemeester",
 ]
@@ -78,7 +90,7 @@ TIER_C_BRANDS = [
     "vetements", "alexander mcqueen", "hussein chalayan",
     "supreme", "off-white", "gallery dept", "amiri",
     "bape", "human made", "cav empt", "wacko maria",
-    "neighborhood", "wtaps", "visvim", "sacai",
+    "neighborhood", "wtaps", "sacai",
     "dries van noten",
 ]
 
@@ -208,23 +220,125 @@ class RealtimeMonitor:
             
             category = self._detect_category(item.title)
             
-            # Get pricing
-            price_rec = await self.pricing.calculate_price_async(
-                source_price=item.price,
-                brand=brand,
-                title=item.title,
-                shipping_cost=getattr(item, "shipping_cost", 0) or 0,
-            )
-            
+            # ── Product catalog fast-path ──
+            _monitor_product_match = None
+            try:
+                from scrapers.product_fingerprint import parse_title_to_fingerprint
+                from db.sqlite_models import get_product_by_fingerprint, get_product_pricing
+                from api.services.pricing import PriceRecommendation
+                from decimal import Decimal
+
+                _fp = parse_title_to_fingerprint(brand, item.title)
+                if _fp.confidence == "high" and _fp.fingerprint_hash:
+                    _product = get_product_by_fingerprint(_fp.fingerprint_hash)
+                    if _product:
+                        _pricing = get_product_pricing(_product.id)
+                        if _pricing and _pricing["confidence_tier"] in ("guaranteed", "high"):
+                            _monitor_product_match = _pricing
+                            sell_fee = PLATFORM_FEES.get(DEFAULT_SELL_PLATFORM, 0.142)
+                            _median = _pricing["median_price"]
+
+                            # Apply condition adjustment (same as gap_hunter)
+                            try:
+                                from core.condition_parser import parse_condition, CONDITION_TIERS
+                                _src_cond, _, _ = parse_condition(item.title, brand=brand or "")
+                                _src_mult = CONDITION_TIERS.get(_src_cond, 0.70)
+                                _comp_assumed = 0.70  # Grailed comp avg
+                                if _src_mult < _comp_assumed and _comp_assumed > 0:
+                                    _median *= (_src_mult / _comp_assumed)
+                            except Exception:
+                                pass
+
+                            # Apply seasonal haircut (same as gap_hunter)
+                            _month = datetime.now().month
+                            _tl = item.title.lower() if item.title else ""
+                            _winter = any(k in _tl for k in ("jacket", "coat", "parka", "puffer"))
+                            _summer = any(k in _tl for k in ("swim", "tank top", "sandal"))
+                            if (_winter and 4 <= _month <= 8) or (_summer and (_month >= 10 or _month <= 2)):
+                                _median *= 0.85
+
+                            # Shipping estimate
+                            _shipping = 20.0  # Default
+                            if any(k in _tl for k in ("jacket", "coat", "hoodie")):
+                                _shipping = 32.0
+                            elif any(k in _tl for k in ("boot", "shoe", "sneaker", "geobasket")):
+                                _shipping = 22.0
+                            if _median > 500:
+                                _shipping += _median * 0.04  # Insurance
+
+                            _buy_costs = BUY_SHIPPING_DOMESTIC
+                            _src = getattr(item, 'source', '').lower()
+                            if _src in JAPAN_SOURCES or 'japan' in _src or 'buyee' in _src:
+                                _buy_costs = 45.0 + item.price * 0.05  # Japan shipping + service fee
+
+                            _net = _median * (1 - sell_fee) - _shipping
+                            _profit = _net - item.price - _buy_costs
+                            _margin = _profit / item.price if item.price > 0 else 0
+
+                            # Margin requirement adjusted by tier AND data freshness
+                            _min_margin = MIN_MARGIN  # 25% base
+                            if _pricing["confidence_tier"] == "high":
+                                _min_margin = 0.30  # Higher for price-variable products
+                            _freshness = _pricing.get("data_freshness", "unknown")
+                            if _freshness == "stale":
+                                _min_margin += 0.10  # +10% buffer for stale data
+                            elif _freshness in ("aging", "unknown"):
+                                _min_margin += 0.05  # +5% buffer for uncertain freshness
+
+                            if _profit < MIN_PROFIT or _margin < _min_margin:
+                                _monitor_product_match = None  # Doesn't meet thresholds after adjustments
+                            else:
+                                price_rec = PriceRecommendation(
+                                    source_price=Decimal(str(item.price)),
+                                    market_price=Decimal(str(_median)),
+                                    recommended_price=Decimal(str(_median)),
+                                    margin_percent=float(_margin),
+                                    profit_estimate=Decimal(str(_profit)),
+                                    confidence="high",
+                                    reasoning=f"Product catalog: {_pricing['confidence_tier']} ({_pricing['comp_count']} exact comps)",
+                                    comps_count=_pricing["comp_count"],
+                                )
+                            logger.info(
+                                f"    🏷️ Product match: '{_fp.canonical_name}' → "
+                                f"{_pricing['confidence_tier'].upper()}, {_pricing['comp_count']} comps "
+                                f"({_pricing.get('recent_comp_count', 0)} recent), "
+                                f"${_median:.0f} median [{_freshness.upper()}]"
+                            )
+            except Exception as e:
+                logger.debug(f"    Product catalog lookup failed: {e}")
+
+            if not _monitor_product_match:
+                # Get pricing (with listing image for pHash comp validation)
+                listing_images = getattr(item, 'images', None) or []
+                listing_img_url = listing_images[0] if listing_images else None
+                price_rec = await self.pricing.calculate_price_async(
+                    source_price=item.price,
+                    brand=brand,
+                    title=item.title,
+                    shipping_cost=getattr(item, "shipping_cost", 0) or 0,
+                    listing_image_url=listing_img_url,
+                )
+
             if not price_rec or price_rec.confidence == "skip" or price_rec.recommended_price == 0:
                 return False
             
             profit = float(price_rec.profit_estimate) if hasattr(price_rec, 'profit_estimate') else 0
-            margin = float(price_rec.margin_percent) if hasattr(price_rec, 'margin_percent') else 0
-            
+            # Deduct buy-side costs (shipping, tax, service fees)
+            if not _monitor_product_match:  # Product path already deducted
+                _src_lower = getattr(item, 'source', '').lower()
+                if _src_lower in JAPAN_SOURCES or 'japan' in _src_lower:
+                    profit -= (45.0 + item.price * 0.05)
+                else:
+                    profit -= BUY_SHIPPING_DOMESTIC
+            margin = profit / item.price if item.price > 0 else 0
+
             if profit < MIN_PROFIT or margin < MIN_MARGIN:
                 return False
-            
+
+            # Hard gate: only surface deals with exact product catalog matches
+            if not _monitor_product_match:
+                return False
+
             # Desirability check — only alert on items the community actually wants
             is_desirable, desirability_score, desirability_reason = check_desirability(
                 title=item.title,
@@ -276,10 +390,33 @@ class RealtimeMonitor:
                     auth_result=None, auth_v2=auth_result
                 )
                 self.stats["deals_sent"] += 1
-                return True
             except Exception as e:
                 logger.error(f"Failed to send deal: {e}")
                 return False
+
+            # Track deal prediction for accuracy analysis
+            try:
+                prediction = DealPrediction(
+                    timestamp=datetime.now().isoformat(),
+                    query=brand or "",
+                    item_title=item.title,
+                    item_url=item.url,
+                    predicted_price=float(price_rec.recommended_price),
+                    prediction_method="product_catalog" if _monitor_product_match else "standard",
+                    cv=None,
+                    confidence_level=price_rec.confidence,
+                    num_comps=price_rec.comps_count,
+                    buy_price=item.price,
+                    buy_platform=item.source,
+                    sell_platform=DEFAULT_SELL_PLATFORM,
+                    estimated_profit=float(price_rec.profit_estimate),
+                    estimated_fees=float(price_rec.recommended_price) * DEFAULT_SELL_FEE,
+                )
+                record_prediction(prediction)
+            except Exception as e:
+                logger.debug(f"Failed to track deal prediction: {e}")
+
+            return True
                 
         except asyncio.TimeoutError:
             return False
@@ -404,7 +541,6 @@ class RealtimeMonitor:
             "vivienne westwood", "maison margiela", "martin margiela", "margiela",
             "dior homme", "dior", "thierry mugler", "mugler",
             "enfants riches deprimes", "erd", "hysteric glamour",
-            "comme des garcons", "cdg",
             "issey miyake", "kapital", "carol christian poell",
             "boris bidjan saberi", "julius", "ann demeulemeester",
             "vetements", "alexander mcqueen",
@@ -412,7 +548,7 @@ class RealtimeMonitor:
             "prada", "gucci", "louis vuitton", "supreme", "off-white",
             "gallery dept", "amiri", "bape", "human made",
             "cav empt", "wacko maria", "neighborhood", "wtaps",
-            "visvim", "sacai", "dries van noten",
+            "sacai", "dries van noten",
         ]
         for brand in brands:
             if brand in title_lower:

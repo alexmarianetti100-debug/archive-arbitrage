@@ -341,15 +341,9 @@ BLUE_CHIP_FASHION = [
     BlueChipTarget("yohji yamamoto coat", "fashion", 0.18, 0.28, 5, 1200, "preferred", 7, "Dramatic silhouettes"),
     BlueChipTarget("yohji yamamoto new era", "fashion", 0.25, 0.40, 6, 250, "preferred", 8, "Cap collab"),
     
-    # Comme des Garçons - Rei Kawakubo
-    BlueChipTarget("comme des garcons play", "fashion", 0.25, 0.40, 15, 150, "preferred", 10, "Heart logo, entry point"),
-    BlueChipTarget("comme des garcons shirt", "fashion", 0.20, 0.32, 10, 350, "preferred", 9, "Patchwork, stripes"),
-    BlueChipTarget("comme des garcons homme plus", "fashion", 0.18, 0.28, 6, 800, "preferred", 7, "Runway pieces"),
-    BlueChipTarget("comme des garcons junya", "fashion", 0.20, 0.32, 6, 700, "preferred", 7, "Watanabe, technical"),
-    BlueChipTarget("comme des garcons wallet", "fashion", 0.22, 0.35, 10, 350, "preferred", 9, "SA8100 classic"),
-    BlueChipTarget("comme des garcons converse", "fashion", 0.25, 0.40, 12, 180, "preferred", 9, "Play collab"),
-    BlueChipTarget("comme des garcons nike", "fashion", 0.25, 0.40, 8, 250, "preferred", 8, "Sneaker collabs"),
-    
+    # Comme des Garçons — REMOVED (margins not there, SHIRT polluted deals)
+    # All CDG sub-labels demoted in query_normalization.py
+
     # Undercover - Japanese streetwear
     BlueChipTarget("undercover jacket", "fashion", 0.22, 0.35, 6, 700, "preferred", 8, "Graphic, punk influence"),
     BlueChipTarget("undercover hoodie", "fashion", 0.25, 0.40, 8, 450, "preferred", 8, "Prints, collaborations"),
@@ -414,7 +408,7 @@ BLUE_CHIP_FASHION = [
     BlueChipTarget("sacai clot", "fashion", 0.25, 0.40, 6, 320, "preferred", 8, "Kiss of Death"),
     
     # Junya Watanabe - Technical/commercial
-    BlueChipTarget("junya watanabe cdg", "fashion", 0.20, 0.32, 6, 800, "preferred", 7, "Mainline, patchwork"),
+    # junya watanabe cdg — removed (CDG cleanup, margins not there)
     BlueChipTarget("junya watanabe man", "fashion", 0.18, 0.28, 8, 550, "preferred", 8, "Mens, collaborations"),
     BlueChipTarget("junya watanabe north face", "fashion", 0.22, 0.35, 8, 550, "preferred", 8, "TNF collab"),
     BlueChipTarget("junya watanabe levis", "fashion", 0.22, 0.35, 8, 450, "preferred", 8, "Denim collab"),

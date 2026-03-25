@@ -483,6 +483,15 @@ DEMOTED_QUERY_FAMILIES: set[str] = {
     "grailed yeat zine",
     "prada",
     "hysteric glamour",
+    # ALL CDG eliminated — margins not there, SHIRT polluted deals
+    "comme des garcons play", "comme des garcons play heart",
+    "comme des garcons shirt", "comme des garcons shirt jacket",
+    "comme des garcons wallet", "comme des garcons converse",
+    "comme des garcons nike", "comme des garcons homme plus",
+    "cdg play", "cdg play heart", "cdg shirt", "cdg wallet",
+    "cdg converse", "cdg nike", "cdg homme plus",
+    "comme des garcons parfum", "cdg parfum",
+    "comme des garcons junya", "cdg junya",
     # ALL bags eliminated — high counterfeit risk, inaccurate comps
     "gucci bag", "gucci marmont", "gucci dionysus", "gucci jackie",
     "gucci bamboo", "gucci ophidia", "gucci tote", "gucci handbag",
