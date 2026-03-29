@@ -2724,17 +2724,26 @@ class GapHunter:
 
             # Calculate gap against Grailed resale value (no platform discount).
             # We buy on any platform and resell on Grailed — the reference is what
-            # the item sells for on Grailed, not what it would sell for on the source platform.
-            # Pick reference price explicitly — avoid `or` chaining which treats 0.0 as falsy
-            if effective_sold.liquidation_anchor is not None and effective_sold.liquidation_anchor > 0:
-                reference_price = effective_sold.liquidation_anchor
-            elif getattr(effective_sold, '_hyper_pricing', False) and effective_sold.avg_price is not None and effective_sold.avg_price > 0:
+            # the item ACTUALLY sells for, not the conservative liquidation floor.
+            #
+            # reference_price = median (what this item sells for on Grailed)
+            # downside_reference = liquidation_anchor (conservative quick-sale floor)
+            #
+            # Using P25/liquidation as primary reference was killing deal flow —
+            # comparing listings against the bottom 25% of sold prices means only
+            # items priced below the cheapest sold comps register as deals.
+            if getattr(effective_sold, '_hyper_pricing', False) and effective_sold.avg_price is not None and effective_sold.avg_price > 0:
                 reference_price = effective_sold.avg_price
-            else:
+            elif effective_sold.median_price is not None and effective_sold.median_price > 0:
                 reference_price = effective_sold.median_price
+            elif effective_sold.liquidation_anchor is not None and effective_sold.liquidation_anchor > 0:
+                reference_price = effective_sold.liquidation_anchor
+            else:
+                continue  # No usable reference price
 
-            if effective_sold.downside_anchor is not None and effective_sold.downside_anchor > 0:
-                downside_reference = effective_sold.downside_anchor
+            # Downside reference = liquidation anchor (P25) or 85% of market
+            if effective_sold.liquidation_anchor is not None and effective_sold.liquidation_anchor > 0:
+                downside_reference = effective_sold.liquidation_anchor
             else:
                 downside_reference = reference_price * 0.85
 
@@ -2808,6 +2817,13 @@ class GapHunter:
             profit = expected_sell_price - item.price - shipping_est - buy_costs
             downside_profit = downside_sell_price - item.price - shipping_est - buy_costs
             real_margin = profit / item.price if item.price > 0 else 0
+
+            # Temporary: log every item's gap math to diagnose deal flow
+            logger.info(
+                f"    💰 Gap math: ${item.price:.0f} listed → ref ${reference_price:.0f} "
+                f"(gap {gap_percent*100:.0f}%, profit ${profit:.0f}, margin {real_margin*100:.0f}%) "
+                f"| {item.title[:40]}"
+            )
 
             # ── Implausible gap sanity check ──────────────────────────────────
             # Extreme gaps almost always indicate bad comp matches, not real deals.
