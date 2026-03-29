@@ -2821,13 +2821,6 @@ class GapHunter:
             downside_profit = downside_sell_price - item.price - shipping_est - buy_costs
             real_margin = profit / item.price if item.price > 0 else 0
 
-            # Temporary: log every item's gap math to diagnose deal flow
-            logger.info(
-                f"    💰 Gap math: ${item.price:.0f} listed → ref ${reference_price:.0f} "
-                f"(gap {gap_percent*100:.0f}%, profit ${profit:.0f}, margin {real_margin*100:.0f}%) "
-                f"| {item.title[:40]}"
-            )
-
             # ── Implausible gap sanity check ──────────────────────────────────
             # Extreme gaps almost always indicate bad comp matches, not real deals.
             # Tiered: higher market prices get stricter caps.
