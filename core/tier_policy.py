@@ -160,72 +160,75 @@ def classify_discord_tiers(
     signals: Any = None,
     auth_result: Any = None,
 ) -> TierDecision:
-    """Classify a deal into exactly ONE Discord channel tier (exclusive routing).
+    """Classify a deal into Discord channel tiers using brand-access routing.
 
-    Tier requirements (from Whop descriptions):
-    - Whale: $500+ profit, 80%+ auth, brand in whale set, no price ceiling
-    - Pro:   $300+ profit, 72%+ auth, brand in pro set, up to $10k
-    - Beginner: $100+ profit, brand in beginner set, up to $2,500
+    Whop tier structure (each tier includes everything below it):
+    - Beginner ($30): 10 core brands, items up to $2,500
+    - Pro ($80):      40+ brands, items up to $10,000, 72%+ auth
+    - Whale ($400):   50+ brands, no price ceiling, 80%+ auth, Japan deals
 
-    Checks from highest → lowest. First match wins.
-    Deals that don't qualify for any tier default to beginner.
+    Routing logic — brand exclusivity determines the MINIMUM tier:
+    1. Brand only in whale set → whale channel (CCP, Number Nine, BBS, etc.)
+    2. Brand only in pro set → pro channel (ERD, Undercover, Kapital, Raf, etc.)
+    3. Brand in beginner set → beginner channel
+    4. High profit ($300+) on beginner brand → ALSO goes to pro
+    5. Monster profit ($500+) on any brand → ALSO goes to whale
+    6. Japan source deals → always whale (Japan is whale-exclusive feature)
 
-    Returns TierDecision with exactly one entry in channel_tiers.
+    Returns TierDecision with channel_tiers list for multi-channel posting.
     """
-    big = RULES["big_baller"]
-    pro = RULES["pro"]
-    beg = RULES["beginner"]
-
     brand = _brand(item)
     price = float(getattr(item, "price", 0) or 0)
+    source = (getattr(item, "source", "") or "").lower()
     auth_conf = float(getattr(auth_result, "confidence", 0.0) or 0.0) if auth_result else 0.0
+    is_japan = source in {"japan_buyee", "rakuma", "mercari_jp", "yahoo_auctions_jp", "buyee"}
 
-    # ── Whale: $500+ profit, 80%+ auth, brand in whale set ──
-    whale_floor = (
-        profit >= big.get("min_profit", 500)
-        and margin >= big.get("min_margin", 0.15)
-        and auth_conf >= big.get("min_auth", 0.80)
-        and brand in BIG_BALLER_BRANDS
-    )
-    if whale_floor:
-        return TierDecision(
-            minimum_tier="whale",
-            channel_tiers=["whale"],
-            reasons=["whale-tier metrics", f"${profit:.0f} profit", f"{margin*100:.0f}% margin", f"{auth_conf*100:.0f}% auth"],
-        )
+    channels = []
+    reasons = []
 
-    # ── Pro: $300+ profit, 72%+ auth, brand in pro set, up to $10k ──
-    pro_floor = (
-        profit >= pro.get("min_profit", 300)
-        and margin >= pro.get("min_margin", 0.20)
-        and auth_conf >= pro.get("min_auth", 0.72)
-        and price <= pro.get("max_price", 10000)
-        and brand in PRO_BRANDS
-    )
-    if pro_floor:
-        return TierDecision(
-            minimum_tier="pro",
-            channel_tiers=["pro"],
-            reasons=["pro-tier metrics", f"${profit:.0f} profit", f"{margin*100:.0f}% margin", f"{auth_conf*100:.0f}% auth"],
-        )
+    # ── Japan deals are whale-exclusive ──
+    if is_japan:
+        channels.append("whale")
+        reasons.append("Japan cross-border (whale-exclusive)")
+        return TierDecision(minimum_tier="whale", channel_tiers=channels, reasons=reasons)
 
-    # ── Beginner: $100+ profit, brand in beginner set, up to $2,500 ──
-    beg_floor = (
-        profit >= beg.get("min_profit", 100)
-        and margin >= beg.get("min_margin", 0.20)
-        and price <= beg.get("max_price", 2500)
-        and brand in BEGINNER_BRANDS
-    )
-    if beg_floor:
-        return TierDecision(
-            minimum_tier="beginner",
-            channel_tiers=["beginner"],
-            reasons=["beginner-tier metrics", f"${profit:.0f} profit", f"{margin*100:.0f}% margin"],
-        )
+    # ── Determine minimum tier by brand exclusivity ──
+    # Whale-only brands: brands in whale set but NOT in pro set
+    whale_only_brands = BIG_BALLER_BRANDS - PRO_BRANDS
+    # Pro-only brands: brands in pro set but NOT in beginner set
+    pro_only_brands = PRO_BRANDS - BEGINNER_BRANDS
 
-    # ── No tier qualifies — still route to beginner as default ──
-    return TierDecision(
-        minimum_tier="beginner",
-        channel_tiers=["beginner"],
-        reasons=["default fallback"],
-    )
+    if brand in whale_only_brands:
+        # CCP, Number Nine, BBS, Hysteric — whale-exclusive brands
+        channels.append("whale")
+        reasons.append(f"whale-exclusive brand: {brand}")
+    elif brand in pro_only_brands:
+        # ERD, Undercover, Kapital, Raf, SLP, Dior, etc. — pro-tier brands
+        channels.append("pro")
+        reasons.append(f"pro-tier brand: {brand}")
+    elif brand in BEGINNER_BRANDS:
+        # CH, RO, Margiela, Prada, Balenciaga, BV, JPG, Helmut — core brands
+        channels.append("beginner")
+        reasons.append(f"beginner brand: {brand}")
+    else:
+        # Unknown brand — route to beginner as default
+        channels.append("beginner")
+        reasons.append("default fallback")
+
+    # ── Profit-based upgrades (high profit promotes to higher tiers too) ──
+    if profit >= 500 and "whale" not in channels:
+        channels.append("whale")
+        reasons.append(f"${profit:.0f} profit → whale upgrade")
+    if profit >= 300 and "pro" not in channels:
+        channels.append("pro")
+        reasons.append(f"${profit:.0f} profit → pro upgrade")
+
+    # Determine minimum tier from highest channel
+    if "whale" in channels:
+        min_tier = "whale"
+    elif "pro" in channels:
+        min_tier = "pro"
+    else:
+        min_tier = "beginner"
+
+    return TierDecision(minimum_tier=min_tier, channel_tiers=channels, reasons=reasons)

@@ -229,67 +229,62 @@ async def send_discord_alert(
 ) -> bool:
     """Send a deal alert to exactly ONE Discord channel based on tier.
 
-    Exclusive routing: each deal goes to its single highest qualifying tier channel.
-    No waterfall, no multi-channel, no legacy fallback.
+    Brand-access routing: deals go to the channel(s) determined by brand exclusivity.
+    A Pro-exclusive brand deal goes to #pro-signals. A beginner brand with $500+ profit
+    goes to both #beginner-signals and #whale-signals.
 
     Args:
-        tier: the single tier label for this deal ('beginner', 'pro', or 'whale')
-        tiers: if provided, uses the FIRST entry only (exclusive routing)
+        tier: fallback tier label
+        tiers: list of channel tiers to post to (from classify_discord_tiers)
 
-    Returns True if sent successfully.
+    Returns True if at least one channel succeeded.
     """
     if not DISCORD_ENABLED:
         return False
 
-    # Exclusive routing: pick exactly one channel
-    # Map old "big_baller" references to "whale" for backwards compatibility
-    target_tier = (tiers[0] if tiers else tier) or "beginner"
-    if target_tier == "big_baller":
-        target_tier = "whale"
+    # Determine target channels
+    target_tiers = tiers if tiers else [tier or "beginner"]
+    # Map old "big_baller" references
+    target_tiers = ["whale" if t == "big_baller" else t for t in target_tiers]
 
-    webhook_url = TIER_WEBHOOK_MAP.get(target_tier, DISCORD_WEBHOOK_BEGINNER)
-    if not webhook_url:
-        logger.warning(f"No webhook configured for tier '{target_tier}', falling back to beginner")
-        webhook_url = DISCORD_WEBHOOK_BEGINNER
+    if not target_tiers:
+        target_tiers = ["beginner"]
 
-    if not webhook_url:
-        logger.error("No Discord webhooks configured at all")
-        return False
-
-    embed = build_embed(item, message, fire_level, signals, auth_result)
-
-    # Add tier badge to the embed footer
     tier_labels = {"beginner": "beginner-signals", "pro": "pro-signals", "whale": "whale-signals"}
-    channel_label = tier_labels.get(target_tier, target_tier)
-    if signals:
-        score = getattr(signals, "quality_score", 0)
-        embed["footer"] = {"text": f"Score: {score:.0f}/100 | #{channel_label} | Archive Arbitrage"}
-    else:
-        embed["footer"] = {"text": f"#{channel_label} | Archive Arbitrage"}
-
-    payload = {
-        "username": BOT_NAME,
-        "embeds": [embed],
-    }
+    any_sent = False
 
     async with httpx.AsyncClient(timeout=10) as client:
-        try:
-            resp = await client.post(webhook_url, json=payload)
-            if resp.status_code in (200, 204):
-                logger.info(f"✅ Discord alert sent to #{channel_label}: {item.title[:50] if hasattr(item, 'title') else 'deal'}")
-                return True
+        for target_tier in target_tiers:
+            webhook_url = TIER_WEBHOOK_MAP.get(target_tier, "")
+            if not webhook_url:
+                logger.warning(f"No webhook configured for tier '{target_tier}'")
+                continue
+
+            embed = build_embed(item, message, fire_level, signals, auth_result)
+            channel_label = tier_labels.get(target_tier, target_tier)
+            if signals:
+                score = getattr(signals, "quality_score", 0)
+                embed["footer"] = {"text": f"Score: {score:.0f}/100 | #{channel_label} | Archive Arbitrage"}
             else:
-                logger.warning(f"Discord webhook returned {resp.status_code} for #{channel_label}: {resp.text[:200]}")
-                return False
-        except httpx.ConnectError as e:
-            logger.error(f"Discord webhook ConnectError ({channel_label}): cannot reach discord.com — check VPN/network. Detail: {e}")
-            return False
-        except httpx.TimeoutException as e:
-            logger.error(f"Discord webhook timeout ({channel_label}): {e}")
-            return False
-        except Exception as e:
-            logger.error(f"Discord webhook error ({channel_label}): {type(e).__name__}: {e}")
-            return False
+                embed["footer"] = {"text": f"#{channel_label} | Archive Arbitrage"}
+
+            payload = {"username": BOT_NAME, "embeds": [embed]}
+
+            try:
+                resp = await client.post(webhook_url, json=payload)
+                if resp.status_code in (200, 204):
+                    logger.info(f"✅ Discord alert sent to #{channel_label}: {item.title[:50] if hasattr(item, 'title') else 'deal'}")
+                    any_sent = True
+                else:
+                    logger.warning(f"Discord webhook returned {resp.status_code} for #{channel_label}: {resp.text[:200]}")
+            except httpx.ConnectError as e:
+                logger.error(f"Discord webhook ConnectError ({channel_label}): {e}")
+            except httpx.TimeoutException as e:
+                logger.error(f"Discord webhook timeout ({channel_label}): {e}")
+            except Exception as e:
+                logger.error(f"Discord webhook error ({channel_label}): {type(e).__name__}: {e}")
+
+    return any_sent
 
 
 async def send_discord_message(text: str, webhook_url: str = "") -> bool:
