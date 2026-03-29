@@ -913,8 +913,14 @@ def compute_weighted_price(
     halflife = config.get("time_decay_halflife", 45)
     now = datetime.now()
 
-    weighted_final = []  # (comp, weight) where weight = similarity * time_decay
+    # Parse listing condition/size for proximity scoring
+    listing_cond = listing_fp.condition
+    listing_size = listing_fp.size
+    COND_RANK = {"DEADSTOCK": 4, "NEAR_DEADSTOCK": 3, "GENTLY_USED": 2, "USED": 1, "POOR": 0}
+
+    weighted_final = []  # (comp, weight) where weight = similarity * time_decay * condition_prox * size_prox
     for comp, sim in final:
+        # Time decay
         sold_date = getattr(comp, 'sold_date', None)
         decay = 1.0
         if sold_date:
@@ -925,7 +931,34 @@ def compute_weighted_price(
                     decay = 0.5 ** (days_ago / halflife) if halflife > 0 else 1.0
             except (ValueError, TypeError):
                 decay = 1.0
-        weighted_final.append((comp, sim * decay))
+
+        # Condition proximity — same condition comps weigh more
+        cond_mult = 1.0
+        comp_fp = parse_title(brand, comp.title) if comp.title else None
+        comp_cond = comp_fp.condition if comp_fp else ""
+        if listing_cond and comp_cond:
+            diff = abs(COND_RANK.get(listing_cond, 2) - COND_RANK.get(comp_cond, 2))
+            if diff == 0:
+                cond_mult = 1.3   # Same condition tier — boost
+            elif diff == 1:
+                cond_mult = 1.0   # Adjacent tier — neutral
+            else:
+                cond_mult = 0.7   # Far apart — dampen
+
+        # Size proximity — same size comps weigh more
+        size_mult = 1.0
+        comp_size = comp_fp.size if comp_fp else ""
+        if listing_size and comp_size:
+            if listing_size == comp_size:
+                size_mult = 1.2
+            else:
+                try:
+                    diff = abs(int(listing_size) - int(comp_size))
+                    size_mult = 1.0 if diff <= 1 else (0.85 if diff <= 2 else 0.7)
+                except ValueError:
+                    size_mult = 0.85  # Different letter sizes
+
+        weighted_final.append((comp, sim * decay * cond_mult * size_mult))
 
     # Compute weighted median
     weighted_final.sort(key=lambda x: x[0].price)
@@ -1533,9 +1566,40 @@ class GapHunter:
                             uplift = EBAY_TO_GRAILED_UPLIFT.get(cat, EBAY_TO_GRAILED_DEFAULT) if cat else EBAY_TO_GRAILED_DEFAULT
                             eb.price = eb.price * uplift
                     if ebay_fresh:
-                        logger.info(f"  📦 eBay comps: {len(ebay_fresh)} for '{query}' "
+                        # Cross-platform dedup: remove eBay comps that match a Grailed comp
+                        # (same physical sale listed on both platforms)
+                        grailed_sigs = set()
+                        for gs in fresh_sold:
+                            # Build a signature: lowercase title words (skip noise), rounded price
+                            _words = set(w.lower() for w in (gs.title or "").split() if len(w) > 2)
+                            _price_bucket = round((gs.price or 0) / 50) * 50  # $50 buckets
+                            grailed_sigs.add((frozenset(_words), _price_bucket))
+
+                        deduped_ebay = []
+                        for eb in ebay_fresh:
+                            _words = set(w.lower() for w in (eb.title or "").split() if len(w) > 2)
+                            # Check against each Grailed sig: word overlap > 60% AND price within 25%
+                            is_dup = False
+                            for g_words, g_price in grailed_sigs:
+                                if not g_words or not _words:
+                                    continue
+                                overlap = len(_words & g_words) / max(len(_words | g_words), 1)
+                                # Compare eBay price before uplift was applied
+                                orig_price = eb.price / EBAY_TO_GRAILED_DEFAULT  # approximate pre-uplift
+                                price_close = abs(orig_price - g_price) <= g_price * 0.25 if g_price > 0 else False
+                                if overlap > 0.6 and price_close:
+                                    is_dup = True
+                                    break
+                            if not is_dup:
+                                deduped_ebay.append(eb)
+
+                        dedup_removed = len(ebay_fresh) - len(deduped_ebay)
+                        if dedup_removed > 0:
+                            logger.info(f"  🔄 Cross-platform dedup: removed {dedup_removed}/{len(ebay_fresh)} eBay duplicates")
+
+                        logger.info(f"  📦 eBay comps: {len(deduped_ebay)} for '{query}' "
                                     f"(Grailed had {len(fresh_sold)})")
-                        fresh_sold.extend(ebay_fresh)
+                        fresh_sold.extend(deduped_ebay)
                         ebay_fallback_used = True
                 except Exception as e:
                     logger.debug(f"  eBay sold fetch failed for '{query}': {e}")
@@ -2131,6 +2195,8 @@ class GapHunter:
                             seen_ids.add(key)
                             merged.append(c)
                     if len(merged) >= 3:
+                        # Hydrate pHashes for DB embedding comps before scoring
+                        await self._hydrate_comp_phashes(merged)
                         weighted = compute_weighted_price(item.title, brand, merged, generic_sold, listing_phash=listing_phash)
                         if weighted is not None:
                             logger.info(
