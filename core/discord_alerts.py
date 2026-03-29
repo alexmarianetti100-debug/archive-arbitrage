@@ -204,27 +204,17 @@ def build_embed(
 
 
 def determine_tier(item: Any, profit: float = 0, margin: float = 0) -> str:
-    """Determine which tier a deal belongs to based on strict qualification criteria.
+    """Determine which tier a deal belongs to based on qualification criteria.
 
     Exclusive routing — returns the SINGLE highest qualifying tier.
-    Tier Requirements (ALL must be met):
-    - Whale: $500+ profit, 20%+ margin, $1,500+ price
-    - Pro: $300+ profit, 25%+ margin
-    - Beginner: everything else (default fallback)
+    Simplified version (no brand check) — use classify_discord_tiers() for full routing.
 
     Returns: 'beginner', 'pro', or 'whale'
     """
-    price = getattr(item, "price", 0) or 0
-
-    # Check Whale criteria FIRST (most exclusive)
-    if profit >= 500 and margin >= 0.20 and price >= 1500:
+    if profit >= 500 and margin >= 0.15:
         return "whale"
-
-    # Check Pro criteria
-    if profit >= 300 and margin >= 0.25:
+    if profit >= 300 and margin >= 0.20:
         return "pro"
-
-    # Default: beginner
     return "beginner"
 
 

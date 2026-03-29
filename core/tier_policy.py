@@ -38,7 +38,7 @@ DEFAULT_RULES = {
             "balenciaga", "dior", "dior homme",
             "jean paul gaultier", "gaultier",
             "enfants riches deprimes", "erd",
-            "undercover", "kapital", "visvim",
+            "undercover", "kapital",
             "alexander mcqueen", "thierry mugler", "mugler",
             "vivienne westwood", "julius",
             "haider ackermann", "dries van noten", "sacai",
@@ -64,7 +64,7 @@ DEFAULT_RULES = {
             "balenciaga", "dior", "dior homme",
             "jean paul gaultier", "gaultier",
             "enfants riches deprimes", "erd",
-            "undercover", "kapital", "visvim",
+            "undercover", "kapital",
             "alexander mcqueen", "thierry mugler", "mugler",
             "vivienne westwood", "julius",
             "boris bidjan saberi", "haider ackermann", "ann demeulemeester",
@@ -162,6 +162,11 @@ def classify_discord_tiers(
 ) -> TierDecision:
     """Classify a deal into exactly ONE Discord channel tier (exclusive routing).
 
+    Tier requirements (from Whop descriptions):
+    - Whale: $500+ profit, 80%+ auth, brand in whale set, no price ceiling
+    - Pro:   $300+ profit, 72%+ auth, brand in pro set, up to $10k
+    - Beginner: $100+ profit, brand in beginner set, up to $2,500
+
     Checks from highest → lowest. First match wins.
     Deals that don't qualify for any tier default to beginner.
 
@@ -169,45 +174,58 @@ def classify_discord_tiers(
     """
     big = RULES["big_baller"]
     pro = RULES["pro"]
+    beg = RULES["beginner"]
 
     brand = _brand(item)
     price = float(getattr(item, "price", 0) or 0)
-    liquidity = float(getattr(signals, "liquidity_score", 0) or 0)
     auth_conf = float(getattr(auth_result, "confidence", 0.0) or 0.0) if auth_result else 0.0
 
-    # ── Whale (formerly big_baller) ──
+    # ── Whale: $500+ profit, 80%+ auth, brand in whale set ──
     whale_floor = (
         profit >= big.get("min_profit", 500)
-        and margin >= big.get("min_margin", 0.20)
-        and liquidity >= big.get("min_liquidity", 5.0)
-        and price >= big.get("min_price", 1500)
+        and margin >= big.get("min_margin", 0.15)
+        and auth_conf >= big.get("min_auth", 0.80)
         and brand in BIG_BALLER_BRANDS
     )
     if whale_floor:
         return TierDecision(
             minimum_tier="whale",
             channel_tiers=["whale"],
-            reasons=["whale-tier metrics", f"${profit:.0f} profit", f"{margin*100:.0f}% margin"],
+            reasons=["whale-tier metrics", f"${profit:.0f} profit", f"{margin*100:.0f}% margin", f"{auth_conf*100:.0f}% auth"],
         )
 
-    # ── Pro ──
+    # ── Pro: $300+ profit, 72%+ auth, brand in pro set, up to $10k ──
     pro_floor = (
         profit >= pro.get("min_profit", 300)
-        and margin >= pro.get("min_margin", 0.25)
-        and liquidity >= pro.get("min_liquidity", 5.5)
-        and price < pro.get("max_price", 10000)
+        and margin >= pro.get("min_margin", 0.20)
+        and auth_conf >= pro.get("min_auth", 0.72)
+        and price <= pro.get("max_price", 10000)
         and brand in PRO_BRANDS
     )
     if pro_floor:
         return TierDecision(
             minimum_tier="pro",
             channel_tiers=["pro"],
-            reasons=["pro-tier metrics", f"${profit:.0f} profit", f"{margin*100:.0f}% margin"],
+            reasons=["pro-tier metrics", f"${profit:.0f} profit", f"{margin*100:.0f}% margin", f"{auth_conf*100:.0f}% auth"],
         )
 
-    # ── Beginner (default) ──
+    # ── Beginner: $100+ profit, brand in beginner set, up to $2,500 ──
+    beg_floor = (
+        profit >= beg.get("min_profit", 100)
+        and margin >= beg.get("min_margin", 0.20)
+        and price <= beg.get("max_price", 2500)
+        and brand in BEGINNER_BRANDS
+    )
+    if beg_floor:
+        return TierDecision(
+            minimum_tier="beginner",
+            channel_tiers=["beginner"],
+            reasons=["beginner-tier metrics", f"${profit:.0f} profit", f"{margin*100:.0f}% margin"],
+        )
+
+    # ── No tier qualifies — still route to beginner as default ──
     return TierDecision(
         minimum_tier="beginner",
         channel_tiers=["beginner"],
-        reasons=["default beginner"],
+        reasons=["default fallback"],
     )
