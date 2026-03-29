@@ -1248,9 +1248,12 @@ class GapHunter:
             logger.debug(f"Image hash failed for {image_url}: {e}")
             return None
 
-    async def _hydrate_comp_phashes(self, comps: list):
-        """Load cached pHashes from DB, compute missing ones, and persist new hashes.
+    async def _hydrate_comp_phashes(self, comps: list, db_only: bool = False):
+        """Load cached pHashes from DB and optionally compute missing ones.
 
+        Args:
+            db_only: If True, only load from DB cache (fast, no network).
+                     If False, also download images and compute missing hashes (slow).
         Modifies comp objects in-place by setting .phash attribute.
         """
         try:
@@ -1276,9 +1279,9 @@ class GapHunter:
                     if key in cached:
                         comp.phash = cached[key]
 
-            # Compute pHashes for comps still missing them
+            # Compute pHashes for comps still missing them (skip in db_only mode)
             missing = [c for c in comps if not getattr(c, 'phash', None)]
-            if missing:
+            if missing and not db_only:
                 phash_results = await compute_comp_phashes(missing)
                 for idx, phash_hex in phash_results.items():
                     comp = missing[idx]
@@ -2116,7 +2119,7 @@ class GapHunter:
                     raw = self._raw_items_cache.get(cache_key, [])
                     if raw:
                         # Hydrate comp pHashes from DB cache + compute missing
-                        await self._hydrate_comp_phashes(raw)
+                        await self._hydrate_comp_phashes(raw, db_only=True)
                         weighted = compute_weighted_price(item.title, brand, raw, cached, listing_phash=listing_phash)
                         if weighted is not None:
                             self._item_comp_cache[cache_key] = weighted
@@ -2142,7 +2145,7 @@ class GapHunter:
 
             if sold and sold.count >= 3 and raw_items:
                 # Hydrate comp pHashes from DB cache + compute missing
-                await self._hydrate_comp_phashes(raw_items)
+                await self._hydrate_comp_phashes(raw_items, db_only=True)
                 weighted = compute_weighted_price(item.title, brand, raw_items, sold, listing_phash=listing_phash)
                 if weighted is not None:
                     self._item_comp_cache[cache_key] = weighted
@@ -2212,7 +2215,7 @@ class GapHunter:
                             merged.append(c)
                     if len(merged) >= 3:
                         # Hydrate pHashes for DB embedding comps before scoring
-                        await self._hydrate_comp_phashes(merged)
+                        await self._hydrate_comp_phashes(merged, db_only=True)
                         weighted = compute_weighted_price(item.title, brand, merged, generic_sold, listing_phash=listing_phash)
                         if weighted is not None:
                             logger.info(
