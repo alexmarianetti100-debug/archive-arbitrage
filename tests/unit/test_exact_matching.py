@@ -90,9 +90,10 @@ class TestMatchQuality:
         listing = parse_title("rick owens", "Rick Owens Geobasket Leather Black SS24")
         comp = parse_title("rick owens", "Rick Owens Geobasket Leather Black SS24")
         score = match_quality(listing, comp)
-        # Identical titles without explicit size/condition keywords get neutral credit
-        # for those dimensions, so score is ~0.65-0.75 (not 1.0)
-        assert score >= 0.6
+        # Season matches (0.3) but no explicit size/condition → reduced neutral credits
+        # (0.075 + 0.05 + 0.05). Total ~0.475. Sparse metadata comps correctly score
+        # below the 0.5 gate to reward data-rich comps.
+        assert score >= 0.4
 
     def test_different_season_scores_lower(self):
         listing = parse_title("rick owens", "Rick Owens Geobasket Leather SS24")

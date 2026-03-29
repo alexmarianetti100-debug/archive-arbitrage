@@ -775,7 +775,7 @@ def compute_weighted_price(
     Returns a new SoldData with recalculated prices, or None if no comps
     are similar enough (hard gate: 0 comps above 0.5 similarity).
     """
-    from scrapers.comp_matcher import parse_title, score_comp_similarity, image_similarity_boost, is_exact_match
+    from scrapers.comp_matcher import parse_title, score_comp_similarity, image_similarity_boost, is_exact_match, match_quality
     from db.sqlite_models import get_comp_quality_scores, get_pair_quality_scores_batch
 
     if not sold_items:
@@ -871,7 +871,14 @@ def compute_weighted_price(
                 f"    📷 Image boost: {img_boost:.1f}x for '{comp.title[:40]}'"
             )
 
-        scored.append((comp, similarity))
+        # Blend title similarity (70%) with match_quality (30%) for richer signal
+        # match_quality scores season/size/condition/recency — complementary to title scoring
+        comp_fp = parse_title(brand, comp.title)
+        comp_sold_date = getattr(comp, 'sold_date', '') or ''
+        mq = match_quality(listing_fp, comp_fp, comp_sold_date)
+        blended = similarity * 0.7 + mq * 0.3
+
+        scored.append((comp, blended))
 
     if not scored:
         return None
@@ -2646,11 +2653,16 @@ class GapHunter:
                 from scrapers.product_fingerprint import parse_title_to_fingerprint
                 from db.sqlite_models import get_product_by_fingerprint, get_product_pricing
                 _fp = parse_title_to_fingerprint(detected_brand, item.title)
-                if _fp.confidence == "high" and _fp.fingerprint_hash:
+                if _fp.confidence in ("high", "medium") and _fp.fingerprint_hash:
                     _product = get_product_by_fingerprint(_fp.fingerprint_hash)
                     if _product:
                         _pricing = get_product_pricing(_product.id)
-                        if _pricing and _pricing["confidence_tier"] in ("guaranteed", "high"):
+                        # "high" confidence: accept guaranteed/high tier
+                        # "medium" confidence: require guaranteed tier + 5+ comps (stricter)
+                        _tier_ok = _pricing and _pricing["confidence_tier"] in ("guaranteed", "high")
+                        if _fp.confidence == "medium":
+                            _tier_ok = _pricing and _pricing["confidence_tier"] == "guaranteed" and _pricing.get("comp_count", 0) >= 5
+                        if _tier_ok:
                             # Category cross-check: item category must match product
                             _product_type = _product.item_type or ""
                             if _fp.item_type and _product_type and _fp.item_type != _product_type:

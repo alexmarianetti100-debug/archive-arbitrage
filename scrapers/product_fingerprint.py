@@ -31,11 +31,11 @@ SUB_BRANDS = {
     "maison margiela": ["artisanal", "line 0", "replica", "mm6", "couture"],
     "yohji yamamoto": ["pour homme", "y's", "costume d'homme", "noir", "ground y", "new era"],
     "undercover": ["undercoverism", "supreme", "nike", "valentino", "fragment"],
-    "issey miyake": ["homme plisse", "pleats please", "bao bao", "plantation", "men"],
+    "issey miyake": ["homme plisse", "homme plissé", "pleats please", "bao bao", "plantation", "men"],
     "dior": ["homme", "men", "lady", "saddle", "book tote", "b23"],
     "saint laurent": ["paris", "rive gauche", "surf sound"],
     "prada": ["sport", "linea rossa", "re-nylon"],
-    "balenciaga": ["triple s", "track", "speed", "defender", "runner"],
+    "balenciaga": [],  # triple s, track, speed, defender are MODELS not sub-brands
     "supreme": ["nike", "north face", "louis vuitton", "comme des garcons", "stone island"],
     "helmut lang": ["vintage", "re-edition", "j crew"],
     "number (n)ine": ["the high streets", "touch me i'm sick", "collage", "michelangelo"],
@@ -46,102 +46,93 @@ SUB_BRANDS = {
 # "trucker hat" must match "hats" before "trucker" matches "outerwear".
 # "chain bracelet" must match "bracelets" before "chain" matches "necklaces".
 # We use OrderedDict semantics (Python 3.7+ dicts preserve insertion order).
-ITEM_TYPES = {
-    # Jewelry/accessories — check FIRST (most specific, easily confused)
-    "rings": ["ring", "band", "signet", "signet ring", "pinky ring", "spinner ring",
-              "forever ring", "cross ring", "scroll ring", "keeper ring"],
-    "bracelets": ["bracelet", "cuff", "bangle", "chain bracelet", "paper chain bracelet",
-                  "rollercoaster bracelet", "id bracelet"],
-    "necklaces": ["necklace", "pendant", "choker", "paper chain", "cross pendant",
-                  "baby fat", "dagger pendant", "dog tag", "chain"],
-    "earrings": ["earring", "earrings", "stud", "hoop", "drop earring", "huggie"],
-    "eyewear": ["sunglasses", "glasses", "frames", "optical", "eyewear", "aviator"],
-    "hats": ["trucker hat", "trucker cap", "bucket hat", "snapback", "beanie", "hat", "cap"],
-    "belts": ["belt", "leather belt", "studded belt"],
-    "wallets": ["wallet", "card holder", "card case", "coin purse", "zip wallet",
-                "bifold", "trifold", "long wallet", "continental wallet"],
-    "scarves": ["scarf", "shawl", "stole", "bandana"],
-    # Bags — before clothing (clutch/pouch could overlap)
-    "bags": ["bag", "handbag", "purse", "tote", "clutch", "shoulder bag", "crossbody",
-             "satchel", "backpack", "duffle", "keepall", "weekender", "pouch",
-             "briefcase", "messenger bag", "belt bag", "bum bag", "fanny pack"],
-    # Footwear
-    "footwear": ["shoes", "sneakers", "runners", "trainers", "loafers", "derbies", "oxford shoes",
-                 "slides", "sandals", "mules", "slip on", "boots", "boot", "combat boots", "chelsea", "side zip"],
-    # Clothing — check LAST (most generic keywords)
-    "outerwear": ["leather jacket", "denim jacket", "trucker jacket", "jacket", "blazer", "coat",
-                  "bomber", "parka", "varsity", "windbreaker", "anorak", "overshirt", "harrington", "trench"],
-    "hoodies": ["hoodie", "hooded", "sweatshirt", "pullover", "zip up", "zip-up"],
-    "sweaters": ["sweater", "knit", "cardigan", "jumper", "crewneck", "crew neck", "turtleneck", "mohair", "cable knit"],
-    "shirts": ["shirt", "button up", "button down", "flannel", "camp collar", "hawaiian", "oxford", "dress shirt"],
-    "t-shirts": ["t-shirt", "tee", "tshirt", "t shirt"],
-    "pants": ["pants", "trousers", "jeans", "denim", "cargo", "jogger", "sweatpants", "track pants",
-              "chinos", "slacks", "cargos", "wide leg", "flare"],
-    "shorts": ["shorts", "short", "swim trunks"],
-}
+# Item type keywords — imported from canonical taxonomy
+from core.categories import ITEM_TYPES
 
 # === MODEL DATABASE ===
 # Specific product models that define exact products
 MODELS = {
-    # Rick Owens
+    # Rick Owens — footwear models (NOT season names)
     "geobasket": ["rick owens", "drkshdw"],
     "ramones": ["rick owens", "drkshdw"],
     "kiss boot": ["rick owens"],
     "creatch": ["rick owens", "drkshdw"],
-    "bauhaus": ["rick owens"],
-    "bela": ["rick owens"],
-    "stooges": ["rick owens"],
-    "intarsia": ["rick owens"],
-    "dust": ["rick owens"],
-    "memphis": ["rick owens"],
-    "babel": ["rick owens"],
-    "sphinx": ["rick owens"],
-    "cyclops": ["rick owens"],
-    "hustler": ["rick owens"],
-    "pods": ["rick owens", "drkshdw"],
     "mega lace": ["rick owens"],
     "larry": ["rick owens"],
-    
-    # Raf Simons
-    "ozweego": ["raf simons", "adidas"],
+    # Rick Owens — clothing models (actual product names, not seasons)
+    "stooges": ["rick owens"],  # Stooges leather jacket — specific product
+    "bela": ["rick owens"],     # Bela pants/shorts — specific product line
+    "pods": ["rick owens", "drkshdw"],
+    "hustler": ["rick owens"],
+    "bauhaus": ["rick owens"],  # Bauhaus cargo — specific product
+    # NOTE: dust, babel, sphinx, cyclops, memphis, intarsia are SEASONS not models.
+    # "Rick Owens Babel Ramones" → model=ramones, season=babel (not model=babel)
+
+    # Chrome Hearts
+    "forever ring": ["chrome hearts"],
+    "keeper ring": ["chrome hearts"],
+    "fuck you ring": ["chrome hearts"],
+    "plus ring": ["chrome hearts"],
+    "scroll ring": ["chrome hearts"],
+    "fleur de lis": ["chrome hearts"],
+    "cemetery cross": ["chrome hearts"],
+    "dagger pendant": ["chrome hearts"],
+    "cross ball": ["chrome hearts"],
+    "filigree cross": ["chrome hearts"],
+    "baby fat": ["chrome hearts"],
+    "spacer": ["chrome hearts"],
+    "paper chain": ["chrome hearts"],
+    "tiny e": ["chrome hearts"],
+    "cross pendant": ["chrome hearts"],
+
+    # Raf Simons — specific sub-models BEFORE generic
+    "runner cylon": ["raf simons", "adidas"],
+    "runner orion": ["raf simons", "adidas"],
+    "runner response": ["raf simons", "adidas"],
+    "ozweego 2": ["raf simons", "adidas"],
+    "ozweego 3": ["raf simons", "adidas"],
+    "ozweego": ["raf simons", "adidas"],  # Generic — after versioned ones
     "response trail": ["raf simons", "adidas"],
     "cylon": ["raf simons", "adidas"],
     "replicant": ["raf simons"],
-    "runner": ["raf simons", "adidas"],
     "orion": ["raf simons"],
     "virginia creeper": ["raf simons"],
-    
+    # NOTE: generic "runner" removed — too broad, groups different shoes.
+    # Use specific sub-models above instead.
+
     # Margiela
     "tabi": ["maison margiela", "mm6"],
     "replica": ["maison margiela"],
     "gat": ["maison margiela"],
     "german army": ["maison margiela"],
     "fusion": ["maison margiela"],
-    
+
     # Undercover
     "scab": ["undercover"],
     "but": ["undercover"],
-    " Cindy Sherman": ["undercover"],
-    
+    "cindy sherman": ["undercover"],
+
     # Number (N)ine
     "touch me i'm sick": ["number (n)ine"],
     "the high streets": ["number (n)ine"],
     "collage": ["number (n)ine"],
-    
-    # Dior
+
+    # Dior — "christian dior" removed (it's a brand variant, not a model)
     "clawmark": ["dior"],
     "jake": ["dior"],
-    "christian dior": ["dior"],
-    
+    "saddle": ["dior"],
+    "b23": ["dior"],
+
     # Balenciaga
     "triple s": ["balenciaga"],
-    "track": ["balenciaga"],
     "speed": ["balenciaga"],
     "defender": ["balenciaga"],
     "le city": ["balenciaga"],
     "hourglass": ["balenciaga"],
     "le cagole": ["balenciaga"],
     "arena": ["balenciaga"],
+    # NOTE: "track" removed from models — too ambiguous (matches track jackets/pants).
+    # "Track" sneaker is handled by detect_track_sneaker() below.
 
     # Gucci
     "marmont": ["gucci"],
@@ -265,14 +256,18 @@ class ProductFingerprint:
         return " | ".join(parts)
     
     def _compute_hash(self) -> str:
-        """Compute unique hash from fingerprint components."""
-        # Only hash the core identity fields
+        """Compute unique hash from fingerprint components.
+
+        Color IS part of the identity — a black Geobasket and a milk Geobasket
+        are different products with different market prices.
+        """
         key_parts = [
             self.brand.lower().replace(" ", "_"),
             self.sub_brand.lower().replace(" ", "_") if self.sub_brand else "mainline",
             self.model.lower().replace(" ", "_") if self.model else "",
             self.item_type.lower().replace(" ", "_") if self.item_type else "",
             self.material.lower().replace(" ", "_") if self.material else "any",
+            self.color.lower().replace(" ", "_") if self.color else "any",
         ]
         key = "|".join(key_parts)
         return hashlib.md5(key.encode()).hexdigest()[:16]
@@ -294,15 +289,57 @@ class ProductFingerprint:
     
 
 
+# Sub-type patterns for splitting over-grouped models
+_TABI_SUBTYPES = ["western boot", "ankle boot", "mary jane", "loafer", "derby", "flat", "slipper"]
+_BELA_SUBTYPES = ["cargo", "track"]
+_PODS_SUBTYPES = ["short", "shorts"]
+_RAMONES_SUBTYPES = ["high", "hi", "high top", "hightop", "low"]
+_GAT_SUBTYPES = ["high", "hi", "high top", "hightop", "low"]
+
+# Model aliases — normalize spelling variants to canonical model names
+MODEL_ALIASES = {
+    "geo basket": "geobasket",
+    "geo baskets": "geobasket",
+    "geobaskets": "geobasket",
+    "ramone": "ramones",
+    "ramone hi": "ramones high",
+    "ramones hi": "ramones high",
+    "ramones high top": "ramones high",
+    "ramones hightop": "ramones high",
+    "tabi boot": "tabi",
+    "tabi boots": "tabi",
+    "triple-s": "triple s",
+    "ozweego 2s": "ozweego 2",
+    "ozweego ii": "ozweego 2",
+    "ozweego 3s": "ozweego 3",
+    "ozweego iii": "ozweego 3",
+}
+
+# Brand name strings that should NOT be extracted as models
+_BRAND_NAME_STRINGS = {
+    "christian dior", "dior homme", "dior men", "yves saint laurent",
+    "maison martin margiela", "comme des garcons",
+}
+
+
+def _detect_subtype(title_lower: str, subtypes: list) -> str:
+    """Find the most specific sub-type match in a title."""
+    # Sort longest first so "high top" matches before "high"
+    for st in sorted(subtypes, key=len, reverse=True):
+        if st in title_lower:
+            return st
+    return ""
+
+
 def parse_title_to_fingerprint(brand: str, title: str) -> ProductFingerprint:
     """
     Extract a product fingerprint from a listing title.
-    
-    This is the core function for Phase 2A exact product identification.
+
+    This is the core function for exact product identification.
     """
     title_lower = title.lower()
     brand = brand.lower().strip()
-    
+
     # Detect sub-brand
     sub_brand = ""
     brand_subs = SUB_BRANDS.get(brand, [])
@@ -310,16 +347,8 @@ def parse_title_to_fingerprint(brand: str, title: str) -> ProductFingerprint:
         if sub.lower() in title_lower:
             sub_brand = sub
             break
-    
-    # Detect model (most specific identifier)
-    model = ""
-    for model_name, brands in MODELS.items():
-        if brand in [b.lower() for b in brands]:
-            if model_name.lower() in title_lower:
-                model = model_name
-                break
-    
-    # Detect item type (most specific match)
+
+    # Detect item type BEFORE model (needed for gating "track" to footwear)
     item_type = ""
     for category, keywords in ITEM_TYPES.items():
         for kw in sorted(keywords, key=len, reverse=True):
@@ -328,21 +357,53 @@ def parse_title_to_fingerprint(brand: str, title: str) -> ProductFingerprint:
                 break
         if item_type:
             break
-    
+
+    # Detect model (most specific identifier)
+    # Sort by length descending so "runner cylon" matches before "cylon"
+    # Skip models that equal the sub_brand (e.g., "replica" for Margiela)
+    # Skip brand name strings (e.g., "christian dior" is NOT a model)
+    model = ""
+    sorted_models = sorted(MODELS.items(), key=lambda x: len(x[0]), reverse=True)
+    for model_name, model_brands in sorted_models:
+        if brand in [b.lower() for b in model_brands]:
+            mn_lower = model_name.lower()
+            if mn_lower in title_lower:
+                if mn_lower == sub_brand.lower():
+                    continue  # Skip — it's the sub_brand, keep looking
+                if mn_lower in _BRAND_NAME_STRINGS:
+                    continue  # Skip — it's a brand variant, not a product model
+                model = model_name
+                break
+
+    # Check model aliases (normalize spelling variants)
+    if not model:
+        for alias, canonical in sorted(MODEL_ALIASES.items(), key=lambda x: len(x[0]), reverse=True):
+            if alias in title_lower:
+                # Verify the canonical model is valid for this brand
+                if canonical in MODELS and brand in [b.lower() for b in MODELS[canonical]]:
+                    model = canonical
+                    break
+
+    # Special case: Balenciaga "Track" — only a model for footwear
+    if brand == "balenciaga" and not model and "track" in title_lower:
+        footwear_types = {"footwear", "sneakers", "shoes", "boots"}
+        if item_type in footwear_types or any(kw in title_lower for kw in ["sneaker", "shoe", "trainer"]):
+            model = "track"
+
     # Detect material
     material = ""
     for mat in MATERIALS:
         if mat in title_lower:
             material = mat
             break
-    
+
     # Detect color
     color = ""
     for col in COLORS:
         if re.search(rf'\b{col}\b', title_lower):
             color = col
             break
-    
+
     # Detect season/year
     season = ""
     year = None
@@ -358,16 +419,57 @@ def parse_title_to_fingerprint(brand: str, title: str) -> ProductFingerprint:
                 year = 1900 + year_int
             else:
                 year = year_int
-    
+
+    # ── Sub-type splitting for over-grouped models ──
+    # Appends sub-type to model so different variants get different fingerprints
+    if model == "tabi":
+        st = _detect_subtype(title_lower, _TABI_SUBTYPES)
+        if st:
+            # Normalize: "ankle boot" → "boot", "western boot" → "western boot"
+            model = "tabi " + st
+    elif model == "bela":
+        st = _detect_subtype(title_lower, _BELA_SUBTYPES)
+        if st:
+            model = "bela " + st
+        elif "short" in title_lower or "shorts" in title_lower:
+            model = "bela shorts"
+    elif model == "pods":
+        if "short" in title_lower or "shorts" in title_lower:
+            model = "pods shorts"
+        else:
+            model = "pods pants"
+    elif model == "ramones":
+        st = _detect_subtype(title_lower, _RAMONES_SUBTYPES)
+        if st in ("high", "hi", "high top", "hightop"):
+            model = "ramones high"
+        elif st == "low":
+            model = "ramones low"
+    elif model == "gat":
+        st = _detect_subtype(title_lower, _GAT_SUBTYPES)
+        if st in ("high", "hi", "high top", "hightop"):
+            model = "gat high"
+        elif st == "low":
+            model = "gat low"
+    elif model == "dagger pendant":
+        if "double" in title_lower:
+            model = "double dagger pendant"
+        elif "heart" in title_lower:
+            model = "heart dagger pendant"
+        elif "large" in title_lower:
+            model = "large dagger pendant"
+    elif model == "baby fat":
+        if "diamond" in title_lower or "pave" in title_lower or "pavé" in title_lower:
+            model = "baby fat diamond"
+
     # Determine confidence
     confidence = "low"
     if model:
-        confidence = "high"  # Exact model identified
+        confidence = "high"
     elif item_type and sub_brand:
-        confidence = "medium"  # Sub-brand + category
+        confidence = "medium"
     elif item_type:
-        confidence = "low"  # Just category
-    
+        confidence = "low"
+
     return ProductFingerprint(
         brand=brand,
         sub_brand=sub_brand,

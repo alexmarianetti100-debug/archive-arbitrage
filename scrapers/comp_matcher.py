@@ -47,26 +47,8 @@ SUB_BRANDS = {
     "supreme": ["nike", "north face", "louis vuitton", "comme des garcons", "stone island"],
 }
 
-# Item type keywords grouped by category
-ITEM_TYPES = {
-    "jacket": ["jacket", "blazer", "coat", "bomber", "parka", "varsity", "windbreaker", "anorak",
-                "leather jacket", "denim jacket", "trucker", "overshirt", "harrington"],
-    "pants": ["pants", "trousers", "jeans", "denim", "cargo", "jogger", "sweatpants", "track pants",
-              "chinos", "slacks", "cargos", "wide leg", "flare", "slim", "straight"],
-    "shorts": ["shorts", "short", "swim trunks"],
-    "shirt": ["shirt", "button up", "button down", "flannel", "camp collar", "hawaiian", "oxford"],
-    "tee": ["t-shirt", "tee", "tshirt", "t shirt"],
-    "hoodie": ["hoodie", "hooded", "sweatshirt", "pullover", "zip up", "zip-up"],
-    "sweater": ["sweater", "knit", "cardigan", "jumper", "crewneck", "crew neck", "turtleneck", "mohair"],
-    "boots": ["boots", "boot", "combat boots", "chelsea", "side zip", "lace up"],
-    "sneakers": ["sneakers", "runners", "trainers", "high top", "low top", "shoes"],
-    "loafers": ["loafers", "derbies", "oxford shoes", "slip on", "mules"],
-    "sandals": ["slides", "sandals"],
-    "bag": ["bag", "backpack", "tote", "messenger", "duffle", "crossbody", "pouch", "clutch", "wallet"],
-    "hat": ["hat", "cap", "beanie", "bucket hat", "trucker hat", "snapback"],
-    "jewelry": ["ring", "necklace", "bracelet", "chain", "pendant", "earring", "bangle", "jewelry"],
-    "accessories": ["belt", "scarf", "gloves", "sunglasses", "tie", "keychain"],
-}
+# Item type keywords — imported from canonical taxonomy
+from core.categories import ITEM_TYPES
 
 # Material keywords that affect value
 MATERIALS = [
@@ -592,8 +574,7 @@ def match_quality(listing: ParsedTitle, comp: ParsedTitle, comp_sold_date: str =
             # Partial credit for same decade
             score += 0.1
     else:
-        # No season data — give neutral credit
-        score += 0.15
+        score += 0.075  # No season data — reduced neutral (25% of max)
 
     # Size proximity (0.3 weight)
     if listing.size and comp.size:
@@ -612,7 +593,7 @@ def match_quality(listing: ParsedTitle, comp: ParsedTitle, comp_sold_date: str =
             except ValueError:
                 score += 0.05  # Different letter sizes or mixed formats
     else:
-        score += 0.15  # No size data — neutral credit
+        score += 0.075  # No size data — reduced neutral (25% of max)
 
     # Condition proximity (0.2 weight)
     if listing.condition and comp.condition:
@@ -627,7 +608,7 @@ def match_quality(listing: ParsedTitle, comp: ParsedTitle, comp_sold_date: str =
         else:
             score += 0.05  # Very different condition
     else:
-        score += 0.10  # No condition data — neutral credit
+        score += 0.05  # No condition data — reduced neutral (25% of max)
 
     # Recency — based on comp_sold_date if provided
     if comp_sold_date:
@@ -643,9 +624,9 @@ def match_quality(listing: ParsedTitle, comp: ParsedTitle, comp_sold_date: str =
             else:
                 score += 0.05
         except (ValueError, TypeError):
-            score += 0.10
+            score += 0.05  # Parse error — reduced neutral
     else:
-        score += 0.15
+        score += 0.05  # No recency data — reduced neutral (25% of max)
 
     return min(score, 1.0)
 

@@ -15,18 +15,25 @@ from typing import Optional
 
 logger = logging.getLogger("comp_validator")
 
-# Broad category keywords (more aggressive than fingerprinter)
-CATEGORY_KEYWORDS: dict[str, list[str]] = {
-    "footwear": ["shoes", "sneakers", "boots", "boot", "loafers", "sandals", "slides",
-                 "trainers", "runners", "derbies", "mules", "heels", "slippers"],
-    "outerwear": ["jacket", "coat", "blazer", "bomber", "parka", "vest", "gilet"],
-    "tops": ["shirt", "tee", "t-shirt", "hoodie", "sweatshirt", "sweater", "knit",
-             "cardigan", "tank", "top", "polo", "henley"],
-    "bottoms": ["pants", "jeans", "trousers", "shorts", "skirt", "denim"],
-    "jewelry": ["ring", "necklace", "bracelet", "pendant", "earring", "chain", "bangle"],
-    "bags": ["bag", "backpack", "tote", "clutch", "wallet", "purse", "pouch"],
-    "accessories": ["belt", "scarf", "hat", "cap", "gloves", "sunglasses", "glasses"],
-}
+# Broad category keywords — derived from canonical taxonomy + extra aggressive keywords
+# for the validator (which intentionally catches more mismatches than the fingerprinter).
+from core.categories import ITEM_TYPES as _CANONICAL_TYPES, CATEGORY_MAP as _CAT_MAP
+
+def _build_broad_keywords() -> dict[str, list[str]]:
+    """Build broad category keyword dict from canonical fine-grained types."""
+    broad: dict[str, set[str]] = {}
+    for fine_type, keywords in _CANONICAL_TYPES.items():
+        broad_cat = _CAT_MAP.get(fine_type, "accessories")
+        broad.setdefault(broad_cat, set()).update(keywords)
+    # Extra aggressive keywords the validator uses but aren't in the canonical list
+    broad.setdefault("footwear", set()).update(["heels", "slippers"])
+    broad.setdefault("outerwear", set()).update(["vest", "gilet"])
+    broad.setdefault("tops", set()).update(["tank", "top", "polo", "henley"])
+    broad.setdefault("bottoms", set()).update(["skirt"])
+    broad.setdefault("accessories", set()).update(["gloves"])
+    return {k: sorted(v, key=len, reverse=True) for k, v in broad.items()}
+
+CATEGORY_KEYWORDS: dict[str, list[str]] = _build_broad_keywords()
 
 MATERIAL_KEYWORDS = [
     "leather", "suede", "canvas", "nylon", "denim", "mesh", "wool",
@@ -34,10 +41,43 @@ MATERIAL_KEYWORDS = [
     "velvet", "corduroy", "gore-tex", "waxed", "coated", "knit",
 ]
 
-# Brands with extended recency window (archive pieces sell infrequently)
+# Brands with extended recency window (archive pieces sell infrequently).
+# These get a 365-day comp window instead of 180 days because vintage/archive
+# pieces have low liquidity and sparse comp data.
+# Contemporary luxury brands (Balenciaga, Gucci, Prada, etc.) are NOT included —
+# they have high production volume and 180 days is sufficient.
 ARCHIVE_BRANDS = {
+    # Original set
     "helmut lang", "number nine", "number (n)ine", "carol christian poell",
     "jean colonna", "walter van beirendonck", "boris bidjan saberi",
+    # Core archive designers
+    "raf simons",
+    "undercover", "undercoverism",
+    "yohji yamamoto",
+    "rick owens", "drkshdw",
+    "maison margiela", "martin margiela", "margiela",
+    "dior homme",
+    "jean paul gaultier", "gaultier",
+    "ann demeulemeester",
+    "thierry mugler", "mugler",
+    "alexander mcqueen", "mcqueen",
+    "issey miyake",
+    "junya watanabe",
+    "comme des garcons", "cdg",
+    "vivienne westwood",
+    # Niche archive / cult designers
+    "enfants riches deprimes", "erd",
+    "julius",
+    "guidi",
+    "kapital",
+    "haider ackermann",
+    "dries van noten",
+    "hysteric glamour",
+    "takahiromiyashita thesoloist", "soloist",
+    "ccp",
+    "sacai",
+    "craig green",
+    "kiko kostadinov",
 }
 
 COMP_MAX_AGE_DAYS = 180
