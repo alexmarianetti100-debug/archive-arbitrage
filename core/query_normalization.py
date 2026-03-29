@@ -50,6 +50,7 @@ QUERY_ALIASES: dict[str, str] = {
 PROMOTED_LIQUIDITY_QUERIES: set[str] = {
     # Chrome Hearts jewelry — most liquid segment
     "chrome hearts cross pendant",
+    "chrome hearts ch cross pendant",
     "chrome hearts baby fat pendant",
     "chrome hearts paper chain",
     "chrome hearts dagger pendant",
