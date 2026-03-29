@@ -1,283 +1,243 @@
 """
 Archive fashion brands and keywords for filtering.
-Expanded list covering Japanese archive, European designers, and streetwear.
+Brand detection list + optimized search queries based on March 2026 telemetry audit.
+
+Architecture:
+- ARCHIVE_BRANDS: Brand detection (substring matching in item titles)
+- SEARCH_QUERIES: Optimized Grailed search queries (broad + piece-specific)
+- PRIORITY_BRANDS: Top search queries run most frequently
 """
 
-# Primary archive brands to search for
+# ── Brand detection list ─────────────────────────────────────────────────────
+# Used by detect_brand() across the codebase for substring matching in titles.
+# Contains canonical brand names only — NOT search queries.
+# Longer entries before shorter ones within a brand group to prevent partials.
 ARCHIVE_BRANDS = [
-    # === JAPANESE ARCHIVE ===
-    "number (n)ine",
-    "number nine",
-    "undercover",
-    "hysteric glamour",
-    "comme des garcons",
-    "cdg",
-    "comme des garcons homme plus",
-    "comme des garcons black",
-    "comme des garcons tao",
-    "comme des garcons junya man",
-    "comme des garcons parfum",
-    "cdg x supreme",
-    "yohji yamamoto",
-    "y's",
-    "yohji yamamoto pour homme",
-    "yohji yamamoto costume d'homme",
-    "issey miyake",
-    "pleats please",
-    "homme plisse",
-    "issey miyake men",
-    "issey miyake plantation",
-    "kapital",
-    "visvim",
-    "wtaps",
-    "neighborhood",
-    "bape",
-    "a bathing ape",
-    "human made",
-    "nigo",
-    "takahiromiyashita thesoloist",
-    "soloist",
-    "julius",
-    "julius_7",
-    "if six was nine",
-    "l.g.b.",
-    "lgb",
-    "undercoverism",
-    "undercover x supreme",
-    "jun takahashi",
-    "fragment design",
-    "sacai",
-    "sacai x nike",
-    "junya watanabe",
-    "ganryu",
-    "kolor",
-    "white mountaineering",
-    "needles",
-    "engineered garments",
-    "beams",
-    "united arrows",
-    "beauty & youth",
-    "wacko maria",
-    "cav empt",
-    "c.e",
-    "kansai yamamoto",
-    "rei kawakubo",
-    "kiko kostadinov",
-    
-    # === EUROPEAN ARCHIVE ===
-    "rick owens",
-    "drkshdw",
-    "rick owens mainline",
-    "rick owens runway leather",
-    "rick owens dunks",
-    "raf simons",
-    "raf simons redux",
-    "raf simons sterling ruby",
-    "raf simons x fred perry",
+    # === TIER 1: KEEP BROAD — proven arbitrage gap ===
+    "enfants riches deprimes",
+    "erd",
+    "bottega veneta",
+    "chrome hearts",
+    "saint laurent",
     "maison margiela",
     "martin margiela",
     "margiela",
-    "mmm",
-    "maison martin margiela",
-    "maison margiela artisanal",
-    "margiela artisanal line 0",
+    "rick owens",
+    "drkshdw",
+    "dior homme",
+    "dior",
+    "jean paul gaultier",
+    "gaultier",
     "helmut lang",
-    "helmut lang jeans",
-    "helmut lang painter denim",
-    "helmut lang astro jacket",
-    "helmut lang flak jacket",
-    "helmut lang bulletproof vest",
-    "ann demeulemeester",
-    "ann demeulemeester homme",
-    "dries van noten",
+    "raf simons",
     "carol christian poell",
     "ccp",
-    "ccp prosthetic",
-    "boris bidjan saberi",
-    "bbs",
-    "ma+",
-    "maurizio amadei",
-    "guidi",
-    "a1923",
-    "layer-0",
-    "incarnation",
-    "ie",
-    "isaac sellam",
-    "lost & found",
-    "m.a+",
-    "paul harnden",
-    "geoffrey b small",
-    "elena dawson",
-    "walter van beirendonck",
-    "craig green",
-    "jil sander",
-    "label under construction",
-    "hussein chalayan",
-    "chalayan",
-    
-    # === STREETWEAR / HYPE ===
-    "supreme",
-    "palace",
-    "stussy",
-    "the hundreds",
-    "kith",
-    "off-white",
-    "off white",
-    "virgil abloh",
-    "vetements",
-    "demna gvasalia",
+
+    # === TIER 2: PIECE-SPECIFIC ONLY — detected but searched specifically ===
     "balenciaga",
-    "gosha rubchinskiy",
-    "alyx",
-    "1017 alyx 9sm",
-    "heron preston",
-    "ambush",
-    "yoon ahn",
-    "awge",
-    "bianca chandon",
-    "noah",
-    "online ceramics",
-    "brain dead",
-    "denim tears",
-    "tremaine emory",
-    
-    # === LUXURY / DESIGNER ===
-    "hermes",
-    "hermès",
-    "chanel",
-    "karl lagerfeld chanel",
-    "prada",
-    "prada uomo",
-    "miu miu",
-    "gucci",
-    "tom ford gucci",
-    "tom ford yves saint laurent",
-    "bottega veneta",
-    "celine",
-    "old celine",
-    "celine phoebe philo",
-    "phoebe philo celine",
-    "celine homme",
-    "saint laurent",
-    "saint laurent paris",
-    "saint laurent rive gauche",
-    "slp",
-    "hedi slimane",
-    "hedi slimane dior homme",
-    "hedi slimane saint laurent",
-    "dior homme",
-    "dior homme aw04",
-    "dior homme aw06",
-    "dior homme aw07",
-    "dior",
-    "louis vuitton",
-    "louis vuitton marc jacobs",
-    "lv",
-    "givenchy",
-    "givenchy riccardo tisci",
-    "givenchy alexander mcqueen",
-    "burberry",
-    "burberry prorsum",
-    "alexander mcqueen",
-    "mcqueen",
-    "alexander wang",
-    "vivienne westwood",
-    "vivienne westwood gold label",
-    "vivienne westwood red label",
-    "vivienne westwood anglomania",
-    "seditionaries",
-    "malcolm mclaren vivienne westwood",
-    "jean paul gaultier",
-    "jpg",
-    "jpg soleil",
-    "jpg cyber",
-    "jpg archive denim",
-    "gaultier",
+    "kapital",
+    "number (n)ine",
+    "number nine",
+    "julius",
+    "undercover",
+    "undercoverism",
     "thierry mugler",
     "mugler",
-    "versace",
-    "gianni versace",
-    "dolce gabbana",
-    "d&g",
-    "roberto cavalli",
-    "prada sport",
-    "prada linea rossa",
+    "alexander mcqueen",
+    "mcqueen",
+    "prada",
+    "vivienne westwood",
+    "ann demeulemeester",
+    "yohji yamamoto",
+    "vetements",
+    "dries van noten",
+    "gucci",
+    "louis vuitton",
+    "guidi",
+
+    # === BRANDS KEPT FOR DETECTION (in tier_rules, may appear in results) ===
+    "takahiromiyashita thesoloist",
+    "soloist",
     "acne studios",
-    "our legacy",
     "lemaire",
-    "the row",
-    "khaite",
-    "toteme",
-    "ami paris",
-    "balmain",
-    "balmain decarnin",
-    "nicolas ghesquiere balenciaga",
-    "demna balenciaga",
-    "fendi",
-    "karl lagerfeld fendi",
-    "fendi kim jones",
-    "valentino",
-    "valentino garavani",
-    "valentino couture",
-    "schiaparelli",
-    "lanvin",
-    "lanvin alber elbaz",
-    "lanvin homme",
-    "alaia",
-    "maison alaia",
-    "alaia homme",
-    "paco rabanne",
-    "courreges",
-    "kenzo",
-    "marni",
-    "moschino",
-    "yves saint laurent",
-    
-    # === AMERICAN / OTHER ===
+    "simone rocha",
+    "brunello cucinelli",
+    "haider ackermann",
+    "chanel",
+    "hermes",
+    "burberry",
+]
+
+# ── Search queries ───────────────────────────────────────────────────────────
+# Optimized Grailed search queries based on telemetry audit (March 2026).
+# Tier 1 brands: broad queries. Tier 2 brands: piece-specific only.
+# Removed 23 dead brands (0 deals across 500+ runs combined).
+SEARCH_QUERIES = [
+    # ── TIER 1: BROAD BRAND QUERIES (proven deal flow) ──────────────────────
+
+    # Enfants Riches Deprimes (4.00 ratio, 98% gap — BEST in system)
     "enfants riches deprimes",
     "erd",
+    "enfants riches deprimes subhumans leather jacket",
+    "enfants riches deprimes bathroom stall tee",
+    "enfants riches deprimes high risk hoodie",
+
+    # Bottega Veneta (3.12 ratio, 96% gap)
+    "bottega veneta",
+    "bottega veneta puddle boots",
+    "bottega veneta lug boots",
+    "bottega veneta tire boots",
+    "bottega veneta cassette bag",
+    "bottega veneta intrecciato",
+    "bottega veneta leather jacket",
+    "bottega veneta padded",
+
+    # Chrome Hearts (1.71 ratio, 97% gap)
     "chrome hearts",
-    "kapital",
-    "gallery dept",
-    "amiri",
-    "mike amiri",
-    "john elliott",
-    "robert geller",
-    "greg lauren",
-    "r13",
-    "simon miller",
-    "y/project",
-    "martine rose",
-    "wales bonner",
-    "grace wales bonner",
-    "casablanca",
-    "jacquemus",
-    "marine serre",
-    "ottolinger",
-    
-    # === FOOTWEAR SPECIFIC ===
-    "rick owens ramones",
-    "rick owens geobasket",
-    "maison margiela tabi",
-    "balenciaga triple s",
-    "balenciaga track",
-    "salomon xt-6",
-    "salomon xt-4",
-    
-    # === DENIM SPECIFIC ===
-    "evisu",
-    "samurai jeans",
-    "iron heart",
-    "pure blue japan",
-    "pbj",
-    "momotaro",
-    "oni denim",
-    "sugar cane",
-    "warehouse",
-    "tcb jeans",
-    "resolute",
-    "full count",
-    "dry bones",
+    "chrome hearts ch cross pendant",
+    "chrome hearts roll chain necklace",
+    "chrome hearts wallet",
+    "chrome hearts cross patch trucker jacket",
+
+    # Saint Laurent (1.70 ratio, 81% gap)
+    "saint laurent",
+    "saint laurent wyatt boots",
+    "saint laurent teddy jacket",
+    "saint laurent leather jacket",
+    "saint laurent l01",
+    "saint laurent court classic",
+    "saint laurent sac de jour",
+    "saint laurent hedi slimane",
+
+    # Maison Margiela (1.31 ratio, 96% gap)
+    # Split: mainline Maison vs MM6 diffusion — MM6 is 40-60% cheaper
+    "maison margiela",
+    "maison margiela artisanal",
+    "margiela tabi",
+    "margiela gat",
+    "margiela replica sneaker",
+    # MM6 is separate — diffusion line, lower price points
+    "mm6 margiela",
+
+    # Rick Owens (1.16 ratio, 90% gap — killed geobasket 1/276, ramones 0/61)
+    "rick owens",
+    "drkshdw",
+    "rick owens dunks",
+
+    # Dior (0.83 ratio, 89% gap)
+    # Split: Homme (menswear archive) vs Women's/mainline accessories
+    "dior homme",
+    "dior homme hedi slimane",
+    "dior homme kris van assche",
+    "dior men kim jones",
+    "dior b23",
+    "dior saddle bag",
+    "dior oblique",
+
+    # Jean Paul Gaultier (0.82 ratio, 97% gap)
+    "jean paul gaultier",
+    "gaultier",
+    "jean paul gaultier soleil",
+    "jean paul gaultier mesh",
+
+    # Helmut Lang (0.75 ratio, 89% gap)
+    "helmut lang",
+    "helmut lang astro biker",
+    "helmut lang bondage",
+    "helmut lang leather jacket",
+    "helmut lang painter jeans",
+    "helmut lang archive",
+    "helmut lang reflective",
+
+    # Raf Simons (0.61 ratio, 94% gap — killed ozweego 0/61)
+    "raf simons",
+
+    # Carol Christian Poell (chronic mispricing, ultra-niche)
+    "carol christian poell",
+    "ccp",
+
+    # ── TIER 2: PIECE-SPECIFIC ONLY (broad returns noise) ───────────────────
+
+    # Balenciaga — broad dead (0/14), piece-specific proven
+    "balenciaga runner",
+    "balenciaga skater baggy sweatpants",
+    "balenciaga lamborghini hoodie",
+    "balenciaga lost tape flared",
+    "balenciaga political campaign",
+    "balenciaga hummer boots",
+    "balenciaga leather jacket",
+    "balenciaga bomber jacket",
+
+    # Kapital — boro is the play (2.33 ratio)
+    "kapital boro jacket",
+    "kapital century denim",
+    "kapital smiley boro",
+    "kapital kountry patchwork",
+
+    # Number Nine — piece-specific to avoid title noise (broad 0.04 ratio)
+    "number nine leather jacket",
+    "number nine mohair",
+    "number nine hoodie",
+    "number nine skull",
+
+    # Julius — leather jacket (43%) + boots
+    "julius leather jacket",
+    "julius boots",
+
+    # Undercover — collection-specific (arts & crafts 54%)
+    "undercover arts and crafts",
+    "undercover bug denim",
+    "undercover witches",
+    "undercover nike",
+    "undercover parka",
+
+    # Thierry Mugler — leather only (67%)
+    "thierry mugler leather jacket",
+    "mugler vintage",
+    "mugler bodysuit",
+
+    # Alexander McQueen — leather jacket (15%) + skull ring
+    "alexander mcqueen leather jacket",
+    "alexander mcqueen skull ring",
+
+    # Prada — America's Cup (proven) + velvet blouson (75%)
+    "prada america's cup sneakers",
+    "prada cotton velvet blouson",
+    "prada chocolate loafers",
+
+    # Vivienne Westwood — jewelry/corset only (clothing = 0 deals)
+    "vivienne westwood orb necklace",
+    "vivienne westwood armor ring",
+    "vivienne westwood corset",
+
+    # Ann Demeulemeester — leather focus (boots 67%)
+    "ann demeulemeester leather boots",
+    "ann demeulemeester leather jacket",
+    "ann demeulemeester backlace boots",
+
+    # Yohji Yamamoto — targeted (gabardine 1/53 was terrible)
+    "yohji yamamoto pour homme coat",
+    "yohji yamamoto pour homme blazer",
+
+    # Vetements — fully rewritten (old queries 0/50, wrong pieces)
+    "vetements polizei hoodie",
+    "vetements total darkness hoodie",
+    "vetements dhl tee",
+    "vetements metal logo hoodie",
+
+    # Dries Van Noten — post-retirement appreciation opportunity
+    "dries van noten embroidered jacket",
+    "dries van noten velvet",
+    "dries van noten floral jacket",
+
+    # Gucci — Tom Ford era only (current = efficient pricing)
+    "tom ford gucci",
+
+    # Louis Vuitton — Murakami collab only (strict auth gate)
+    "louis vuitton murakami",
+
+    # Guidi — niche leather, small but dedicated market
+    "guidi boots",
 ]
 
 # Keywords that indicate archive/vintage pieces
@@ -334,76 +294,39 @@ def normalize_brand(brand: str) -> str:
 
 
 def get_search_queries() -> list[str]:
-    """Generate search queries combining brands with optional keywords."""
-    queries = []
-    for brand in ARCHIVE_BRANDS:
-        queries.append(brand)
-    return queries
+    """Return optimized search queries for Grailed scraping."""
+    return list(SEARCH_QUERIES)
 
 
-# Priority brands for faster scraping (most valuable/common)
+# Priority queries — scraped first and most frequently.
+# These are the highest-performing queries from telemetry.
 PRIORITY_BRANDS = [
-    # High value archive - European
-    "raf simons",
-    "rick owens",
-    "helmut lang",
-    "maison margiela",
-    "ann demeulemeester",
-    "dries van noten",
-    "carol christian poell",
-    "boris bidjan saberi",
-
-    # Japanese archive
-    "number nine",
-    "undercover",
-    "comme des garcons",
-    "yohji yamamoto",
-    "issey miyake",
-    "junya watanabe",
-    "sacai",
-    "visvim",
-    "julius",
-    
-    # Luxury houses
-    "dior homme",
-    "saint laurent",
-    "celine",
-    "gucci",
-    "prada",
-    "hermes",
-    "chanel",
-    "louis vuitton",
-    "bottega veneta",
-    "balenciaga",
-    "givenchy",
-    "fendi",
-    "valentino",
-    
-    # Designer archive
-    "jean paul gaultier",
-    "thierry mugler",
-    "vivienne westwood",
-    "alexander mcqueen",
-    "hussein chalayan",
-    
-    # Streetwear
-    "supreme",
-    "vetements",
-    "chrome hearts",
-    "off-white",
-    
-    # Japanese streetwear
-    "hysteric glamour",
-    "kapital",
-    "wtaps",
-    "neighborhood",
-    "bape",
-    "human made",
-    "cav empt",
-    "wacko maria",
-    
-    # Other high value
+    # Tier 1 broad brands (highest deal ratios, sorted by ratio)
     "enfants riches deprimes",
-    "gallery dept",
-    "amiri",
+    "bottega veneta",
+    "chrome hearts",
+    "saint laurent",
+    "maison margiela",
+    "margiela tabi",
+    "rick owens",
+    "dior homme",
+    "dior homme hedi slimane",
+    "jean paul gaultier",
+    "helmut lang",
+    "raf simons",
+    "carol christian poell",
+
+    # High-value piece-specific queries
+    "balenciaga runner",
+    "kapital boro jacket",
+    "undercover arts and crafts",
+    "thierry mugler leather jacket",
+    "alexander mcqueen leather jacket",
+    "prada america's cup sneakers",
+    "prada cotton velvet blouson",
+    "ann demeulemeester leather boots",
+    "vetements polizei hoodie",
+    "dries van noten embroidered jacket",
+    "tom ford gucci",
+    "louis vuitton murakami",
 ]

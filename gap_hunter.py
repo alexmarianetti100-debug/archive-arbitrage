@@ -59,9 +59,8 @@ from scrapers.vinted import VintedScraperWrapper as VintedScraper
 from scrapers.ebay import EbayScraper
 from scrapers.depop import DepopScraper
 from scrapers.mercari import MercariScraper
-from scrapers.therealreal import TheRealRealScraper
 from scrapers.fashionphile import FashionphileScraper
-from scrapers.secondstreet import SecondStreetScraper
+from scrapers.auction_sniper import AuctionSniper
 # ShopGoodwill removed — API consistently returns 500
 from core.authenticity_v2 import AuthenticityCheckerV2, format_auth_bar, format_auth_grade, MIN_AUTH_SCORE
 from core.desirability import check_desirability, REJECT_PATTERNS
@@ -69,6 +68,9 @@ from telegram_bot import send_deal_to_subscribers, send_message, init_telegram_d
 from core.discord_alerts import send_discord_alert, DISCORD_ENABLED
 from core.tier_policy import classify_discord_tiers
 from core.whop_alerts import send_whop_alert, format_whop_deal_content
+from marketing.auto_content.pipeline_hook import on_deal_alert
+from core.telegram_funnel import queue_free_channel_deal
+from core.supabase_sync import sync_deal_from_pipeline
 from core.deal_quality import calculate_deal_quality, format_signal_line, format_quality_header, DealSignals, THRESHOLD_FIRE_1
 from core.auth_filter import authenticate_comps, filter_authenticated_comps
 from scrapers.product_fingerprint import parse_title_to_fingerprint
@@ -138,6 +140,30 @@ JAPAN_SERVICE_FEE_RATE = float(os.getenv("JAPAN_SERVICE_FEE_RATE", "0.05"))
 BUY_TAX_RATE = float(os.getenv("BUY_TAX_RATE", "0.0"))
 
 JAPAN_SOURCES = {"japan_buyee", "rakuma", "mercari_jp", "yahoo_auctions_jp", "buyee"}
+
+# eBay→Grailed price uplift by category.
+# eBay sold prices trend lower than Grailed; these multipliers estimate what the
+# same item would sell for on Grailed. CONSERVATIVE estimates — overestimating
+# uplift creates phantom margins, so we err low. Actual spreads vary by brand,
+# condition, and season. TODO: validate against real cross-platform sold data
+# by matching identical items sold on both platforms.
+#   footwear    → eBay runs ~10% below Grailed (auction culture, wider audience)
+#   outerwear   → eBay runs ~10% below Grailed (shipping-sensitive)
+#   tops        → eBay runs ~5% below Grailed (commodity category, tight spread)
+#   bottoms     → eBay runs ~5% below Grailed (similar to tops)
+#   jewelry     → eBay runs ~15% below Grailed (trust premium on Grailed for luxury)
+#   bags        → eBay runs ~12% below Grailed (auth concerns drive Grailed premium)
+#   accessories → eBay runs ~8% below Grailed
+EBAY_TO_GRAILED_UPLIFT: dict[str, float] = {
+    "footwear":    1.10,
+    "outerwear":   1.10,
+    "tops":        1.05,
+    "bottoms":     1.05,
+    "jewelry":     1.15,
+    "bags":        1.12,
+    "accessories": 1.08,
+}
+EBAY_TO_GRAILED_DEFAULT = 1.08  # fallback when category can't be detected
 
 
 def estimate_buy_costs(buy_price: float, source: str = "") -> float:
@@ -268,17 +294,17 @@ def _get_comp_thresholds(query: str):
     """Get comp thresholds based on item type."""
     if _is_archive_query(query):
         return {
-            'min_comps': 5,
-            'max_age_days': 90,  # 90 days — archive markets shift, stale comps = bad pricing
+            'min_comps': 3,
+            'max_age_days': 365,  # 1 year — trust hyper_pricing time-decay for accuracy
         }
     elif _is_luxury_query(query):
         return {
             'min_comps': 3,
-            'max_age_days': 180,  # 6 months for luxury (was 2 years — too stale)
+            'max_age_days': 365,  # 1 year — time-decay handles recency weighting
         }
     return {
-        'min_comps': MIN_SOLD_COMPS,  # Default 8
-        'max_age_days': 365,  # Default 1 year (was 180 days)
+        'min_comps': 5,
+        'max_age_days': 365,  # Default 1 year
     }
 
 MAX_COMP_AGE_DAYS = 180  # Default: only use sold comps from the last 6 months
@@ -867,31 +893,57 @@ def compute_weighted_price(
         )
         return None
     else:
-        # Downweight fallback: keep all, weight by similarity
-        final = scored
+        # Downweight fallback: keep comps above 0.2 similarity floor
+        # Without a floor, comps at 0.01-0.1 similarity (essentially random items)
+        # still influence the weighted price via the weighted median
+        final = [(c, s) for c, s in scored if s >= 0.2]
+        if not final:
+            # All comps below floor — use what we have above threshold
+            final = above_threshold
 
     # Cap at 10 best comps — enough for confidence, few enough that each matters
     # Sort by similarity first to keep the best, then re-sort by price for median
     final.sort(key=lambda x: x[1], reverse=True)
     final = final[:10]
 
+    # Apply time-decay: recent comps weigh more than older ones
+    from scrapers.comp_matcher import get_category_config
+    import math
+    config = get_category_config(listing_fp.item_type or "")
+    halflife = config.get("time_decay_halflife", 45)
+    now = datetime.now()
+
+    weighted_final = []  # (comp, weight) where weight = similarity * time_decay
+    for comp, sim in final:
+        sold_date = getattr(comp, 'sold_date', None)
+        decay = 1.0
+        if sold_date:
+            try:
+                if isinstance(sold_date, str) and sold_date:
+                    sold_dt = datetime.fromisoformat(sold_date.replace("Z", "+00:00"))
+                    days_ago = max(0, (now - sold_dt.replace(tzinfo=None)).days)
+                    decay = 0.5 ** (days_ago / halflife) if halflife > 0 else 1.0
+            except (ValueError, TypeError):
+                decay = 1.0
+        weighted_final.append((comp, sim * decay))
+
     # Compute weighted median
-    final.sort(key=lambda x: x[0].price)
-    total_weight = sum(s for _, s in final)
+    weighted_final.sort(key=lambda x: x[0].price)
+    total_weight = sum(w for _, w in weighted_final)
     if total_weight <= 0:
         return None
 
     # Walk through prices accumulating weight until 50th percentile
     cumulative = 0.0
-    weighted_median = final[-1][0].price
-    for comp, sim in final:
-        cumulative += sim
+    weighted_median = weighted_final[-1][0].price
+    for comp, w in weighted_final:
+        cumulative += w
         if cumulative >= total_weight * 0.5:
             weighted_median = comp.price
             break
 
     # Weighted average
-    weighted_avg = sum(c.price * s for c, s in final) / total_weight
+    weighted_avg = sum(c.price * w for c, w in weighted_final) / total_weight
 
     # Build new SoldData
     surviving_comps = [c for c, _ in final]
@@ -1374,20 +1426,22 @@ class GapHunter:
                         return True
         return False
 
-    async def get_sold_data(self, query: str, return_raw: bool = False) -> Optional[SoldData]:
+    async def get_sold_data(self, query: str, return_raw: bool = False, skip_cache: bool = False) -> Optional[SoldData]:
         """Get sold price data for a query, using PricingEngine cache when available.
-        
+
         Args:
             query: Search query
             return_raw: If True, also return the raw sold items for hyper-pricing
-        
+            skip_cache: If True, bypass PricingEngine cache (pipeline deals need real comp data)
+
         Returns:
             SoldData or tuple(SoldData, list) if return_raw=True
         """
         # ── Try PricingEngine first ──
         # Skip when return_raw=True — PricingEngine has no raw comp data for similarity scoring
+        # Skip when skip_cache=True — pipeline deals need real comp quality signals
         pricing_engine = _get_pricing_engine()
-        if pricing_engine and not return_raw:
+        if pricing_engine and not return_raw and not skip_cache:
             cached_entry = pricing_engine.get_price(query)
             if cached_entry and cached_entry.data:
                 # Extract price from cached data
@@ -1422,7 +1476,7 @@ class GapHunter:
 
         try:
             async with GrailedScraper() as scraper:
-                sold = await scraper.search_sold(query, max_results=40)  # Fetch more to account for filtering
+                sold = await scraper.search_sold(query, max_results=100)
 
             # ── Temporal filtering: only use comps from last max_age_days ──
             from datetime import datetime as _dt, timedelta, timezone
@@ -1448,31 +1502,43 @@ class GapHunter:
             if stale_count > 0:
                 logger.debug(f"  Filtered out {stale_count} stale comps (>{max_age_days}d) for '{query}'")
 
-            # ── eBay sold fallback: only when Grailed has < 3 comps ──
-            # eBay prices run 5-10% below Grailed; mixing freely dilutes accuracy.
-            # Only fall back to eBay when Grailed data is truly insufficient.
+            # ── Page 1 fallback: fetch another 100 if page 0 insufficient ──
+            if len(fresh_sold) < min_comps:
+                try:
+                    async with GrailedScraper() as scraper:
+                        page1 = await scraper.search_sold(query, max_results=100, page=1)
+                    if page1:
+                        page1_fresh, page1_stale = _filter_fresh(page1)
+                        if page1_fresh:
+                            logger.info(f"  📄 Page 1 fallback: +{len(page1_fresh)} fresh comps for '{query}'")
+                            fresh_sold.extend(page1_fresh)
+                            stale_count += page1_stale
+                except Exception as e:
+                    logger.debug(f"  Page 1 fallback failed for '{query}': {e}")
+
+            # ── eBay sold: always fetch for archive, fallback for others ──
+            # eBay prices run below Grailed; uplift to Grailed-equivalent by category.
+            from core.comp_validator import _extract_category
+            is_archive = _is_archive_query(query)
             ebay_fallback_used = False
-            if len(fresh_sold) < 3:
+            fetch_ebay = is_archive or len(fresh_sold) < min_comps
+            if fetch_ebay:
                 try:
                     async with EbaySoldScraper() as ebay_scraper:
                         ebay_sold = await ebay_scraper.search_sold(query, max_results=50)
                     ebay_fresh, _ = _filter_fresh(ebay_sold or [])
-                    # eBay "Best Offer Accepted" shows listing price, not actual sale price.
-                    # Apply 12% haircut to eBay comps to approximate real transaction prices.
                     for eb in ebay_fresh:
                         if eb.price and eb.price > 0:
-                            eb.price = eb.price * 0.88
-                    combined = fresh_sold + ebay_fresh
-                    if len(combined) >= min_comps:
-                        logger.info(f"  📦 eBay sold fallback: {len(ebay_fresh)} comps for '{query}' "
+                            cat = _extract_category(eb.title) if eb.title else None
+                            uplift = EBAY_TO_GRAILED_UPLIFT.get(cat, EBAY_TO_GRAILED_DEFAULT) if cat else EBAY_TO_GRAILED_DEFAULT
+                            eb.price = eb.price * uplift
+                    if ebay_fresh:
+                        logger.info(f"  📦 eBay comps: {len(ebay_fresh)} for '{query}' "
                                     f"(Grailed had {len(fresh_sold)})")
-                        fresh_sold = combined
+                        fresh_sold.extend(ebay_fresh)
                         ebay_fallback_used = True
-                    else:
-                        logger.debug(f"  eBay fallback insufficient for '{query}' "
-                                     f"({len(combined)} combined, need {min_comps})")
                 except Exception as e:
-                    logger.debug(f"  eBay sold fallback failed for '{query}': {e}")
+                    logger.debug(f"  eBay sold fetch failed for '{query}': {e}")
 
             if len(fresh_sold) < min_comps:
                 logger.info(f"  📊 Insufficient comps for '{query}': {len(fresh_sold)} fresh, need {min_comps} (had {len(sold or [])} total)")
@@ -1773,11 +1839,11 @@ class GapHunter:
         
         Falls back to standard get_sold_data if hyper-pricing fails.
         """
-        # First get standard sold data
-        base_data = await self.get_sold_data(query)
+        # First get standard sold data — skip cache so we get real comp quality signals
+        base_data = await self.get_sold_data(query, skip_cache=True)
         if not base_data:
             return None
-        
+
         try:
             # Detect category for time decay settings
             category = detect_category_from_query(query)
@@ -1791,7 +1857,7 @@ class GapHunter:
             # Build Comp objects from sold items
             # We need to re-fetch the sold items to get full details
             async with GrailedScraper() as scraper:
-                sold_items = await scraper.search_sold(query, max_results=40)
+                sold_items = await scraper.search_sold(query, max_results=100)
             
             if not sold_items or len(sold_items) < 3:
                 # Not enough comps for hyper-pricing, use standard
@@ -2138,17 +2204,6 @@ class GapHunter:
                 logger.warning(f"    ⚠️ Mercari search failed for '{query}': {e}")
                 return []
 
-        async def _therealreal():
-            try:
-                async with TheRealRealScraper() as scraper:
-                    return await asyncio.wait_for(scraper.search(query, max_results=15), timeout=20.0)
-            except asyncio.TimeoutError:
-                logger.debug(f"    TheRealReal timed out for '{query}'")
-                return []
-            except Exception as e:
-                logger.debug(f"    TheRealReal search failed: {e}")
-                return []
-
         async def _fashionphile():
             try:
                 async with FashionphileScraper() as scraper:
@@ -2160,36 +2215,24 @@ class GapHunter:
                 logger.debug(f"    Fashionphile search failed: {e}")
                 return []
 
-        async def _secondstreet():
-            try:
-                async with SecondStreetScraper(use_proxies=False) as scraper:
-                    return await asyncio.wait_for(scraper.search(query, max_results=15), timeout=20.0)
-            except asyncio.TimeoutError:
-                logger.debug(f"    2ndSTREET timed out for '{query}'")
-                return []
-            except Exception as e:
-                logger.debug(f"    2ndSTREET search failed: {e}")
-                return []
-
         # ── Chrome Hearts: Multi-platform with extended window ──
         # CH is luxury, not hype — use 72hr window and seller trust instead of platform-only.
         is_chrome_hearts = "chrome hearts" in query.lower()
 
         if is_chrome_hearts:
-            # Search all platforms for CH (skip Depop/Vinted)
             results_list = await asyncio.gather(
                 _grailed(), _poshmark(), _depop(), _vinted(), _ebay(), _mercari(),
-                _therealreal(), _fashionphile(), _secondstreet(),
+                _fashionphile(),
             )
             logger.info(
                 f"  [CH] Multi-platform: Grailed={len(results_list[0])}, Poshmark={len(results_list[1])}, "
                 f"eBay={len(results_list[4])}, Mercari={len(results_list[5])}, "
-                f"TRR={len(results_list[6])}, Fashionphile={len(results_list[7])}, 2ndST={len(results_list[8])}"
+                f"Fashionphile={len(results_list[6])}"
             )
         else:
             results_list = await asyncio.gather(
                 _grailed(), _poshmark(), _depop(), _vinted(), _ebay(), _mercari(),
-                _therealreal(), _fashionphile(), _secondstreet(),
+                _fashionphile(),
             )
 
         all_items = [item for sublist in results_list for item in sublist]
@@ -2478,12 +2521,16 @@ class GapHunter:
                 continue
 
             # ── Listing age check ──
-            # Stale listings (>30 days old) indicate the item isn't liquid
+            # Stale listings indicate the item isn't liquid.
+            # Archive brands sell slower — longer window. Contemporary/streetwear goes stale faster.
+            from core.comp_validator import ARCHIVE_BRANDS as _ARCHIVE_BRANDS
+            _brand_lower = (detected_brand or "").lower().strip()
+            max_listing_age = 30 if _brand_lower in _ARCHIVE_BRANDS else 14
             if item.listed_at:
                 from datetime import timezone
                 listing_age_days = (datetime.now(timezone.utc) - item.listed_at).days
-                if listing_age_days > 14:
-                    logger.debug(f"    Skipped stale listing ({listing_age_days}d old): {item.title[:50]}")
+                if listing_age_days > max_listing_age:
+                    logger.debug(f"    Skipped stale listing ({listing_age_days}d old, max={max_listing_age}d): {item.title[:50]}")
                     self.stats.setdefault("stale_skipped", 0)
                     self.stats["stale_skipped"] += 1
                     query_metrics["stale_skips"] += 1
@@ -2582,42 +2629,84 @@ class GapHunter:
                 else:
                     self.stats["item_specific_comp_misses"] = self.stats.get("item_specific_comp_misses", 0) + 1
 
+            # Penalize deals using generic (non-item-specific) comps — cross-category contamination risk
+            if not is_item_specific:
+                existing_penalty = getattr(effective_sold, 'comp_confidence_penalty', 0)
+                effective_sold.comp_confidence_penalty = existing_penalty + 25
+                logger.debug(f"    Generic comp penalty: +25pts (total: {effective_sold.comp_confidence_penalty})")
+
             # Calculate gap against Grailed resale value (no platform discount).
             # We buy on any platform and resell on Grailed — the reference is what
             # the item sells for on Grailed, not what it would sell for on the source platform.
-            reference_price = effective_sold.liquidation_anchor or (
-                getattr(effective_sold, '_hyper_pricing', False) and effective_sold.avg_price or effective_sold.median_price
-            )
-            downside_reference = effective_sold.downside_anchor or (reference_price * 0.85)
+            # Pick reference price explicitly — avoid `or` chaining which treats 0.0 as falsy
+            if effective_sold.liquidation_anchor is not None and effective_sold.liquidation_anchor > 0:
+                reference_price = effective_sold.liquidation_anchor
+            elif getattr(effective_sold, '_hyper_pricing', False) and effective_sold.avg_price is not None and effective_sold.avg_price > 0:
+                reference_price = effective_sold.avg_price
+            else:
+                reference_price = effective_sold.median_price
+
+            if effective_sold.downside_anchor is not None and effective_sold.downside_anchor > 0:
+                downside_reference = effective_sold.downside_anchor
+            else:
+                downside_reference = reference_price * 0.85
 
             # ── Condition adjustment: if source is worse condition than comps, haircut reference ──
             source_condition, _, _ = parse_condition(item.title, brand=detected_brand or "")
             from core.condition_parser import CONDITION_TIERS
             source_mult = CONDITION_TIERS.get(source_condition, 0.70)  # Default GENTLY_USED
-            # Comps are mostly GENTLY_USED on Grailed; if source is worse, reduce reference
-            comp_assumed_mult = 0.70  # Grailed comps average condition
+
+            # Compute actual average comp condition instead of blanket 0.70 assumption
+            comp_conditions = getattr(effective_sold, 'comp_conditions', None)
+            comp_titles = effective_sold.comp_titles or []
+            if comp_conditions and any(c for c in comp_conditions):
+                # Parse each comp's condition and average the multipliers
+                comp_mults = []
+                for cond in comp_conditions:
+                    if cond:
+                        tier, _, _ = parse_condition(cond, brand=detected_brand or "")
+                        comp_mults.append(CONDITION_TIERS.get(tier, 0.70))
+                comp_assumed_mult = sum(comp_mults) / len(comp_mults) if comp_mults else 0.70
+            elif comp_titles:
+                # Fallback: parse condition from comp titles
+                comp_mults = []
+                for ct in comp_titles:
+                    tier, _, _ = parse_condition(ct, brand=detected_brand or "")
+                    comp_mults.append(CONDITION_TIERS.get(tier, 0.70))
+                comp_assumed_mult = sum(comp_mults) / len(comp_mults) if comp_mults else 0.70
+            else:
+                comp_assumed_mult = 0.70  # Last resort fallback
+
             if source_mult < comp_assumed_mult and comp_assumed_mult > 0:
                 condition_ratio = source_mult / comp_assumed_mult
                 reference_price *= condition_ratio
                 downside_reference *= condition_ratio
-                logger.debug(f"    Condition adjustment: {source_condition} ({source_mult}) vs comps ({comp_assumed_mult}) → {condition_ratio:.2f}x")
+                logger.debug(f"    Condition adjustment: {source_condition} ({source_mult:.2f}) vs comps avg ({comp_assumed_mult:.2f}) → {condition_ratio:.2f}x")
 
             # ── Seasonal pricing: haircut for off-season items ──
-            current_month = datetime.now().month
-            title_lower = item.title.lower() if item.title else ""
-            cat_lower = (item.category or "").lower()
-            combined_text = title_lower + " " + cat_lower
-            # Winter items (outerwear, heavy knits) are off-season April-August
-            winter_keywords = ("jacket", "coat", "parka", "anorak", "puffer", "down vest", "heavy knit", "sherpa")
-            # Summer items are off-season October-February
-            summer_keywords = ("swim", "tank top", "linen short", "sandal")
-            is_winter_item = any(k in combined_text for k in winter_keywords)
-            is_summer_item = any(k in combined_text for k in summer_keywords)
-            off_season = (is_winter_item and 4 <= current_month <= 8) or (is_summer_item and (current_month >= 10 or current_month <= 2))
-            if off_season:
-                reference_price *= 0.85
-                downside_reference *= 0.85
-                logger.debug(f"    Seasonal haircut: -15% (off-season {'winter' if is_winter_item else 'summer'} item)")
+            # Skip for archive brands — collector pieces have year-round demand
+            from core.comp_validator import ARCHIVE_BRANDS
+            brand_lower = (detected_brand or "").lower().strip()
+            is_archive_brand = brand_lower in ARCHIVE_BRANDS
+
+            if not is_archive_brand:
+                current_month = datetime.now().month
+                title_lower = item.title.lower() if item.title else ""
+                cat_lower = (item.category or "").lower()
+                combined_text = title_lower + " " + cat_lower
+                # Winter items (outerwear, heavy knits) are off-season April-August
+                winter_keywords = ("jacket", "coat", "parka", "anorak", "puffer", "down vest", "heavy knit", "sherpa")
+                # Summer items are off-season October-February
+                summer_keywords = ("swim", "tank top", "linen short", "sandal")
+                is_winter_item = any(k in combined_text for k in winter_keywords)
+                is_summer_item = any(k in combined_text for k in summer_keywords)
+                off_season = (is_winter_item and 4 <= current_month <= 8) or (is_summer_item and (current_month >= 10 or current_month <= 2))
+                if off_season:
+                    reference_price *= 0.85
+                    downside_reference *= 0.85
+                    logger.debug(f"    Seasonal haircut: -15% (off-season {'winter' if is_winter_item else 'summer'} item)")
+            else:
+                logger.debug(f"    Seasonal haircut: skipped (archive brand: {brand_lower})")
 
             gap = reference_price - item.price
             gap_percent = gap / reference_price if reference_price > 0 else 0
@@ -2809,13 +2898,12 @@ class GapHunter:
         brand = self._detect_brand(item.title)
         category = self._detect_category(item.title)
 
-        # ── Hard gate: only surface deals with exact product catalog matches ──
-        # Items without a guaranteed/high product match are noise — they don't
-        # have enough exact comps to guarantee profitability.
-        if not getattr(deal, '_product_id', None):
-            logger.debug(f"    ⛔ Skipped (no product catalog match): {item.title[:50]}")
-            self.stats["no_catalog_skipped"] = self.stats.get("no_catalog_skipped", 0) + 1
-            return False
+        # ── Product catalog match: boost quality but don't gate on it ──
+        # Items with exact product matches get higher confidence, but items
+        # with strong comp data can still surface without a catalog entry.
+        has_product_match = bool(getattr(deal, '_product_id', None))
+        if not has_product_match:
+            self.stats["no_catalog_match"] = self.stats.get("no_catalog_match", 0) + 1
 
         # ── Japan Deal Special Handling ──
         if is_japan_deal and hasattr(item, '_japan_data'):
@@ -3227,6 +3315,39 @@ class GapHunter:
             except Exception as e:
                 logger.error(f"Whop alert failed: {e}")
 
+            # Auto-generate Instagram content for qualifying deals
+            try:
+                await on_deal_alert(
+                    item=item,
+                    signals=signals,
+                    auth_result=auth_result,
+                    tier=tier_decision.minimum_tier or "beginner",
+                )
+            except Exception as e:
+                logger.debug(f"Content generation skipped: {e}")
+
+            # Queue deal for free public Telegram channel (delayed)
+            try:
+                await queue_free_channel_deal(
+                    item=item,
+                    signals=signals,
+                    auth_result=auth_result,
+                )
+            except Exception as e:
+                logger.debug(f"Free channel queue skipped: {e}")
+
+            # Sync deal to Supabase for user dashboard
+            try:
+                sync_deal_from_pipeline(
+                    item=item,
+                    deal=deal,
+                    signals=signals,
+                    auth_result=auth_result,
+                    tier=tier_decision.minimum_tier or "beginner",
+                )
+            except Exception as e:
+                logger.debug(f"Supabase sync skipped: {e}")
+
             self.stats["deals_sent"] += 1
 
             # Persist deal to DB for frontend display
@@ -3367,7 +3488,7 @@ class GapHunter:
             logger.error(f"Send failed: {e}")
             return False
 
-    async def run_cycle(self, brand_filter=None, custom_queries=None, max_targets=None, source_filter=None, use_blue_chip=False, customer_tier="intermediate", skip_japan: bool = False):
+    async def run_cycle(self, brand_filter=None, custom_queries=None, max_targets=None, source_filter=None, use_blue_chip=False, customer_tier="intermediate", skip_japan: bool = False, skip_auctions: bool = False):
         """Run one hunting cycle.
         
         Args:
@@ -3696,6 +3817,174 @@ class GapHunter:
                 import traceback
                 logger.debug(f"Japan scan traceback: {traceback.format_exc()}")
 
+        # ── eBay Auction Snipe ──
+        # Find auctions ending soon with low bids — high-margin opportunities.
+        # Follows the same pattern as Japan integration above.
+        if not skip_auctions:
+            logger.info("🔨 Running eBay auction snipe...")
+            try:
+                async with AuctionSniper() as sniper:
+                    if sniper.enabled:
+                        auction_items = await sniper.snipe_brands(
+                            max_per_brand=10,
+                            ending_within_hours=12,
+                            max_price=500,
+                        )
+
+                        if auction_items:
+                            logger.info(f"  🎯 Found {len(auction_items)} auction opportunities")
+
+                            auction_deals = 0
+                            for auction_item in auction_items:
+                                # Skip auctions ending in <1 hour (not enough time to act)
+                                if auction_item.time_left_hours < 1.0:
+                                    logger.debug(f"  ⏰ Skipping auction ending too soon ({auction_item.time_left_hours:.1f}h): {auction_item.title[:50]}")
+                                    continue
+
+                                # Detect brand from auction title
+                                detected_brand = self._detect_brand(auction_item.title)
+                                if not detected_brand:
+                                    continue
+
+                                # Get sold data for comps
+                                sold = await self.get_sold_data(detected_brand, return_raw=True)
+                                if isinstance(sold, tuple):
+                                    sold_data_auction, raw_items = sold
+                                else:
+                                    sold_data_auction, raw_items = sold, []
+
+                                if not sold_data_auction or sold_data_auction.count < 3:
+                                    continue
+
+                                # Build a MockItem compatible with process_deal()
+                                class AuctionMockItem:
+                                    def __init__(self, ai):
+                                        self.title = ai.title
+                                        self.description = ''
+                                        self.price = ai.price
+                                        self.source = 'ebay'
+                                        self.source_id = ai.source_id
+                                        self.url = ai.url
+                                        self.images = ai.images
+                                        self.size = ai.size
+                                        self.brand = detected_brand
+                                        self.category = ''
+                                        self.seller = None
+                                        self.seller_sales = None
+                                        self.seller_rating = None
+                                        self.condition = ai.condition
+                                        self.shipping_cost = ai.shipping_cost
+                                        self.currency = 'USD'
+                                        self.raw_data = {}
+                                        self.listed_at = None
+                                        self.is_auction = True
+                                        self._auction_hours_left = ai.time_left_hours
+                                        self._auction_bid_count = ai.bid_count
+                                        self._auction_ends_at = ai.ends_at
+
+                                mock_item = AuctionMockItem(auction_item)
+
+                                # Get item-specific comps via the standard pipeline
+                                effective_sold, item_comp_query, is_item_specific = await self.get_item_specific_comps(
+                                    mock_item, detected_brand, sold_data_auction
+                                )
+
+                                # Calculate gap — explicit checks, avoid 0.0 truthiness bug
+                                if effective_sold.liquidation_anchor is not None and effective_sold.liquidation_anchor > 0:
+                                    reference_price = effective_sold.liquidation_anchor
+                                else:
+                                    reference_price = effective_sold.median_price
+                                if reference_price is None or reference_price <= 0:
+                                    continue
+
+                                gap = reference_price - auction_item.price
+                                gap_percent = gap / reference_price if reference_price > 0 else 0
+
+                                # Shipping + fees
+                                sell_fee_rate = DEFAULT_SELL_FEE
+                                shipping_est = estimate_shipping(mock_item, reference_price=reference_price) * 1.20
+                                buy_costs = estimate_buy_costs(auction_item.price, 'ebay')
+                                expected_sell_price = reference_price * (1.0 - sell_fee_rate)
+                                profit = expected_sell_price - auction_item.price - shipping_est - buy_costs
+
+                                if gap_percent < MIN_GAP_PERCENT or profit < MIN_PROFIT_DOLLARS:
+                                    continue
+
+                                # Build comp snapshots
+                                _titles = getattr(effective_sold, 'comp_titles', None) or []
+                                _prices = getattr(effective_sold, 'comp_prices', None) or []
+                                _urls = getattr(effective_sold, 'comp_urls', None) or []
+                                _sources = getattr(effective_sold, 'comp_sources', None) or []
+                                _source_ids = getattr(effective_sold, 'comp_source_ids', None) or []
+                                _conditions = getattr(effective_sold, 'comp_conditions', None) or []
+                                _sold_dates = getattr(effective_sold, 'comp_sold_dates', None) or []
+                                _phashes = getattr(effective_sold, 'comp_phashes', None) or []
+                                _image_urls = getattr(effective_sold, 'comp_image_urls', None) or []
+                                _sim_scores = getattr(effective_sold, '_similarity_scores', None) or []
+                                _snapshots = []
+                                for _i, _t in enumerate(_titles[:10]):
+                                    _snapshots.append({
+                                        "title": _t,
+                                        "price": _prices[_i] if _i < len(_prices) else effective_sold.avg_price,
+                                        "url": _urls[_i] if _i < len(_urls) else None,
+                                        "source": _sources[_i] if _i < len(_sources) else "grailed",
+                                        "source_id": _source_ids[_i] if _i < len(_source_ids) else "",
+                                        "condition": _conditions[_i] if _i < len(_conditions) else None,
+                                        "sold_date": _sold_dates[_i] if _i < len(_sold_dates) else None,
+                                        "phash": _phashes[_i] if _i < len(_phashes) else None,
+                                        "image_url": _image_urls[_i] if _i < len(_image_urls) else None,
+                                        "similarity_score": _sim_scores[_i] if _i < len(_sim_scores) else None,
+                                    })
+
+                                downside_reference = effective_sold.downside_anchor or (reference_price * 0.85)
+                                downside_sell_price = downside_reference * (1.0 - sell_fee_rate)
+                                downside_profit = downside_sell_price - auction_item.price - shipping_est - buy_costs
+
+                                deal = GapDeal(
+                                    item=mock_item,
+                                    sold_avg=effective_sold.avg_price,
+                                    gap_percent=gap_percent,
+                                    profit_estimate=profit,
+                                    sold_count=effective_sold.count,
+                                    query=item_comp_query if is_item_specific else detected_brand,
+                                    comp_confidence=getattr(effective_sold, '_confidence', 'medium'),
+                                    comp_confidence_level=getattr(effective_sold, '_confidence_level', 'medium'),
+                                    comp_cv=getattr(effective_sold, '_cv', None),
+                                    authenticated_comps=getattr(effective_sold, '_authenticated_comps', 0),
+                                    comp_auth_confidence=getattr(effective_sold, '_auth_confidence', 0.0),
+                                    hyper_pricing=getattr(effective_sold, '_hyper_pricing', False),
+                                    comp_confidence_penalty=getattr(effective_sold, 'comp_confidence_penalty', 0),
+                                    liquidation_anchor=reference_price,
+                                    downside_anchor=downside_reference,
+                                    expected_net_profit=profit,
+                                    downside_net_profit=downside_profit,
+                                    margin_of_safety_score=max(0.0, downside_profit),
+                                    discovered_at=datetime.now(),
+                                    comp_snapshots=_snapshots,
+                                    similarity_scores=_sim_scores,
+                                )
+
+                                success = await self.process_deal(deal)
+                                if success:
+                                    auction_deals += 1
+                                    total_deals += 1
+                                    logger.info(
+                                        f"  🔨 Auction deal sent: {detected_brand} ${auction_item.price:.0f} "
+                                        f"({auction_item.bid_count} bids, {auction_item.time_left_hours:.1f}h left) "
+                                        f"→ +${profit:.0f}"
+                                    )
+
+                            if auction_deals > 0:
+                                logger.info(f"  🔨 {auction_deals} auction deal alerts sent")
+                            else:
+                                logger.info("  🔨 No auction items passed deal qualification")
+                        else:
+                            logger.debug("  No auction opportunities found")
+                    else:
+                        logger.debug("  eBay API not configured (set EBAY_APP_ID and EBAY_CERT_ID)")
+            except Exception as e:
+                logger.warning(f"  ⚠️ Auction snipe failed: {e}")
+
         elapsed = time.time() - cycle_start
 
         if total_deals:
@@ -3727,7 +4016,7 @@ class GapHunter:
                 f"seen={len(self.seen_ids)}"
             )
 
-    async def run(self, once: bool = False, brand_filter=None, custom_queries=None, max_targets=None, source_filter=None, use_blue_chip=False, skip_japan: bool = False):
+    async def run(self, once: bool = False, brand_filter=None, custom_queries=None, max_targets=None, source_filter=None, use_blue_chip=False, skip_japan: bool = False, skip_auctions: bool = False):
         """Main loop."""
         init_telegram_db()
 
@@ -3752,6 +4041,10 @@ class GapHunter:
         else:
             logger.info(f"   🗾 Japan arbitrage: ENABLED (every cycle)")
             logger.info(f"     Platforms: Yahoo Auctions, Mercari, Rakuma (via Buyee)")
+        if skip_auctions:
+            logger.info(f"   🔨 eBay auctions: SKIPPED (CLI flag)")
+        else:
+            logger.info(f"   🔨 eBay auctions: {'ENABLED' if os.getenv('EBAY_APP_ID') else 'DISABLED (no API key)'}")
         logger.info("=" * 60)
 
         # ── Embedding backfill check ──
@@ -3778,12 +4071,13 @@ class GapHunter:
         while self.running:
             try:
                 await self.run_cycle(
-                    brand_filter=brand_filter, 
-                    custom_queries=custom_queries, 
-                    max_targets=max_targets, 
+                    brand_filter=brand_filter,
+                    custom_queries=custom_queries,
+                    max_targets=max_targets,
                     source_filter=source_filter,
                     use_blue_chip=use_blue_chip,
                     skip_japan=skip_japan,
+                    skip_auctions=skip_auctions,
                 )
             except Exception as e:
                 logger.error(f"Cycle error: {e}")
@@ -3990,6 +4284,7 @@ if __name__ == "__main__":
     parser.add_argument("--query", type=str, help="Custom search queries, comma-separated (e.g. 'rick owens dunks,raf simons bomber')")
     parser.add_argument("--max-targets", type=int, help="Max number of targets per cycle")
     parser.add_argument("--skip-japan", action="store_true", help="Skip the Japan arbitrage sweep (useful for fast smoke tests)")
+    parser.add_argument("--skip-auctions", action="store_true", help="Skip eBay auction sniping")
     parser.add_argument("--list-brands", action="store_true", help="List all brands in targets and exit")
     parser.add_argument("--list-targets", action="store_true", help="List all search targets and exit")
     parser.add_argument("--help-config", action="store_true", help="Show configuration help and exit")
@@ -4120,4 +4415,5 @@ if __name__ == "__main__":
         custom_queries=custom_queries,
         max_targets=args.max_targets,
         skip_japan=args.skip_japan,
+        skip_auctions=args.skip_auctions,
     ))

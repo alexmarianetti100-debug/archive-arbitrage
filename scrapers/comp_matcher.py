@@ -64,7 +64,8 @@ ITEM_TYPES = {
     "sandals": ["slides", "sandals"],
     "bag": ["bag", "backpack", "tote", "messenger", "duffle", "crossbody", "pouch", "clutch", "wallet"],
     "hat": ["hat", "cap", "beanie", "bucket hat", "trucker hat", "snapback"],
-    "accessories": ["belt", "chain", "jewelry", "necklace", "ring", "bracelet", "scarf", "gloves", "sunglasses"],
+    "jewelry": ["ring", "necklace", "bracelet", "chain", "pendant", "earring", "bangle", "jewelry"],
+    "accessories": ["belt", "scarf", "gloves", "sunglasses", "tie", "keychain"],
 }
 
 # Material keywords that affect value
@@ -73,6 +74,17 @@ MATERIALS = [
     "nylon", "gore-tex", "goretex", "canvas", "velvet", "shearling", "fur",
     "rubber", "mesh", "knit", "waxed", "coated", "distressed", "raw",
 ]
+
+# Sub-brands that are NOT diffusion lines — they're mainline identifiers.
+# is_exact_match() must NOT treat these as diffusion when checking line parity.
+MAINLINE_SUB_BRANDS = {
+    "mainline",          # Rick Owens mainline
+    "homme",             # Dior Homme — mainline menswear
+    "pour homme",        # Yohji Yamamoto Pour Homme — mainline menswear
+    "homme plus",        # CDG Homme Plus — top-tier CDG menswear
+    "men",               # Issey Miyake Men — mainline menswear
+    "paris",             # Saint Laurent Paris — just the mainline rebrand
+}
 
 # Hybrid model type aliases — models that span multiple item type categories.
 # Used by is_exact_match() to allow valid cross-type comp matching.
@@ -101,11 +113,28 @@ MODEL_PATTERNS = [
     # Raf Simons
     r"ozweego|response trail|replicant|cylon|runner|orion|virginia creeper|riot",
     # Margiela
-    r"tabi|replica|gat|german army|fusion|paint splatter|deconstructed",
+    r"tabi|replica|\bgats?\b|german army|fusion|paint splatter|deconstructed",
     # Chrome Hearts
     r"cemetery cross|spacer|forever ring|dagger pendant|floral cross|paperchain|tiny e|scroll ring",
     r"plus ring|keeper ring|fuck you ring|fleur de lis|cross ball|filigree cross|baby fat",
     r"dagger ring|star ring|foti harris teeter|heart ring|chomper|grillz|fang",
+    # Bottega Veneta
+    r"puddle boot|lug boot|tire boot|bounce boot|flash|salon|stretch sandal|intrecciato",
+    r"cassette|pouch|padded cassette|arco|jodie|hop|point|chain pouch|teen jodie",
+    r"orbit sneaker|speedster|vulcan|climber|pillow sneaker|sardine",
+    # Saint Laurent Paris
+    r"wyatt|lukas|jodphur|jodhpur|theo|west harness|army boot|camp boot",
+    r"teddy|classic moto|motorcycle|l01|l17|saharienne",
+    r"court classic|sl/06|sl/10|sl/61|sl/80|venice|malibu",
+    r"kate|loulou|sac de jour|manhattan|sunset|college|niki",
+    # Helmut Lang
+    r"astro moto|astro biker|astro pant|bondage|bondage strap|classic raw|painter jeans",
+    r"flight bomber|tank top|longsleeve|cutout|mesh top|brushstroke",
+    r"archive jeans|reflective|safety|fireman|riot|parachute",
+    # Dior Homme
+    r"navigate|luster|victim|deville|thinning|votc|strip|jake",
+    r"clawmark|safety pin|bee|oblique|cd diamond|roller|b23|b22|b01|b27",
+    r"saddle|book tote|dior lock|30 montaigne|lady dior",
     # Balenciaga
     r"triple s|track|speed trainer|defender",
     # Supreme
@@ -138,6 +167,8 @@ class ParsedTitle:
     material: str = ""           # e.g., "leather", "cashmere"
     color: str = ""
     season: str = ""             # e.g., "AW01", "SS05"
+    size: str = ""               # e.g., "48", "M", "10"
+    condition: str = ""          # e.g., "DEADSTOCK", "GENTLY_USED"
     key_details: List[str] = field(default_factory=list)  # Other distinctive terms
     clean_title: str = ""        # Title with noise removed
 
@@ -212,13 +243,14 @@ def parse_title(brand: str, title: str) -> ParsedTitle:
     result.item_type = best_type
     result.item_type_specific = best_type_specific
     
-    # Detect model names (skip if it's the same as sub-brand)
+    # Detect model names (skip if it's the same as sub-brand, keep looking)
     for pattern in MODEL_PATTERNS:
-        match = re.search(pattern, title_lower)
-        if match:
+        for match in re.finditer(pattern, title_lower):
             model = match.group(0)
             if model != result.sub_brand.lower():
                 result.model = model
+                break
+        if result.model:
             break
     
     # Detect material
@@ -241,6 +273,39 @@ def parse_title(brand: str, title: str) -> ParsedTitle:
             result.color = color
             break
     
+    # Detect size — explicit markers first, then standalone EU/IT sizes
+    size_match = re.search(r'(?:size|sz)\s*:?\s*(\d{1,3}(?:\.\d)?|(?:xx?[sl]|[sml]))\b', title_lower)
+    if size_match:
+        result.size = size_match.group(1).upper()
+    else:
+        # Standalone EU/IT clothing sizes (44-56) or shoe sizes (36-48)
+        size_match = re.search(r'\b(3[6-9]|4[0-9]|5[0-6])\b', title_lower)
+        if size_match:
+            result.size = size_match.group(1)
+        else:
+            # Letter sizes
+            letter_match = re.search(r'\b(XXS|XS|XXL|XL|XXXL)\b', title, re.IGNORECASE)
+            if letter_match:
+                result.size = letter_match.group(1).upper()
+            else:
+                # Single letter S/M/L only if preceded by "size" context or standalone
+                letter_match = re.search(r'(?:^|\s)([SML])\b(?!\w)', title)
+                if letter_match:
+                    result.size = letter_match.group(1).upper()
+
+    # Detect condition from title keywords
+    cond_lower = title_lower
+    if any(k in cond_lower for k in ("deadstock", "nwt", "bnwt", "new with tags", "new/never worn", "brand new")):
+        result.condition = "DEADSTOCK"
+    elif any(k in cond_lower for k in ("like new", "near mint", "excellent", "near deadstock")):
+        result.condition = "NEAR_DEADSTOCK"
+    elif any(k in cond_lower for k in ("gently used", "very good", "light wear", "minimal wear")):
+        result.condition = "GENTLY_USED"
+    elif any(k in cond_lower for k in ("used", "worn", "pre-owned", "preowned", "good condition")):
+        result.condition = "USED"
+    elif any(k in cond_lower for k in ("poor", "heavily worn", "damaged", "thrashed")):
+        result.condition = "POOR"
+
     # Build clean title (remove noise words)
     words = re.findall(r'[a-zA-Z]+', title)
     clean_words = [w for w in words if w.lower() not in NOISE_WORDS and len(w) > 1]
@@ -314,6 +379,24 @@ def build_search_queries(parsed: ParsedTitle) -> List[Tuple[str, float]]:
     return unique
 
 
+def phash_hamming_distance(hash1: str, hash2: str) -> int:
+    """Compute hamming distance between two pHash hex strings.
+    Returns -1 if either hash is invalid or missing.
+    """
+    if not hash1 or not hash2 or len(hash1) != len(hash2):
+        return -1
+    try:
+        n1, n2 = int(hash1, 16), int(hash2, 16)
+        return bin(n1 ^ n2).count("1")
+    except (ValueError, TypeError):
+        return -1
+
+
+# Hard-reject threshold: images this different are not the same product.
+# Cologne vs shoes, ring vs jacket, etc. — hamming distance > 25 on 64-bit pHash.
+IMAGE_HARD_REJECT_DISTANCE = 25
+
+
 def image_similarity_boost(listing_phash: str = None, comp_phash: str = None) -> float:
     """Convert pHash hamming distance to a scoring multiplier.
 
@@ -321,26 +404,20 @@ def image_similarity_boost(listing_phash: str = None, comp_phash: str = None) ->
         1.2  — strong visual match (distance <= 5)
         1.0  — neutral (either hash missing, or moderate distance 6-15)
         0.7  — visual mismatch (distance 16-25)
-        0.5  — strong visual mismatch (distance > 25)
+        0.0  — hard reject (distance > 25, completely different item)
     """
-    if not listing_phash or not comp_phash:
-        return 1.0
-    if len(listing_phash) != len(comp_phash):
-        return 1.0
-    try:
-        n1, n2 = int(listing_phash, 16), int(comp_phash, 16)
-        distance = bin(n1 ^ n2).count("1")
-    except (ValueError, TypeError):
-        return 1.0
+    distance = phash_hamming_distance(listing_phash, comp_phash)
+    if distance < 0:
+        return 1.0  # Either hash missing — neutral
 
     if distance <= 5:
         return 1.2
     elif distance <= 15:
         return 1.0
-    elif distance <= 25:
+    elif distance <= IMAGE_HARD_REJECT_DISTANCE:
         return 0.7
     else:
-        return 0.5
+        return 0.0  # Hard reject — visually completely different
 
 
 MODEL_MISMATCH_PENALTY = 0.25
@@ -378,12 +455,21 @@ def score_comp_similarity(
         if source_parsed.model in comp_lower:
             score += 3.0
 
-    # Item type match
-    if source_parsed.item_type_specific:
+    # Item type match — hard zero on category mismatch
+    if source_parsed.item_type:
+        comp_parsed_for_type = parse_title(source_parsed.brand, comp_title)
+        if comp_parsed_for_type.item_type and comp_parsed_for_type.item_type != source_parsed.item_type:
+            # Check TYPE_ALIASES before rejecting (e.g., geobasket = boots OR sneakers)
+            src_model = (source_parsed.model or "").lower()
+            cmp_model = (comp_parsed_for_type.model or "").lower()
+            src_types = TYPE_ALIASES.get(src_model, {source_parsed.item_type})
+            cmp_types = TYPE_ALIASES.get(cmp_model, {comp_parsed_for_type.item_type})
+            if not src_types & cmp_types:
+                return 0.0  # Different product category — hard zero
         factors += 1.5
-        if source_parsed.item_type_specific in comp_lower:
+        if source_parsed.item_type_specific and source_parsed.item_type_specific in comp_lower:
             score += 1.5
-        elif source_parsed.item_type and source_parsed.item_type in comp_lower:
+        elif source_parsed.item_type in comp_lower:
             score += 0.75  # Partial match (category level)
 
     # Material match
@@ -472,8 +558,9 @@ def is_exact_match(listing: ParsedTitle, comp: ParsedTitle) -> bool:
                 return False
 
     # 4. Line tier — mainline vs diffusion must agree
-    listing_is_diffusion = bool(listing.sub_brand)
-    comp_is_diffusion = bool(comp.sub_brand)
+    # Sub-brands in MAINLINE_SUB_BRANDS are mainline identifiers, not diffusion
+    listing_is_diffusion = bool(listing.sub_brand) and listing.sub_brand.lower() not in MAINLINE_SUB_BRANDS
+    comp_is_diffusion = bool(comp.sub_brand) and comp.sub_brand.lower() not in MAINLINE_SUB_BRANDS
     if listing_is_diffusion != comp_is_diffusion:
         return False
     # If both are diffusion, must be SAME diffusion line
@@ -508,12 +595,39 @@ def match_quality(listing: ParsedTitle, comp: ParsedTitle, comp_sold_date: str =
         # No season data — give neutral credit
         score += 0.15
 
-    # Size — not in ParsedTitle currently, so give neutral credit
-    # (will be enhanced when size is added to ParsedTitle)
-    score += 0.20
+    # Size proximity (0.3 weight)
+    if listing.size and comp.size:
+        if listing.size == comp.size:
+            score += 0.30  # Exact size match
+        else:
+            # Try numeric proximity for EU/IT sizes
+            try:
+                diff = abs(int(listing.size) - int(comp.size))
+                if diff <= 1:
+                    score += 0.20
+                elif diff <= 2:
+                    score += 0.10
+                else:
+                    score += 0.05  # Very different size
+            except ValueError:
+                score += 0.05  # Different letter sizes or mixed formats
+    else:
+        score += 0.15  # No size data — neutral credit
 
-    # Condition — not in ParsedTitle currently, give neutral credit
-    score += 0.15
+    # Condition proximity (0.2 weight)
+    if listing.condition and comp.condition:
+        COND_RANK = {"DEADSTOCK": 4, "NEAR_DEADSTOCK": 3, "GENTLY_USED": 2, "USED": 1, "POOR": 0}
+        l_rank = COND_RANK.get(listing.condition, 2)
+        c_rank = COND_RANK.get(comp.condition, 2)
+        diff = abs(l_rank - c_rank)
+        if diff == 0:
+            score += 0.20  # Same condition tier
+        elif diff == 1:
+            score += 0.12  # Adjacent tier
+        else:
+            score += 0.05  # Very different condition
+    else:
+        score += 0.10  # No condition data — neutral credit
 
     # Recency — based on comp_sold_date if provided
     if comp_sold_date:
@@ -576,6 +690,10 @@ CATEGORY_CONFIG = {
     "bag": {
         "time_decay_halflife": 60,
         "condition_sensitivity": 1.0,
+    },
+    "jewelry": {
+        "time_decay_halflife": 90,
+        "condition_sensitivity": 0.7,
     },
     "accessories": {
         "time_decay_halflife": 60,
@@ -933,6 +1051,7 @@ async def find_best_comps(
     listing_size: Optional[str] = None,
     use_embeddings: bool = False,
     use_historical_db: bool = False,
+    listing_image_url: Optional[str] = None,
 ) -> CompResult:
     """
     Find the best comparable sold items for pricing.
@@ -1001,6 +1120,11 @@ async def find_best_comps(
                 if not h.get("sold_price") or h["sold_price"] <= 0:
                     continue
 
+                # ── Hard category gate: reject cross-category comps ──
+                hist_parsed = parse_title(brand, h.get("title", ""))
+                if not is_exact_match(parsed, hist_parsed):
+                    continue
+
                 seen_ids.add(h.get("source_id", ""))
                 sim = h.get("similarity", 0.5)
 
@@ -1060,6 +1184,11 @@ async def find_best_comps(
                     # Save to database for catalog building
                     if save_comps:
                         save_sold_comp_to_db(query, item, brand)
+
+                    # ── Hard category gate: reject cross-category comps ──
+                    comp_parsed = parse_title(brand, item.title)
+                    if not is_exact_match(parsed, comp_parsed):
+                        continue
 
                     # Score similarity (keyword-based)
                     similarity = score_comp_similarity(parsed, item.title)
@@ -1122,6 +1251,10 @@ async def find_best_comps(
                             brand=brand,
                         )
 
+                    # Extract first image URL for pHash matching
+                    comp_images = getattr(item, 'images', None) or []
+                    comp_image_url = comp_images[0] if comp_images else None
+
                     all_comps.append(ScoredComp(
                         title=item.title,
                         price=item.price,
@@ -1136,6 +1269,7 @@ async def find_best_comps(
                         num_bids=num_bids,
                         shipping_cost=shipping,
                         normalized_price=norm_price,
+                        image_url=comp_image_url,
                     ))
                     new_comps += 1
 
@@ -1160,6 +1294,63 @@ async def find_best_comps(
             confidence_score=0.0,
             query_used="",
         )
+
+    # ── Image similarity: hard-reject visually different items ──
+    if listing_image_url:
+        try:
+            import httpx as _httpx, imagehash as _ih, io as _io
+            from PIL import Image as _PILImage
+
+            # Compute listing pHash
+            _listing_phash = None
+            async with _httpx.AsyncClient(timeout=10) as _client:
+                _resp = await _client.get(listing_image_url)
+                if _resp.status_code == 200:
+                    _img = _PILImage.open(_io.BytesIO(_resp.content))
+                    if _img.mode != 'RGB':
+                        _img = _img.convert('RGB')
+                    _listing_phash = str(_ih.phash(_img))
+
+            if _listing_phash:
+                # Batch compute comp pHashes and hard-reject mismatches
+                before_count = len(all_comps)
+                surviving = []
+                for comp in all_comps:
+                    comp_img = comp.image_url
+                    if not comp_img:
+                        surviving.append(comp)
+                        continue
+                    try:
+                        async with _httpx.AsyncClient(timeout=10) as _client:
+                            _resp = await _client.get(comp_img)
+                        if _resp.status_code != 200:
+                            surviving.append(comp)
+                            continue
+                        _img = _PILImage.open(_io.BytesIO(_resp.content))
+                        if _img.mode != 'RGB':
+                            _img = _img.convert('RGB')
+                        _comp_phash = str(_ih.phash(_img))
+                        comp.phash = _comp_phash
+
+                        dist = phash_hamming_distance(_listing_phash, _comp_phash)
+                        if dist > IMAGE_HARD_REJECT_DISTANCE:
+                            logger.info(
+                                f"    ❌ Image mismatch: '{comp.title[:50]}' "
+                                f"(distance={dist})"
+                            )
+                            continue  # Hard reject
+                        surviving.append(comp)
+                    except Exception:
+                        surviving.append(comp)  # On error, keep comp
+
+                rejected = before_count - len(surviving)
+                if rejected > 0:
+                    logger.info(f"    📷 Image filter: rejected {rejected}/{before_count} comps")
+                    all_comps = surviving
+        except ImportError:
+            pass  # imagehash not installed
+        except Exception as e:
+            logger.debug(f"    ⚠️ Image similarity check failed: {e}")
 
     # ── Filter outliers (using MAD with IQR fallback) ──
     filtered = filter_outliers(all_comps)

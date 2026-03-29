@@ -38,7 +38,10 @@ REJECT_KEYWORDS = [
     r"\bfragrance\b", r"\bperfume\b", r"\bcologne\b", r"\beau\s+de\b",
     r"\bparfum\b", r"\bedp\b", r"\bedt\b", r"\btoilette\b",
     r"\bsample\b.*\bfragrance\b", r"\bfragrance\b.*\bsample\b",
-    r"\bdecant\b", r"\baftershave\b",
+    r"\bdecant\b", r"\baftershave\b", r"\bbody\s+spray\b",
+    r"\b(?:100|50|30|75|200)\s*ml\b",  # Volume indicators (fragrances, not clothing)
+    r"\broom\s+spray\b", r"\bdiffuser\b", r"\bscented\s+candle\b",
+    r"\bdeo\b", r"\bdeodorant\b",
     
     # Generic non-fashion
     r"\bbook\b", r"\bmagazine\b", r"\bcatalog\b",
@@ -177,20 +180,29 @@ def check_desirability(
         if pattern.search(title_lower):
             return False, 0.0, f"Rejected: {pattern.pattern}"
     
-    # Step 2: Calculate desirability score
-    score = 0.0
+    # Step 2: Calculate desirability score — composite of top matches
     matched_keywords = []
-    
+    matched_weights = []
+
     for keyword, weight in DESIRABLE_KEYWORDS.items():
         if keyword.lower() in title_lower:
-            score = max(score, weight)  # Take highest matching weight
             matched_keywords.append(keyword)
-    
-    # Boost for multiple desirable keywords
-    if len(matched_keywords) >= 2:
-        score = min(1.0, score + 0.1)
-    if len(matched_keywords) >= 3:
-        score = min(1.0, score + 0.1)
+            matched_weights.append(weight)
+
+    if matched_weights:
+        # Sort weights descending — top keyword anchors, rest contribute diminishing returns
+        matched_weights.sort(reverse=True)
+        # Top keyword = 60% of score, 2nd = 25%, 3rd = 15%
+        composite_weights = [0.60, 0.25, 0.15]
+        score = 0.0
+        for i, w in enumerate(matched_weights[:3]):
+            score += w * (composite_weights[i] if i < len(composite_weights) else 0.0)
+        # Additional matches beyond 3 add small flat bonus
+        if len(matched_weights) > 3:
+            score += 0.05 * min(len(matched_weights) - 3, 3)
+        score = min(1.0, score)
+    else:
+        score = 0.0
     
     # Demand level boost
     if demand_level == "hot":
