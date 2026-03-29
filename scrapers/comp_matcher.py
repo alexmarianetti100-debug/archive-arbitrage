@@ -374,19 +374,22 @@ def phash_hamming_distance(hash1: str, hash2: str) -> int:
         return -1
 
 
-# Hard-reject threshold: images this different are not the same product.
-# Cologne vs shoes, ring vs jacket, etc. — hamming distance > 25 on 64-bit pHash.
-IMAGE_HARD_REJECT_DISTANCE = 25
+# Hard-reject threshold: images this different are NOT the same product category.
+# Cologne vs shoes, ring vs jacket — hamming distance > 32 on 64-bit pHash.
+# Note: different PHOTOS of the same product type (e.g., two Rick Owens pants
+# photographed differently) easily reach distance 20-28. Only reject when
+# items are visually from completely different categories (distance 32+).
+IMAGE_HARD_REJECT_DISTANCE = 32
 
 
 def image_similarity_boost(listing_phash: str = None, comp_phash: str = None) -> float:
     """Convert pHash hamming distance to a scoring multiplier.
 
     Returns:
-        1.2  — strong visual match (distance <= 5)
-        1.0  — neutral (either hash missing, or moderate distance 6-15)
-        0.7  — visual mismatch (distance 16-25)
-        0.0  — hard reject (distance > 25, completely different item)
+        1.2  — strong visual match (distance <= 5, likely same photo/item)
+        1.0  — neutral (hash missing, or distance 6-25)
+        0.7  — likely different item (distance 26-32)
+        0.0  — hard reject (distance > 32, completely different category)
     """
     distance = phash_hamming_distance(listing_phash, comp_phash)
     if distance < 0:
@@ -394,12 +397,12 @@ def image_similarity_boost(listing_phash: str = None, comp_phash: str = None) ->
 
     if distance <= 5:
         return 1.2
-    elif distance <= 15:
-        return 1.0
+    elif distance <= 25:
+        return 1.0  # Wide neutral zone — different photos of similar items
     elif distance <= IMAGE_HARD_REJECT_DISTANCE:
         return 0.7
     else:
-        return 0.0  # Hard reject — visually completely different
+        return 0.0  # Hard reject — visually completely different category
 
 
 MODEL_MISMATCH_PENALTY = 0.25

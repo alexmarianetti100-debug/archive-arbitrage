@@ -891,7 +891,9 @@ def compute_weighted_price(
     # Sort by similarity descending for logging
     scored.sort(key=lambda x: x[1], reverse=True)
 
-    above_threshold = [(c, s) for c, s in scored if s >= 0.5]
+    # Gate threshold: 0.4 accounts for the match_quality blend (30% weight with
+    # reduced neutral credits) which lowers effective scores by ~0.05-0.10 vs raw similarity
+    above_threshold = [(c, s) for c, s in scored if s >= 0.4]
 
     # Gate logic
     if len(above_threshold) >= 3:
