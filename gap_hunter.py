@@ -213,10 +213,14 @@ COLLAB_MODEL_WORDS: dict[str, set[str]] = {
 }
 
 # ── Implausible gap hard cap ──────────────────────────────────────────────────
-# A listing >90% below a $200+ market price is almost certainly a wrong match
-# (keyword stuffing, different item entirely) rather than a real arbitrage deal.
-IMPLAUSIBLE_GAP_CAP = 0.90          # reject if gap exceeds this
-IMPLAUSIBLE_GAP_MIN_MARKET = 200.0  # only apply when market median is meaningful
+# Extreme gaps almost always indicate bad comp matches, not real deals.
+# Tiered: higher market prices get stricter caps (harder to have real 85%+ gap on $500+).
+IMPLAUSIBLE_GAP_TIERS = [
+    # (min_market_price, max_gap)
+    (500.0, 0.80),   # $500+ market: >80% gap is almost certainly wrong
+    (200.0, 0.85),   # $200+ market: >85% gap is almost certainly wrong
+    (0.0,   0.92),   # Under $200: >92% gap (allow higher for cheap items)
+]
 
 def estimate_shipping(item: "ScrapedItem", reference_price: float = 0.0) -> float:
     """
@@ -1571,6 +1575,8 @@ class GapHunter:
                         if eb.price and eb.price > 0:
                             cat = _extract_category(eb.title) if eb.title else None
                             uplift = EBAY_TO_GRAILED_UPLIFT.get(cat, EBAY_TO_GRAILED_DEFAULT) if cat else EBAY_TO_GRAILED_DEFAULT
+                            eb._original_price = eb.price  # Pre-uplift price for analysis
+                            eb._uplift_factor = uplift     # Applied uplift for audit trail
                             eb.price = eb.price * uplift
                     if ebay_fresh:
                         # Cross-platform dedup: remove eBay comps that match a Grailed comp
@@ -2801,13 +2807,17 @@ class GapHunter:
             real_margin = profit / item.price if item.price > 0 else 0
 
             # ── Implausible gap sanity check ──────────────────────────────────
-            # A listing >90% below a $200+ market is virtually never a real deal —
-            # it's a wrong match (keyword stuffing, different category entirely).
-            # Both the $13 Dr. Martens and extreme Vinted outliers are caught here.
-            if gap_percent >= IMPLAUSIBLE_GAP_CAP and effective_sold.median_price >= IMPLAUSIBLE_GAP_MIN_MARKET:
+            # Extreme gaps almost always indicate bad comp matches, not real deals.
+            # Tiered: higher market prices get stricter caps.
+            _gap_cap = None
+            for _min_market, _max_gap in IMPLAUSIBLE_GAP_TIERS:
+                if effective_sold.median_price >= _min_market:
+                    _gap_cap = _max_gap
+                    break
+            if _gap_cap and gap_percent >= _gap_cap:
                 logger.info(
                     f"    🚫 Implausible gap {gap_percent*100:.0f}% on ${effective_sold.median_price:.0f} market "
-                    f"(listed ${item.price:.0f}) — likely wrong match: {item.title[:50]}"
+                    f"(cap={_gap_cap*100:.0f}%, listed ${item.price:.0f}) — likely wrong match: {item.title[:50]}"
                 )
                 self.stats.setdefault("implausible_gap_skipped", 0)
                 self.stats["implausible_gap_skipped"] += 1

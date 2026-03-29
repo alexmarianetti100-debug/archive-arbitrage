@@ -83,6 +83,25 @@ ARCHIVE_BRANDS = {
 COMP_MAX_AGE_DAYS = 180
 ARCHIVE_MAX_AGE_DAYS = 365
 
+# Contemporary high-volume brands — shorter comp window (market moves fast)
+CONTEMPORARY_BRANDS = {
+    "balenciaga", "gucci", "prada", "louis vuitton", "bottega veneta",
+    "saint laurent", "burberry", "acne studios", "lemaire", "amiri",
+    "off-white", "palm angels", "fear of god", "essentials",
+    "stone island", "moncler", "canada goose",
+}
+CONTEMPORARY_MAX_AGE_DAYS = 120  # 4 months — prices shift quickly for high-volume brands
+
+
+def get_comp_max_age(brand: str) -> int:
+    """Get the appropriate comp age limit for a brand."""
+    brand_lower = brand.lower().strip()
+    if brand_lower in ARCHIVE_BRANDS:
+        return ARCHIVE_MAX_AGE_DAYS  # 365d — sparse sales, long-lived value
+    if brand_lower in CONTEMPORARY_BRANDS:
+        return CONTEMPORARY_MAX_AGE_DAYS  # 120d — high volume, fast depreciation
+    return COMP_MAX_AGE_DAYS  # 180d — default
+
 
 def _extract_category(title: str) -> Optional[str]:
     title_lower = title.lower()
@@ -140,13 +159,17 @@ def check_material_parity(listing_title: str, comp_title: str) -> bool:
     return True
 
 
-def check_recency(sold_date_str: Optional[str], archive_brand: bool = False) -> bool:
-    """Check 4: Comp must be recent enough."""
+def check_recency(sold_date_str: Optional[str], archive_brand: bool = False, brand: str = "") -> bool:
+    """Check 4: Comp must be recent enough. Per-brand age limits."""
     if not sold_date_str:
         return True
     try:
         sold_dt = datetime.fromisoformat(sold_date_str.replace("Z", "+00:00"))
-        max_age = ARCHIVE_MAX_AGE_DAYS if archive_brand else COMP_MAX_AGE_DAYS
+        # Use per-brand age limit if brand provided, else fall back to binary flag
+        if brand:
+            max_age = get_comp_max_age(brand)
+        else:
+            max_age = ARCHIVE_MAX_AGE_DAYS if archive_brand else COMP_MAX_AGE_DAYS
         age = (datetime.now(sold_dt.tzinfo) - sold_dt).days
         return age <= max_age
     except (ValueError, TypeError):
@@ -190,7 +213,7 @@ def validate_comps(
     surviving = [i for i in surviving if check_category_parity(listing_title, comp_titles[i])]
     surviving = [i for i in surviving if check_line_parity(listing_title, listing_brand, comp_titles[i], listing_brand)]
     surviving = [i for i in surviving if check_material_parity(listing_title, comp_titles[i])]
-    surviving = [i for i in surviving if check_recency(comp_sold_dates[i], archive_brand=is_archive)]
+    surviving = [i for i in surviving if check_recency(comp_sold_dates[i], brand=listing_brand)]
 
     if len(surviving) >= 3:
         surviving_prices = [comp_prices[i] for i in surviving]
