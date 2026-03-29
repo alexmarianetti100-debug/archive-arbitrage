@@ -738,31 +738,32 @@ async def compute_comp_phashes(comps: list, max_concurrent: int = 5) -> dict:
     sem = asyncio.Semaphore(max_concurrent)
     results = {}
 
-    async def _hash_one(idx: int, url: str):
-        async with sem:
-            try:
-                async with httpx.AsyncClient(timeout=10) as client:
+    # Single shared client — avoids file descriptor leak from creating one per download
+    async with httpx.AsyncClient(timeout=10) as client:
+        async def _hash_one(idx: int, url: str):
+            async with sem:
+                try:
                     resp = await client.get(url)
-                if resp.status_code != 200:
-                    return
-                img = Image.open(io.BytesIO(resp.content))
-                if img.mode != 'RGB':
-                    img = img.convert('RGB')
-                results[idx] = str(imagehash.phash(img))
-            except Exception:
-                pass
+                    if resp.status_code != 200:
+                        return
+                    img = Image.open(io.BytesIO(resp.content))
+                    if img.mode != 'RGB':
+                        img = img.convert('RGB')
+                    results[idx] = str(imagehash.phash(img))
+                except Exception:
+                    pass
 
-    tasks = []
-    for i, comp in enumerate(comps):
-        if getattr(comp, 'phash', None):
-            continue  # Already has phash
-        images = getattr(comp, 'images', None) or []
-        url = images[0] if images else getattr(comp, 'image_url', None)
-        if url:
-            tasks.append(_hash_one(i, url))
+        tasks = []
+        for i, comp in enumerate(comps):
+            if getattr(comp, 'phash', None):
+                continue  # Already has phash
+            images = getattr(comp, 'images', None) or []
+            url = images[0] if images else getattr(comp, 'image_url', None)
+            if url:
+                tasks.append(_hash_one(i, url))
 
-    if tasks:
-        await asyncio.gather(*tasks)
+        if tasks:
+            await asyncio.gather(*tasks)
 
     return results
 
