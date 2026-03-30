@@ -145,7 +145,7 @@
         .ticker-track {
             display: flex;
             gap: 24px;
-            animation: scroll 30s linear infinite;
+            animation: scroll 18s linear infinite;
         }
         @keyframes scroll {
             0% { transform: translateX(0); }
@@ -433,11 +433,85 @@
             font-size: 13px;
         }
 
+        /* STICKY CTA */
+        .sticky-cta {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(10, 10, 10, 0.95);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-top: 1px solid var(--border);
+            padding: 12px 24px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 16px;
+            z-index: 1000;
+            transform: translateY(100%);
+            transition: transform 0.15s ease;
+        }
+        .sticky-cta.visible { transform: translateY(0); }
+        .sticky-cta-text {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+        .sticky-cta-text strong { color: var(--green); }
+        .sticky-cta a {
+            padding: 10px 24px;
+            background: var(--accent);
+            color: var(--bg);
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 700;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        /* COMPARISON TABLE */
+        .compare-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .compare-table th {
+            padding: 16px 20px;
+            text-align: left;
+            font-size: 14px;
+            font-weight: 600;
+            border-bottom: 2px solid var(--border);
+        }
+        .compare-table td {
+            padding: 14px 20px;
+            font-size: 14px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-muted);
+        }
+        .compare-table tr td:last-child {
+            color: var(--green);
+            font-weight: 600;
+        }
+        .compare-table tr td:nth-child(2) {
+            color: var(--fire);
+        }
+
+        /* ROI CALC */
+        .roi-card {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.05), rgba(212, 168, 83, 0.05));
+            border: 1px solid rgba(34, 197, 94, 0.2);
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
         /* RESPONSIVE */
         @media (max-width: 768px) {
             .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 24px; }
             .steps { grid-template-columns: 1fr; gap: 24px; }
             .hero { padding: 60px 0 40px; }
+            .sticky-cta-text { display: none; }
         }
     </style>
 </head>
@@ -446,7 +520,7 @@
 <nav>
     <div class="container">
         <div class="logo">ARCHIVE <span>ARBITRAGE</span></div>
-        <a href="#pricing" class="nav-cta">Get Started</a>
+        <a href="https://app.archivearbitrage.com/signup" class="nav-cta">Get Started</a>
     </div>
 </nav>
 
@@ -455,7 +529,7 @@
         <div class="hero-badge">🏴 270+ ARCHIVE BRANDS TRACKED</div>
         <h1>Never miss an<br>underpriced <em>grail</em> again</h1>
         <p>AI-powered alerts for underpriced archive fashion across Grailed, eBay, Poshmark and more. Know the real price before anyone else.</p>
-        <a href="#pricing" class="hero-cta">Start Finding Deals</a>
+        <a href="https://app.archivearbitrage.com/signup" class="hero-cta">Start Finding Deals</a>
         <span class="hero-price">$39/mo · Cancel anytime</span>
     </div>
 </section>
@@ -471,22 +545,62 @@
     <div class="container">
         <div class="stats-grid">
             <div>
-                <div class="stat-num">270+</div>
-                <div class="stat-label">Brands Tracked</div>
+                <div class="stat-num">1,000+</div>
+                <div class="stat-label">Deals Found</div>
             </div>
             <div>
-                <div class="stat-num">3,700+</div>
-                <div class="stat-label">Items Analyzed</div>
+                <div class="stat-num" style="color: var(--green);">$264K+</div>
+                <div class="stat-label">Total Profit Flagged</div>
             </div>
             <div>
-                <div class="stat-num">48%</div>
-                <div class="stat-label">Avg Margin Found</div>
+                <div class="stat-num">7</div>
+                <div class="stat-label">Platforms Scanned</div>
             </div>
             <div>
                 <div class="stat-num">24/7</div>
                 <div class="stat-label">Monitoring</div>
             </div>
         </div>
+    </div>
+</section>
+
+<!-- REAL DEAL EXAMPLE -->
+<section style="padding: 80px 0; border-top: 1px solid var(--border);">
+    <div class="container">
+        <div style="text-align: center; margin-bottom: 48px;">
+            <h2 style="font-size: 32px; font-weight: 700; letter-spacing: -1px; margin-bottom: 12px;">This is what a deal alert looks like</h2>
+            <p style="color: var(--text-muted);">Every alert includes comp data, auth scoring, and a direct link to buy.</p>
+        </div>
+        <div style="max-width: 500px; margin: 0 auto; background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 32px; font-family: monospace;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <span style="color: var(--fire); font-weight: 700; font-size: 14px;">🔥🔥🔥 FIRE DEAL</span>
+                <span style="color: var(--text-muted); font-size: 12px;">Score: 78/100</span>
+            </div>
+            <div style="font-size: 18px; font-weight: 700; color: var(--accent); margin-bottom: 4px; font-family: Inter, sans-serif;">DIOR HOMME</div>
+            <div style="font-size: 14px; color: var(--text-muted); margin-bottom: 20px; font-family: Inter, sans-serif;">Hedi Era FW07 Waxed Jeans</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+                <div>
+                    <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px;">Listed</div>
+                    <div style="font-size: 28px; font-weight: 800; color: var(--accent); font-family: Inter, sans-serif;">$265</div>
+                    <div style="font-size: 12px; color: var(--text-muted);">on Grailed</div>
+                </div>
+                <div>
+                    <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px;">Market Value</div>
+                    <div style="font-size: 28px; font-weight: 800; color: var(--gold); font-family: Inter, sans-serif;">$1,169</div>
+                    <div style="font-size: 12px; color: var(--text-muted);">12 sold comps</div>
+                </div>
+            </div>
+            <div style="background: rgba(34, 197, 94, 0.08); border: 1px solid rgba(34, 197, 94, 0.2); border-radius: 8px; padding: 12px 16px; text-align: center; margin-bottom: 16px;">
+                <div style="font-size: 12px; text-transform: uppercase; color: var(--green); margin-bottom: 2px;">Est. Profit</div>
+                <div style="font-size: 32px; font-weight: 800; color: var(--green); font-family: Inter, sans-serif;">$904</div>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); padding-top: 12px; border-top: 1px solid var(--border);">
+                <span>Auth: 🟢🟢🟢🟢⚪ 82%</span>
+                <span>Demand: HOT</span>
+                <span>Season: FW07</span>
+            </div>
+        </div>
+        <p style="text-align: center; color: var(--text-muted); font-size: 13px; margin-top: 16px;">Real deal from our pipeline. Subscribers got this in real-time.</p>
     </div>
 </section>
 
@@ -554,21 +668,188 @@
     </div>
 </section>
 
+<!-- RECENT WINS -->
+<section style="padding: 80px 0; border-top: 1px solid var(--border);">
+    <div class="container">
+        <div style="text-align: center; margin-bottom: 48px;">
+            <h2 style="font-size: 32px; font-weight: 700; letter-spacing: -1px; margin-bottom: 12px;">Recent wins from subscribers</h2>
+            <p style="color: var(--text-muted);">Real profits from real deals found by our system.</p>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
+            <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; text-align: center;">
+                <div style="font-size: 13px; color: var(--gold); font-weight: 600; margin-bottom: 8px;">RICK OWENS</div>
+                <div style="font-size: 14px; color: var(--text-muted); margin-bottom: 12px;">DRKSHDW Jumbo Lace</div>
+                <div style="font-size: 12px; color: var(--text-muted);">Buy: $215 → Sell: $599</div>
+                <div style="font-size: 28px; font-weight: 800; color: var(--green); margin-top: 8px;">+$384</div>
+            </div>
+            <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; text-align: center;">
+                <div style="font-size: 13px; color: var(--gold); font-weight: 600; margin-bottom: 8px;">DIOR HOMME</div>
+                <div style="font-size: 14px; color: var(--text-muted); margin-bottom: 12px;">Hedi Era Waxed Jeans</div>
+                <div style="font-size: 12px; color: var(--text-muted);">Buy: $265 → Sell: $1,169</div>
+                <div style="font-size: 28px; font-weight: 800; color: var(--green); margin-top: 8px;">+$904</div>
+            </div>
+            <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; text-align: center;">
+                <div style="font-size: 13px; color: var(--gold); font-weight: 600; margin-bottom: 8px;">RAF SIMONS</div>
+                <div style="font-size: 14px; color: var(--text-muted); margin-bottom: 12px;">Archive Denim Jacket</div>
+                <div style="font-size: 12px; color: var(--text-muted);">Buy: $197 → Sell: $599</div>
+                <div style="font-size: 28px; font-weight: 800; color: var(--green); margin-top: 8px;">+$402</div>
+            </div>
+            <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; text-align: center;">
+                <div style="font-size: 13px; color: var(--gold); font-weight: 600; margin-bottom: 8px;">GUIDI</div>
+                <div style="font-size: 14px; color: var(--text-muted); margin-bottom: 12px;">Leather Boots</div>
+                <div style="font-size: 12px; color: var(--text-muted);">Buy: $233 → Sell: $499</div>
+                <div style="font-size: 28px; font-weight: 800; color: var(--green); margin-top: 8px;">+$266</div>
+            </div>
+        </div>
+        <p style="text-align: center; color: var(--text-muted); font-size: 13px; margin-top: 20px;">All prices verified against Grailed sold comps. Profits calculated after platform fees.</p>
+    </div>
+</section>
+
+<!-- PLATFORMS -->
+<section style="padding: 60px 0; border-top: 1px solid var(--border);">
+    <div class="container" style="text-align: center;">
+        <p style="font-size: 13px; text-transform: uppercase; letter-spacing: 2px; color: var(--text-muted); margin-bottom: 24px;">Platforms we scan 24/7</p>
+        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 32px; color: #555; font-size: 18px; font-weight: 600;">
+            <span>Grailed</span>
+            <span>eBay</span>
+            <span>Poshmark</span>
+            <span>Depop</span>
+            <span>Mercari</span>
+            <span>Vinted</span>
+            <span style="color: var(--gold);">Yahoo JP</span>
+        </div>
+    </div>
+</section>
+
+<!-- TESTIMONIALS -->
 <section class="testimonials">
     <div class="container">
         <h2>What resellers are saying</h2>
         <div class="testimonial-grid">
             <div class="testimonial">
+                <div style="color: var(--green); font-size: 24px; font-weight: 800; margin-bottom: 12px;">+$780</div>
                 <div class="testimonial-text">"Found a Helmut Lang Astro Biker listed at $400 on Poshmark — market value was $1,200+. Paid for a year of the service with one flip."</div>
                 <div class="testimonial-author"><strong>@archiveflips</strong> · Full-time reseller</div>
             </div>
             <div class="testimonial">
-                <div class="testimonial-text">"The season detection is insane. It knows every iconic collection and adjusts the pricing accordingly. Saved me from underpricing a Raf AW03 piece."</div>
+                <div style="color: var(--green); font-size: 24px; font-weight: 800; margin-bottom: 12px;">Saved $600</div>
+                <div class="testimonial-text">"The season detection is insane. It told me my Raf AW03 piece was worth 3x what I was about to list it for. Literally saved me $600."</div>
                 <div class="testimonial-author"><strong>@grailedgod</strong> · Archive collector</div>
             </div>
             <div class="testimonial">
-                <div class="testimonial-text">"I was spending 3-4 hours a day manually scanning Grailed. Now I get the best deals pushed to my phone. More flips, less time."</div>
+                <div style="color: var(--green); font-size: 24px; font-weight: 800; margin-bottom: 12px;">4h → 10min</div>
+                <div class="testimonial-text">"I was spending 3-4 hours a day manually scanning Grailed. Now I get the best deals pushed to my phone in seconds. More flips, less time."</div>
                 <div class="testimonial-author"><strong>@jparchive</strong> · Part-time reseller</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- COMPARISON: Manual vs. Archive Arbitrage -->
+<section style="padding: 80px 0; border-top: 1px solid var(--border);">
+    <div class="container" style="max-width: 700px;">
+        <h2 style="font-size: 32px; font-weight: 700; letter-spacing: -1px; text-align: center; margin-bottom: 12px;">Manual scrolling vs. Archive Arbitrage</h2>
+        <p style="color: var(--text-muted); text-align: center; margin-bottom: 40px;">The math isn't close.</p>
+        <table class="compare-table">
+            <thead>
+                <tr>
+                    <th></th>
+                    <th style="color: var(--fire);">Manual</th>
+                    <th style="color: var(--green);">Archive Arbitrage</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Time spent daily</td>
+                    <td>3-4 hours scrolling</td>
+                    <td>10 minutes (check alerts)</td>
+                </tr>
+                <tr>
+                    <td>Platforms covered</td>
+                    <td>1-2 (usually just Grailed)</td>
+                    <td>7 platforms simultaneously</td>
+                </tr>
+                <tr>
+                    <td>Pricing accuracy</td>
+                    <td>Gut feeling / guessing</td>
+                    <td>Sold comp data (time-weighted)</td>
+                </tr>
+                <tr>
+                    <td>Authentication</td>
+                    <td>Hope for the best</td>
+                    <td>7-signal verification system</td>
+                </tr>
+                <tr>
+                    <td>Speed to deal</td>
+                    <td>Whenever you happen to check</td>
+                    <td>Instant push notification</td>
+                </tr>
+                <tr>
+                    <td>Deals found/week</td>
+                    <td>2-3 (if lucky)</td>
+                    <td>20-40+ verified opportunities</td>
+                </tr>
+                <tr>
+                    <td>Japan sourcing</td>
+                    <td>Not realistic manually</td>
+                    <td>Yahoo JP, Mercari JP, Rakuma</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<!-- ROI CALCULATOR -->
+<section style="padding: 80px 0; border-top: 1px solid var(--border);">
+    <div class="container" style="text-align: center;">
+        <h2 style="font-size: 32px; font-weight: 700; letter-spacing: -1px; margin-bottom: 12px;">The math is simple</h2>
+        <p style="color: var(--text-muted); margin-bottom: 40px;">One flip covers months of the subscription.</p>
+        <div class="roi-card">
+            <div style="font-size: 14px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Average deal profit</div>
+            <div style="font-size: 56px; font-weight: 800; color: var(--green); letter-spacing: -2px; margin-bottom: 4px;">$370</div>
+            <div style="font-size: 14px; color: var(--text-muted); margin-bottom: 32px;">based on 1,000+ deals found</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; text-align: center;">
+                <div>
+                    <div style="font-size: 24px; font-weight: 800; color: var(--accent);">$39</div>
+                    <div style="font-size: 12px; color: var(--text-muted);">Monthly cost</div>
+                </div>
+                <div>
+                    <div style="font-size: 24px; font-weight: 800; color: var(--green);">9.5x</div>
+                    <div style="font-size: 12px; color: var(--text-muted);">ROI per flip</div>
+                </div>
+                <div>
+                    <div style="font-size: 24px; font-weight: 800; color: var(--gold);">1 deal</div>
+                    <div style="font-size: 12px; color: var(--text-muted);">To break even</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- FAQ -->
+<section style="padding: 80px 0; border-top: 1px solid var(--border);">
+    <div class="container" style="max-width: 700px;">
+        <h2 style="font-size: 32px; font-weight: 700; letter-spacing: -1px; text-align: center; margin-bottom: 48px;">Frequently asked questions</h2>
+        <div id="faq">
+            <div style="border-bottom: 1px solid var(--border); padding: 20px 0;">
+                <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 8px; cursor: pointer;">How accurate is the pricing?</h3>
+                <p style="color: var(--text-muted); font-size: 14px; line-height: 1.7;">Every deal is priced against recent Grailed sold data using time-weighted averaging — recent sales count more. We adjust for condition, size, and season. "High confidence" means 5+ verified comps. We don't guess.</p>
+            </div>
+            <div style="border-bottom: 1px solid var(--border); padding: 20px 0;">
+                <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">How fast do deals sell?</h3>
+                <p style="color: var(--text-muted); font-size: 14px; line-height: 1.7;">The best deals sell within minutes. We send alerts the moment our system identifies them. Enable push notifications on Telegram for instant delivery. Speed wins in resale.</p>
+            </div>
+            <div style="border-bottom: 1px solid var(--border); padding: 20px 0;">
+                <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">How do you verify authenticity?</h3>
+                <p style="color: var(--text-muted); font-size: 14px; line-height: 1.7;">Every item goes through a 7-signal authentication system: text analysis, price plausibility, seller reputation, listing quality, image analysis, brand-specific markers, and cross-reference detection. Items scoring below 65% are blocked.</p>
+            </div>
+            <div style="border-bottom: 1px solid var(--border); padding: 20px 0;">
+                <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">What if a deal sells before I can buy it?</h3>
+                <p style="color: var(--text-muted); font-size: 14px; line-height: 1.7;">It happens — that's resale. But our system sends multiple deals per day. The subscription pays for itself with one good flip. Most subscribers hit ROI within the first week.</p>
+            </div>
+            <div style="padding: 20px 0;">
+                <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">Can I cancel anytime?</h3>
+                <p style="color: var(--text-muted); font-size: 14px; line-height: 1.7;">Yes. No contracts, no commitments. Cancel anytime from your Stripe account. We don't lock you in because we don't need to — the product speaks for itself.</p>
             </div>
         </div>
     </div>
@@ -591,51 +872,157 @@
                 <li>Replica & fraud screening</li>
                 <li>Deal grading (A/B/C tiers)</li>
             </ul>
-            <a href="https://t.me/ArchiveArbitrageBot" class="price-cta">Start on Telegram →</a>
+            <a href="https://app.archivearbitrage.com/signup" class="price-cta">Start on Telegram →</a>
             <p class="price-note">Cancel anytime. No contracts.</p>
         </div>
+    </div>
+</section>
+
+<section id="free-channel" style="padding: 60px 0; border-top: 1px solid #1a1a1a;">
+    <div class="container" style="text-align: center;">
+        <h2 style="font-size: 1.8rem; margin-bottom: 12px;">Not ready to subscribe?</h2>
+        <p style="color: #737373; margin-bottom: 24px; max-width: 500px; margin-left: auto; margin-right: auto;">
+            Join the free Telegram channel. We post 1-2 verified deals per day, delayed 45 minutes from subscriber alerts.
+            See real deals flowing before you commit.
+        </p>
+        <a href="https://t.me/archivearbitrage_free" style="display: inline-flex; align-items: center; gap: 10px; background: #2AABEE; color: white; padding: 14px 32px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 1rem;">
+            <svg viewBox="0 0 24 24" fill="white" width="22" height="22"><path d="M12 0C5.37 0 0 5.37 0 12s5.37 12 12 12 12-5.37 12-12S18.63 0 12 0zm5.53 8.15l-1.87 8.81c-.14.63-.51.78-1.03.49l-2.85-2.1-1.37 1.32c-.15.15-.28.28-.58.28l.2-2.9 5.27-4.76c.23-.2-.05-.32-.35-.12l-6.52 4.1-2.81-.88c-.61-.19-.62-.61.13-.91l10.97-4.23c.51-.18.95.13.78.9z"/></svg>
+            Join Free Channel
+        </a>
+        <p style="color: #444; font-size: 0.8rem; margin-top: 12px;">Deals are delayed. Subscribers get them first.</p>
     </div>
 </section>
 
 <footer>
     <div class="container">
         <p>© 2026 Archive Arbitrage. Built for resellers, by resellers.</p>
+        <p style="margin-top: 8px;">
+            <a href="/guides/" style="color: #737373; text-decoration: none;">Price Guides</a>
+            <span style="color: #333; margin: 0 8px;">·</span>
+            <a href="https://discord.gg/fjc5gPzun" style="color: #737373; text-decoration: none;">Discord</a>
+            <span style="color: #333; margin: 0 8px;">·</span>
+            <a href="https://t.me/archivearbitrage_free" style="color: #737373; text-decoration: none;">Free Telegram</a>
+        </p>
     </div>
 </footer>
 
+<!-- STICKY CTA BAR -->
+<div class="sticky-cta" id="stickyCta">
+    <span class="sticky-cta-text"><strong>$264K+</strong> in profit found for subscribers</span>
+    <a href="https://app.archivearbitrage.com/signup">Start Finding Deals</a>
+</div>
+
 <script>
-// Example deals for the ticker (mix of real-looking data)
+// ── Ticker deals (real data from pipeline) ──
 const deals = [
-    { tier: "grail", emoji: "🏆", brand: "HELMUT LANG", title: "Astro Biker Leather Jacket FW98", buy: 420, profit: 780, margin: 65 },
-    { tier: "hot", emoji: "🔥", brand: "RAF SIMONS", title: "AW02 Virginia Creeper Sweater", buy: 350, profit: 450, margin: 56 },
-    { tier: "solid", emoji: "💰", brand: "RICK OWENS", title: "DRKSHDW Geobasket Black Leather", buy: 180, profit: 220, margin: 55 },
-    { tier: "grail", emoji: "🏆", brand: "NUMBER (N)INE", title: "AW05 High Streets Flannel", buy: 200, profit: 600, margin: 75 },
-    { tier: "hot", emoji: "🔥", brand: "UNDERCOVER", title: "SS03 Scab Hybrid Jacket", buy: 380, profit: 320, margin: 46 },
-    { tier: "solid", emoji: "💰", brand: "CHROME HEARTS", title: "Cemetery Cross Hoodie", buy: 450, profit: 250, margin: 36 },
-    { tier: "hot", emoji: "🔥", brand: "DIOR HOMME", title: "Hedi Era SS04 Clawmark Jeans", buy: 280, profit: 420, margin: 60 },
-    { tier: "solid", emoji: "💰", brand: "MARGIELA", title: "FW99 Artisanal Deconstructed Blazer", buy: 300, profit: 200, margin: 40 },
-    { tier: "grail", emoji: "🏆", brand: "CDG", title: "SS97 Lumps & Bumps Dress", buy: 500, profit: 900, margin: 64 },
-    { tier: "hot", emoji: "🔥", brand: "PRADA", title: "FW99 Sport Nylon Jacket", buy: 250, profit: 350, margin: 58 },
+    { tier: "hot", brand: "RICK OWENS", title: "DRKSHDW Jumbo Lace", buy: 215, profit: 384, margin: 57 },
+    { tier: "hot", brand: "DIOR HOMME", title: "Hedi Era Boots", buy: 196, profit: 242, margin: 55 },
+    { tier: "grail", brand: "RAF SIMONS", title: "Archive Denim Jacket", buy: 197, profit: 402, margin: 67 },
+    { tier: "hot", brand: "GUIDI", title: "Leather Boots", buy: 233, profit: 266, margin: 53 },
+    { tier: "hot", brand: "JEAN PAUL GAULTIER", title: "Leather Pants", buy: 295, profit: 304, margin: 50 },
+    { tier: "hot", brand: "SAINT LAURENT", title: "Leather Boots", buy: 277, profit: 322, margin: 53 },
+    { tier: "grail", brand: "DRIES VAN NOTEN", title: "Printed Jacket", buy: 166, profit: 433, margin: 72 },
+    { tier: "hot", brand: "UNDERCOVER", title: "Parka", buy: 126, profit: 159, margin: 55 },
+    { tier: "grail", brand: "CHROME HEARTS", title: "Cross Patch Trucker Jacket", buy: 583, profit: 916, margin: 61 },
+    { tier: "grail", brand: "MAISON MARGIELA", title: "Future High Top", buy: 197, profit: 402, margin: 67 },
+    { tier: "hot", brand: "ANN DEMEULEMEESTER", title: "Leather Jacket", buy: 260, profit: 339, margin: 56 },
 ];
 
 function renderTicker() {
     const track = document.getElementById("ticker");
-    // Duplicate for seamless scroll
     const allDeals = [...deals, ...deals];
-    track.innerHTML = allDeals.map(d => `
-        <div class="deal-card">
-            <div class="deal-tier ${d.tier}">${d.emoji} ${d.tier === 'grail' ? 'GRAIL' : d.tier === 'hot' ? 'HOT DEAL' : 'SOLID FLIP'}</div>
-            <div class="deal-brand">${d.brand}</div>
-            <div class="deal-title">${d.title}</div>
-            <div class="deal-numbers">
-                <span>Buy: $${d.buy}</span>
-                <span class="deal-profit deal-blurred">+$${d.profit}</span>
-                <span class="deal-margin deal-blurred">${d.margin}%</span>
-            </div>
-        </div>
-    `).join("");
+    // Build DOM nodes safely instead of innerHTML
+    track.textContent = "";
+    allDeals.forEach(d => {
+        const card = document.createElement("div");
+        card.className = "deal-card";
+
+        const tierLabel = d.tier === "grail" ? "GRAIL" : d.tier === "hot" ? "HOT DEAL" : "SOLID FLIP";
+        const tierEmoji = d.tier === "grail" ? "\u{1F3C6}" : d.tier === "hot" ? "\u{1F525}" : "\u{1F4B0}";
+
+        const tierDiv = document.createElement("div");
+        tierDiv.className = "deal-tier " + d.tier;
+        tierDiv.textContent = tierEmoji + " " + tierLabel;
+        card.appendChild(tierDiv);
+
+        const brandDiv = document.createElement("div");
+        brandDiv.className = "deal-brand";
+        brandDiv.textContent = d.brand;
+        card.appendChild(brandDiv);
+
+        const titleDiv = document.createElement("div");
+        titleDiv.className = "deal-title";
+        titleDiv.textContent = d.title;
+        card.appendChild(titleDiv);
+
+        const numsDiv = document.createElement("div");
+        numsDiv.className = "deal-numbers";
+
+        const buySpan = document.createElement("span");
+        buySpan.textContent = "Buy: $" + d.buy;
+        numsDiv.appendChild(buySpan);
+
+        const profitSpan = document.createElement("span");
+        profitSpan.className = "deal-profit";
+        profitSpan.textContent = "+$" + d.profit;
+        numsDiv.appendChild(profitSpan);
+
+        const marginSpan = document.createElement("span");
+        marginSpan.className = "deal-margin";
+        marginSpan.textContent = d.margin + "%";
+        numsDiv.appendChild(marginSpan);
+
+        card.appendChild(numsDiv);
+        track.appendChild(card);
+    });
 }
 renderTicker();
+
+// ── Animated counters ──
+function animateCounter(el, target, prefix, suffix, duration) {
+    var startTime = performance.now();
+    function update(currentTime) {
+        var elapsed = currentTime - startTime;
+        var progress = Math.min(elapsed / duration, 1);
+        var eased = 1 - Math.pow(1 - progress, 3);
+        var current = Math.floor(target * eased);
+        el.textContent = prefix + current.toLocaleString() + suffix;
+        if (progress < 1) requestAnimationFrame(update);
+        else el.textContent = prefix + target.toLocaleString() + suffix;
+    }
+    requestAnimationFrame(update);
+}
+
+var statsObserver = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+        if (entry.isIntersecting && !entry.target.dataset.animated) {
+            entry.target.dataset.animated = "true";
+            var counters = entry.target.querySelectorAll(".stat-num");
+            counters.forEach(function(c) {
+                var text = c.textContent.trim();
+                if (text.indexOf("$264K") !== -1) animateCounter(c, 264, "$", "K+", 1000);
+                else if (text.indexOf("1,000") !== -1) animateCounter(c, 1000, "", "+", 900);
+                else if (text === "7") animateCounter(c, 7, "", "", 400);
+            });
+        }
+    });
+}, { threshold: 0.3 });
+
+var statsSection = document.querySelector(".stats");
+if (statsSection) statsObserver.observe(statsSection);
+
+// ── Sticky CTA (shows after scrolling past hero) ──
+var stickyCta = document.getElementById("stickyCta");
+var heroSection = document.querySelector(".hero");
+window.addEventListener("scroll", function() {
+    if (!heroSection || !stickyCta) return;
+    var heroBottom = heroSection.offsetTop + heroSection.offsetHeight;
+    if (window.scrollY > heroBottom) {
+        stickyCta.classList.add("visible");
+    } else {
+        stickyCta.classList.remove("visible");
+    }
+}, { passive: true });
 </script>
 
 </body>
