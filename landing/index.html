@@ -4,22 +4,46 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Archive Arbitrage — Never Miss an Underpriced Grail</title>
-    <meta name="description" content="Real-time alerts for underpriced archive fashion. AI-powered pricing across Grailed, eBay, Poshmark & more. 270+ brands tracked.">
+    <meta name="description" content="Real-time alerts for underpriced archive fashion. AI-powered pricing across Grailed, eBay, Poshmark & more. 280+ brands tracked.">
+    <link rel="canonical" href="https://archivearbitrage.com/">
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Archive Arbitrage — Never Miss an Underpriced Grail">
+    <meta property="og:description" content="Real-time alerts for underpriced archive fashion across 7 platforms. $264K+ in profit found. 280+ brands tracked.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://archivearbitrage.com/">
+    <meta property="og:site_name" content="Archive Arbitrage">
+    <meta property="og:image" content="https://archivearbitrage.com/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Archive Arbitrage — Never Miss an Underpriced Grail">
+    <meta name="twitter:description" content="AI-powered alerts for underpriced archive fashion across 7 platforms. $264K+ in profit found for subscribers.">
+    <meta name="twitter:image" content="https://archivearbitrage.com/og-image.png">
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
     <style>
         :root {
-            --bg: #0a0a0a;
-            --bg-card: #111111;
-            --bg-card-hover: #1a1a1a;
-            --border: #222222;
-            --text: #e5e5e5;
-            --text-muted: #737373;
-            --accent: #f5f5f5;
-            --gold: #d4a853;
-            --fire: #ef4444;
-            --green: #22c55e;
-            --blue: #3b82f6;
+            --bg: #faf9f7;
+            --bg-card: #ffffff;
+            --bg-dark: #0a0a0a;
+            --border: #e5e3de;
+            --border-subtle: #f0eeeb;
+            --text: #111111;
+            --text-muted: #5a5550;
+            --text-light: #8a8580;
+            --accent: #0a0a0a;
+            --gold: #b38728;
+            --gold-light: #d4a853;
+            --gold-glow: rgba(179, 135, 40, 0.4);
+            --fire: #dc2626;
+            --green: #16a34a;
+            --blue: #2563eb;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -30,6 +54,7 @@
             color: var(--text);
             line-height: 1.6;
             -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
         }
 
         .container {
@@ -38,10 +63,40 @@
             padding: 0 24px;
         }
 
-        /* NAV */
+        /* ── SCROLL REVEAL ── */
+        .reveal {
+            opacity: 0;
+            transform: translateY(32px);
+            transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .reveal-delay-1 { transition-delay: 0.1s; }
+        .reveal-delay-2 { transition-delay: 0.2s; }
+        .reveal-delay-3 { transition-delay: 0.3s; }
+        .reveal-delay-4 { transition-delay: 0.4s; }
+
+        /* ── NAV ── */
         nav {
-            padding: 20px 0;
-            border-bottom: 1px solid var(--border);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            padding: 18px 0;
+            background: rgba(250, 249, 247, 0.88);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(229, 227, 222, 0.6);
+            transition: background 0.4s, border-color 0.4s;
+        }
+        nav.nav-hero {
+            background: rgba(10, 10, 10, 0.2);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
         }
         nav .container {
             display: flex;
@@ -49,427 +104,559 @@
             align-items: center;
         }
         .logo {
-            font-size: 18px;
-            font-weight: 700;
-            letter-spacing: -0.5px;
+            font-size: 16px;
+            font-weight: 800;
+            letter-spacing: 3.5px;
+            text-transform: uppercase;
             color: var(--accent);
+            transition: color 0.3s;
         }
-        .logo span { color: var(--text-muted); font-weight: 400; }
+        nav.nav-hero .logo { color: #fff; }
+        .logo span { color: var(--text-light); font-weight: 500; transition: color 0.3s; }
+        nav.nav-hero .logo span { color: rgba(255,255,255,0.4); }
+        .nav-links { display: flex; align-items: center; gap: 32px; }
+        .nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            transition: color 0.2s;
+        }
+        .nav-link:hover { color: var(--text); }
+        nav.nav-hero .nav-link { color: rgba(255,255,255,0.5); }
+        nav.nav-hero .nav-link:hover { color: #fff; }
         .nav-cta {
-            padding: 8px 20px;
-            background: var(--accent);
-            color: var(--bg);
+            padding: 10px 28px;
+            background: var(--gold);
+            color: #fff;
             border: none;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 600;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
             cursor: pointer;
             text-decoration: none;
-            transition: opacity 0.2s;
+            transition: box-shadow 0.3s, transform 0.2s;
+            box-shadow: 0 2px 16px var(--gold-glow);
         }
-        .nav-cta:hover { opacity: 0.85; }
+        .nav-cta:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 24px var(--gold-glow);
+        }
 
-        /* HERO */
+        /* ── HERO ── */
         .hero {
-            padding: 100px 0 80px;
+            position: relative;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             text-align: center;
+            overflow: hidden;
+        }
+        .hero-bg {
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+        }
+        .hero-bg img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center 30%;
+        }
+        .hero-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(
+                180deg,
+                rgba(10, 10, 10, 0.5) 0%,
+                rgba(10, 10, 10, 0.65) 40%,
+                rgba(10, 10, 10, 0.82) 100%
+            );
+            z-index: 1;
+        }
+        .hero-content {
+            position: relative;
+            z-index: 2;
+            padding: 140px 24px 100px;
+            max-width: 780px;
         }
         .hero-badge {
             display: inline-block;
-            padding: 4px 14px;
-            background: rgba(212, 168, 83, 0.1);
-            border: 1px solid rgba(212, 168, 83, 0.3);
-            border-radius: 100px;
-            font-size: 13px;
-            color: var(--gold);
-            margin-bottom: 28px;
-            letter-spacing: 0.5px;
+            padding: 8px 20px;
+            background: rgba(179, 135, 40, 0.1);
+            border: 1px solid rgba(179, 135, 40, 0.25);
+            border-radius: 2px;
+            font-size: 11px;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: var(--gold-light);
+            margin-bottom: 36px;
         }
         .hero h1 {
-            font-size: clamp(36px, 6vw, 64px);
+            font-size: clamp(44px, 8vw, 80px);
             font-weight: 800;
-            letter-spacing: -2px;
-            line-height: 1.05;
-            color: var(--accent);
-            margin-bottom: 20px;
+            letter-spacing: -3px;
+            line-height: 0.95;
+            color: #ffffff;
+            margin-bottom: 28px;
         }
         .hero h1 em {
             font-style: normal;
-            background: linear-gradient(135deg, var(--gold), #e8c36a);
+            background: linear-gradient(135deg, #d4a853, #f5d98a, #b38728);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
         .hero p {
-            font-size: 18px;
-            color: var(--text-muted);
-            max-width: 560px;
-            margin: 0 auto 40px;
-            line-height: 1.7;
+            font-size: 17px;
+            color: rgba(255,255,255,0.55);
+            max-width: 500px;
+            margin: 0 auto 48px;
+            line-height: 1.75;
+            font-weight: 300;
         }
         .hero-cta {
             display: inline-block;
-            padding: 14px 36px;
-            background: var(--accent);
-            color: var(--bg);
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 700;
+            padding: 22px 56px;
+            background: linear-gradient(135deg, #b38728, #d4a853);
+            color: #fff;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
             text-decoration: none;
-            transition: all 0.2s;
+            transition: all 0.3s;
             border: none;
             cursor: pointer;
+            box-shadow: 0 4px 40px var(--gold-glow), 0 0 80px rgba(179, 135, 40, 0.12);
+            animation: ctaGlow 3s ease-in-out infinite;
         }
-        .hero-cta:hover { transform: translateY(-1px); box-shadow: 0 4px 24px rgba(255,255,255,0.1); }
+        @keyframes ctaGlow {
+            0%, 100% { box-shadow: 0 4px 40px var(--gold-glow), 0 0 80px rgba(179, 135, 40, 0.12); }
+            50% { box-shadow: 0 4px 60px rgba(179, 135, 40, 0.55), 0 0 120px rgba(179, 135, 40, 0.2); }
+        }
+        .hero-cta:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 8px 60px rgba(179, 135, 40, 0.6), 0 0 120px rgba(179, 135, 40, 0.25);
+            animation: none;
+        }
         .hero-price {
             display: block;
-            margin-top: 12px;
-            font-size: 14px;
-            color: var(--text-muted);
+            margin-top: 20px;
+            font-size: 13px;
+            color: rgba(255,255,255,0.3);
+            letter-spacing: 1px;
+            font-family: 'Inter', sans-serif;
         }
 
-        /* LIVE DEALS TICKER */
+        /* ── LIVE FEED TICKER ── */
         .ticker {
-            padding: 40px 0;
-            border-top: 1px solid var(--border);
-            border-bottom: 1px solid var(--border);
+            padding: 56px 0;
+            background: var(--bg-dark);
             overflow: hidden;
+            position: relative;
+        }
+        .ticker::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(179, 135, 40, 0.3), transparent);
+        }
+        .ticker::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(179, 135, 40, 0.3), transparent);
+        }
+        .ticker-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 32px;
+        }
+        .ticker-live {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 14px;
+            background: rgba(220, 38, 38, 0.12);
+            border: 1px solid rgba(220, 38, 38, 0.25);
+            border-radius: 2px;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            color: #ef4444;
+        }
+        .ticker-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #ef4444;
+            animation: livePulse 1.5s ease-in-out infinite;
+        }
+        @keyframes livePulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.3; transform: scale(0.7); }
         }
         .ticker-label {
-            text-align: center;
-            font-size: 12px;
+            font-size: 11px;
             text-transform: uppercase;
-            letter-spacing: 2px;
-            color: var(--text-muted);
-            margin-bottom: 20px;
+            letter-spacing: 3px;
+            color: rgba(255,255,255,0.3);
+            font-weight: 600;
         }
         .ticker-track {
             display: flex;
-            gap: 24px;
-            animation: scroll 18s linear infinite;
+            gap: 16px;
+            animation: scroll 30s linear infinite;
         }
+        .ticker-track:hover { animation-play-state: paused; }
         @keyframes scroll {
             0% { transform: translateX(0); }
             100% { transform: translateX(-50%); }
         }
         .deal-card {
             flex-shrink: 0;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 16px 20px;
-            min-width: 280px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-left: 2px solid var(--gold);
+            border-radius: 2px;
+            padding: 18px 22px;
+            min-width: 270px;
+            transition: background 0.3s, border-color 0.3s;
+        }
+        .deal-card:hover {
+            background: rgba(255,255,255,0.07);
+            border-color: rgba(179, 135, 40, 0.4);
+            border-left-color: var(--gold-light);
         }
         .deal-tier {
-            font-size: 12px;
-            font-weight: 600;
-            margin-bottom: 4px;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 6px;
         }
-        .deal-tier.grail { color: var(--gold); }
-        .deal-tier.hot { color: var(--fire); }
-        .deal-tier.solid { color: var(--green); }
+        .deal-tier.grail { color: var(--gold-light); }
+        .deal-tier.hot { color: #ef4444; }
+        .deal-tier.solid { color: #4ade80; }
         .deal-brand {
-            font-size: 15px;
-            font-weight: 700;
-            color: var(--accent);
+            font-size: 14px;
+            font-weight: 800;
+            color: #ffffff;
             margin-bottom: 2px;
+            letter-spacing: 0.5px;
         }
         .deal-title {
-            font-size: 13px;
-            color: var(--text-muted);
-            margin-bottom: 10px;
+            font-size: 12px;
+            color: rgba(255,255,255,0.4);
+            margin-bottom: 14px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            font-family: 'Inter', sans-serif;
         }
         .deal-numbers {
             display: flex;
             justify-content: space-between;
-            font-size: 13px;
+            font-size: 12px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            font-family: 'Inter', sans-serif;
         }
-        .deal-profit { color: var(--green); font-weight: 600; }
-        .deal-margin { color: var(--text-muted); }
-        .deal-blurred {
-            filter: blur(6px);
-            user-select: none;
-            pointer-events: none;
-        }
+        .deal-numbers span:first-child { color: rgba(255,255,255,0.5); }
+        .deal-profit { color: #4ade80; font-weight: 700; font-family: 'Inter', sans-serif !important; }
+        .deal-margin { color: rgba(255,255,255,0.25); }
 
-        /* FEATURES */
-        .features {
-            padding: 80px 0;
-        }
-        .features-header {
-            text-align: center;
-            margin-bottom: 60px;
-        }
-        .features-header h2 {
-            font-size: 32px;
-            font-weight: 700;
-            letter-spacing: -1px;
-            margin-bottom: 12px;
-        }
-        .features-header p {
-            color: var(--text-muted);
-            font-size: 16px;
-        }
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 20px;
-        }
-        .feature {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 28px;
-            transition: border-color 0.2s;
-        }
-        .feature:hover { border-color: #333; }
-        .feature-icon {
-            font-size: 28px;
-            margin-bottom: 16px;
-        }
-        .feature h3 {
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
-        .feature p {
-            font-size: 14px;
-            color: var(--text-muted);
-            line-height: 1.6;
-        }
-
-        /* STATS */
+        /* ── STATS ── */
         .stats {
-            padding: 60px 0;
-            border-top: 1px solid var(--border);
+            padding: 80px 0;
+            background: var(--bg);
         }
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 20px;
+            gap: 24px;
             text-align: center;
         }
         .stat-num {
-            font-size: 36px;
-            font-weight: 800;
-            color: var(--accent);
-            letter-spacing: -1px;
-        }
-        .stat-label {
-            font-size: 13px;
-            color: var(--text-muted);
-            margin-top: 4px;
-        }
-
-        /* HOW IT WORKS */
-        .how {
-            padding: 80px 0;
-            border-top: 1px solid var(--border);
-        }
-        .how h2 {
-            font-size: 32px;
-            font-weight: 700;
-            letter-spacing: -1px;
-            text-align: center;
-            margin-bottom: 60px;
-        }
-        .steps {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 32px;
-        }
-        .step {
-            text-align: center;
-        }
-        .step-num {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-            font-weight: 700;
-            margin-bottom: 16px;
-        }
-        .step h3 {
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
-        .step p {
-            font-size: 14px;
-            color: var(--text-muted);
-        }
-
-        /* PRICING */
-        .pricing {
-            padding: 80px 0;
-            border-top: 1px solid var(--border);
-        }
-        .pricing h2 {
-            font-size: 32px;
-            font-weight: 700;
-            letter-spacing: -1px;
-            text-align: center;
-            margin-bottom: 12px;
-        }
-        .pricing > .container > p {
-            text-align: center;
-            color: var(--text-muted);
-            margin-bottom: 48px;
-        }
-        .price-card {
-            max-width: 420px;
-            margin: 0 auto;
-            background: var(--bg-card);
-            border: 1px solid var(--gold);
-            border-radius: 16px;
-            padding: 40px;
-            text-align: center;
-        }
-        .price-card h3 {
-            font-size: 20px;
-            font-weight: 700;
-            margin-bottom: 8px;
-        }
-        .price-amount {
             font-size: 48px;
             font-weight: 800;
             color: var(--accent);
             letter-spacing: -2px;
         }
-        .price-amount span {
-            font-size: 18px;
-            font-weight: 400;
-            color: var(--text-muted);
-        }
-        .price-features {
-            list-style: none;
-            text-align: left;
-            margin: 28px 0;
-        }
-        .price-features li {
-            padding: 8px 0;
-            font-size: 14px;
-            color: var(--text);
-            border-bottom: 1px solid var(--border);
-        }
-        .price-features li:last-child { border: none; }
-        .price-features li::before {
-            content: "✓ ";
-            color: var(--green);
-            font-weight: 700;
-        }
-        .price-cta {
-            display: block;
-            width: 100%;
-            padding: 14px;
-            background: var(--accent);
-            color: var(--bg);
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 700;
-            cursor: pointer;
-            text-decoration: none;
-            transition: opacity 0.2s;
-        }
-        .price-cta:hover { opacity: 0.85; }
-        .price-note {
-            font-size: 13px;
-            color: var(--text-muted);
-            margin-top: 12px;
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-light);
+            margin-top: 6px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            font-family: 'Inter', sans-serif;
         }
 
-        /* TESTIMONIALS */
-        .testimonials {
-            padding: 80px 0;
+        /* ── DEAL ALERT SHOWCASE ── */
+        .deal-showcase {
+            padding: 120px 0;
+            background: linear-gradient(180deg, var(--bg) 0%, #f3f1ed 100%);
             border-top: 1px solid var(--border);
         }
-        .testimonials h2 {
-            font-size: 32px;
-            font-weight: 700;
-            letter-spacing: -1px;
+        .deal-showcase-card {
+            max-width: 480px;
+            margin: 0 auto;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 40px;
+            font-family: 'Inter', monospace;
+            box-shadow: 0 16px 80px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.03);
+            position: relative;
+            overflow: hidden;
+        }
+        .deal-showcase-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--fire), var(--gold), var(--green));
+        }
+
+        /* ── FEATURES ── */
+        .features {
+            padding: 120px 0;
+        }
+        .section-header {
             text-align: center;
-            margin-bottom: 48px;
+            margin-bottom: 72px;
+        }
+        .section-header h2 {
+            font-size: 40px;
+            font-weight: 800;
+            letter-spacing: -2px;
+            margin-bottom: 14px;
+            color: var(--accent);
+        }
+        .section-header p {
+            color: var(--text-muted);
+            font-size: 16px;
+            max-width: 460px;
+            margin: 0 auto;
+            font-weight: 300;
+        }
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+        }
+        .feature {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 36px;
+            transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s;
+        }
+        .feature:hover {
+            border-color: rgba(179, 135, 40, 0.3);
+            box-shadow: 0 8px 40px rgba(179, 135, 40, 0.08);
+            transform: translateY(-3px);
+        }
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 4px;
+            background: rgba(179, 135, 40, 0.06);
+            border: 1px solid rgba(179, 135, 40, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            margin-bottom: 24px;
+        }
+        .feature h3 {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            letter-spacing: -0.3px;
+        }
+        .feature p {
+            font-size: 14px;
+            color: var(--text-muted);
+            line-height: 1.7;
+            font-weight: 300;
+        }
+
+        /* ── HOW IT WORKS ── */
+        .how {
+            padding: 120px 0;
+            border-top: 1px solid var(--border);
+        }
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 48px;
+        }
+        .step { text-align: center; }
+        .step-num {
+            width: 52px;
+            height: 52px;
+            border-radius: 2px;
+            background: var(--accent);
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: 800;
+            margin-bottom: 24px;
+        }
+        .step h3 {
+            font-size: 17px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            letter-spacing: -0.3px;
+        }
+        .step p {
+            font-size: 14px;
+            color: var(--text-muted);
+            line-height: 1.7;
+            font-weight: 300;
+        }
+
+        /* ── RECENT WINS ── */
+        .wins {
+            padding: 120px 0;
+            border-top: 1px solid var(--border);
+        }
+        .wins-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+        }
+        .win-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 32px;
+            text-align: center;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .win-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.06);
+        }
+        .win-brand {
+            font-size: 10px;
+            color: var(--gold);
+            font-weight: 800;
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+        .win-item {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            font-weight: 300;
+        }
+        .win-math {
+            font-size: 12px;
+            color: var(--text-light);
+            font-family: 'Inter', sans-serif;
+        }
+        .win-profit {
+            font-size: 36px;
+            font-weight: 800;
+            color: var(--green);
+            margin-top: 10px;
+            letter-spacing: -1.5px;
+        }
+
+        /* ── PLATFORMS ── */
+        .platforms {
+            padding: 72px 0;
+            border-top: 1px solid var(--border);
+            text-align: center;
+        }
+        .platforms-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            color: var(--text-light);
+            margin-bottom: 32px;
+            font-weight: 600;
+        }
+        .platforms-list {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 40px;
+            font-size: 16px;
+            font-weight: 700;
+            color: #c5c0bb;
+            letter-spacing: 0.5px;
+        }
+        .platforms-list span:last-child { color: var(--gold); }
+
+        /* ── TESTIMONIALS ── */
+        .testimonials {
+            padding: 120px 0;
+            border-top: 1px solid var(--border);
         }
         .testimonial-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
+            gap: 16px;
         }
         .testimonial {
             background: var(--bg-card);
             border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 28px;
+            border-radius: 4px;
+            padding: 36px;
+            transition: transform 0.3s;
+        }
+        .testimonial:hover { transform: translateY(-3px); }
+        .testimonial-profit {
+            font-size: 32px;
+            font-weight: 800;
+            color: var(--green);
+            margin-bottom: 16px;
+            letter-spacing: -1px;
         }
         .testimonial-text {
             font-size: 15px;
-            line-height: 1.7;
-            margin-bottom: 16px;
+            line-height: 1.75;
+            margin-bottom: 18px;
             font-style: italic;
             color: var(--text);
+            font-weight: 300;
         }
         .testimonial-author {
             font-size: 13px;
             color: var(--text-muted);
+            font-weight: 400;
         }
-        .testimonial-author strong {
-            color: var(--text);
-        }
+        .testimonial-author strong { color: var(--text); font-weight: 600; }
 
-        /* FOOTER */
-        footer {
-            padding: 40px 0;
+        /* ── COMPARISON TABLE ── */
+        .compare {
+            padding: 120px 0;
             border-top: 1px solid var(--border);
-            text-align: center;
-            color: var(--text-muted);
-            font-size: 13px;
         }
-
-        /* STICKY CTA */
-        .sticky-cta {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: rgba(10, 10, 10, 0.95);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border-top: 1px solid var(--border);
-            padding: 12px 24px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 16px;
-            z-index: 1000;
-            transform: translateY(100%);
-            transition: transform 0.15s ease;
-        }
-        .sticky-cta.visible { transform: translateY(0); }
-        .sticky-cta-text {
-            font-size: 14px;
-            color: var(--text-muted);
-        }
-        .sticky-cta-text strong { color: var(--green); }
-        .sticky-cta a {
-            padding: 10px 24px;
-            background: var(--accent);
-            color: var(--bg);
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 700;
-            text-decoration: none;
-            white-space: nowrap;
-        }
-
-        /* COMPARISON TABLE */
         .compare-table {
             width: 100%;
             border-collapse: collapse;
@@ -477,15 +664,19 @@
         .compare-table th {
             padding: 16px 20px;
             text-align: left;
-            font-size: 14px;
-            font-weight: 600;
-            border-bottom: 2px solid var(--border);
+            font-size: 13px;
+            font-weight: 700;
+            font-family: 'Inter', sans-serif;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            border-bottom: 2px solid var(--accent);
         }
         .compare-table td {
-            padding: 14px 20px;
+            padding: 16px 20px;
             font-size: 14px;
             border-bottom: 1px solid var(--border);
             color: var(--text-muted);
+            font-weight: 300;
         }
         .compare-table tr td:last-child {
             color: var(--green);
@@ -495,55 +686,405 @@
             color: var(--fire);
         }
 
-        /* ROI CALC */
+        /* ── ROI CALCULATOR ── */
+        .roi {
+            padding: 120px 0;
+            border-top: 1px solid var(--border);
+        }
         .roi-card {
-            background: linear-gradient(135deg, rgba(34, 197, 94, 0.05), rgba(212, 168, 83, 0.05));
-            border: 1px solid rgba(34, 197, 94, 0.2);
-            border-radius: 16px;
-            padding: 40px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 52px;
             text-align: center;
             max-width: 500px;
             margin: 0 auto;
+            box-shadow: 0 4px 32px rgba(0,0,0,0.04);
         }
 
-        /* RESPONSIVE */
+        /* ── FAQ ── */
+        .faq {
+            padding: 120px 0;
+            border-top: 1px solid var(--border);
+        }
+        .faq-item {
+            border-bottom: 1px solid var(--border);
+            padding: 28px 0;
+        }
+        .faq-item:last-child { border: none; }
+        .faq-item h3 {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            cursor: pointer;
+            letter-spacing: -0.2px;
+        }
+        .faq-item p {
+            color: var(--text-muted);
+            font-size: 14px;
+            line-height: 1.75;
+            font-weight: 300;
+        }
+
+        /* ── PRICING ── */
+        .pricing {
+            padding: 120px 0;
+            border-top: 1px solid var(--border);
+        }
+        .price-card {
+            max-width: 420px;
+            margin: 0 auto;
+            background: var(--bg-card);
+            border: 1px solid var(--gold);
+            border-radius: 4px;
+            padding: 48px;
+            text-align: center;
+            box-shadow: 0 8px 48px rgba(179, 135, 40, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        .price-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--gold), var(--gold-light), var(--gold));
+        }
+        .price-card h3 {
+            font-size: 18px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .price-amount {
+            font-size: 56px;
+            font-weight: 800;
+            color: var(--accent);
+            letter-spacing: -3px;
+        }
+        .price-amount span {
+            font-size: 18px;
+            font-weight: 400;
+            color: var(--text-muted);
+            letter-spacing: 0;
+        }
+        .price-features {
+            list-style: none;
+            text-align: left;
+            margin: 36px 0;
+        }
+        .price-features li {
+            padding: 12px 0;
+            font-size: 14px;
+            color: var(--text);
+            border-bottom: 1px solid var(--border-subtle);
+            font-weight: 400;
+        }
+        .price-features li:last-child { border: none; }
+        .price-features li::before {
+            content: "\2713  ";
+            color: var(--green);
+            font-weight: 700;
+        }
+        .btn-gold {
+            display: block;
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, #b38728, #d4a853);
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 800;
+            font-family: 'Inter', sans-serif;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            cursor: pointer;
+            text-decoration: none;
+            text-align: center;
+            transition: all 0.3s;
+            box-shadow: 0 4px 24px var(--gold-glow);
+            animation: ctaGlow 3s ease-in-out infinite;
+        }
+        .btn-gold:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 40px rgba(179, 135, 40, 0.5);
+            animation: none;
+        }
+        .price-note {
+            font-size: 13px;
+            color: var(--text-light);
+            margin-top: 16px;
+        }
+
+        /* ── FREE CHANNEL ── */
+        .free-channel {
+            padding: 80px 0;
+            border-top: 1px solid var(--border);
+            text-align: center;
+        }
+        .btn-telegram {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: #2AABEE;
+            color: white;
+            padding: 18px 40px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: 800;
+            font-size: 14px;
+            font-family: 'Inter', sans-serif;
+            letter-spacing: 1px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 20px rgba(42, 171, 238, 0.25);
+        }
+        .btn-telegram:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(42, 171, 238, 0.35);
+        }
+
+        /* ── EMAIL CAPTURE ── */
+        .email-capture {
+            padding: 80px 0;
+            border-top: 1px solid var(--border);
+            background: linear-gradient(180deg, rgba(179, 135, 40, 0.03) 0%, transparent 100%);
+        }
+        .email-form {
+            display: flex;
+            gap: 10px;
+            max-width: 460px;
+            margin: 0 auto;
+        }
+        .email-form input {
+            flex: 1;
+            padding: 16px 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text);
+            font-size: 15px;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .email-form input:focus { border-color: var(--gold); }
+        .email-form button {
+            padding: 16px 28px;
+            background: var(--gold);
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 800;
+            font-family: 'Inter', sans-serif;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: opacity 0.2s;
+        }
+        .email-form button:hover { opacity: 0.85; }
+
+        /* ── FOOTER ── */
+        footer {
+            padding: 56px 0;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            color: var(--text-light);
+            font-size: 13px;
+        }
+        footer a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        footer a:hover { color: var(--text); }
+
+        /* ── STICKY CTA ── */
+        .sticky-cta {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.94);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid var(--border);
+            padding: 14px 24px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            z-index: 1000;
+            transform: translateY(100%);
+            transition: transform 0.25s ease;
+            box-shadow: 0 -4px 32px rgba(0,0,0,0.06);
+        }
+        .sticky-cta.visible { transform: translateY(0); }
+        .sticky-cta-text {
+            font-size: 14px;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+        .sticky-cta-text strong { color: var(--green); font-weight: 700; }
+        .sticky-cta a {
+            padding: 12px 28px;
+            background: linear-gradient(135deg, #b38728, #d4a853);
+            color: #fff;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 800;
+            font-family: 'Inter', sans-serif;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            text-decoration: none;
+            white-space: nowrap;
+            box-shadow: 0 2px 16px var(--gold-glow);
+            transition: box-shadow 0.2s;
+        }
+        .sticky-cta a:hover {
+            box-shadow: 0 4px 24px rgba(179, 135, 40, 0.5);
+        }
+
+        /* ── RESPONSIVE ── */
         @media (max-width: 768px) {
-            .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 24px; }
-            .steps { grid-template-columns: 1fr; gap: 24px; }
-            .hero { padding: 60px 0 40px; }
+            .hero h1 { letter-spacing: -2px; }
+            .hero-content { padding: 110px 20px 70px; }
+            .hero-cta { padding: 18px 40px; font-size: 12px; letter-spacing: 2px; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 32px; }
+            .stat-num { font-size: 40px; }
+            .steps { grid-template-columns: 1fr; gap: 36px; }
+            .wins-grid { grid-template-columns: repeat(2, 1fr); }
+            .nav-links { gap: 16px; }
+            .nav-link { display: none; }
             .sticky-cta-text { display: none; }
+            .compare-table { font-size: 13px; }
+            .compare-table td, .compare-table th { padding: 12px 14px; }
+            .email-form { flex-direction: column; }
+            .section-header h2 { font-size: 32px; letter-spacing: -1.5px; }
+            .features, .how, .wins, .testimonials, .compare, .roi, .faq, .pricing {
+                padding: 80px 0;
+            }
+            .deal-showcase { padding: 80px 0; }
+        }
+
+        @media (max-width: 480px) {
+            .wins-grid { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 24px; }
+            .testimonial-grid { grid-template-columns: 1fr; }
+            .hero h1 { letter-spacing: -1.5px; }
+            .section-header h2 { font-size: 28px; }
         }
     </style>
+
+    <!-- FAQ Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How accurate is the pricing?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Every deal is priced against recent Grailed sold data using time-weighted averaging. We adjust for condition, size, and season. High confidence means 5+ verified comps."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How fast do deals sell?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The best deals sell within minutes. We send alerts the moment our system identifies them. Enable push notifications on Telegram for instant delivery."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How do you verify authenticity?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Every item goes through a 7-signal authentication system: text analysis, price plausibility, seller reputation, listing quality, image analysis, brand-specific markers, and cross-reference detection. Items scoring below 65% are blocked."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What platforms do you scan?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Grailed, eBay, Poshmark, Depop, Mercari, Vinted, and Japanese sources including Yahoo Auctions JP, Mercari JP, and Rakuma."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I cancel anytime?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. No contracts, no commitments. Cancel anytime from your Stripe account."
+          }
+        }
+      ]
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Archive Arbitrage",
+      "applicationCategory": "BusinessApplication",
+      "description": "AI-powered alerts for underpriced archive fashion across 7 resale platforms",
+      "offers": {
+        "@type": "Offer",
+        "price": "39",
+        "priceCurrency": "USD"
+      }
+    }
+    </script>
 </head>
 <body>
 
-<nav>
+<nav id="mainNav" class="nav-hero">
     <div class="container">
         <div class="logo">ARCHIVE <span>ARBITRAGE</span></div>
-        <a href="https://app.archivearbitrage.com/signup" class="nav-cta">Get Started</a>
+        <div class="nav-links">
+            <a href="/guides/" class="nav-link">Price Guides</a>
+            <a href="/tools/resale-calculator" class="nav-link">Calculator</a>
+            <a href="https://app.archivearbitrage.com/signup" class="nav-cta">Get Started</a>
+        </div>
     </div>
 </nav>
 
 <section class="hero">
-    <div class="container">
-        <div class="hero-badge">🏴 270+ ARCHIVE BRANDS TRACKED</div>
-        <h1>Never miss an<br>underpriced <em>grail</em> again</h1>
-        <p>AI-powered alerts for underpriced archive fashion across Grailed, eBay, Poshmark and more. Know the real price before anyone else.</p>
-        <a href="https://app.archivearbitrage.com/signup" class="hero-cta">Start Finding Deals</a>
-        <span class="hero-price">$39/mo · Cancel anytime</span>
+    <div class="hero-bg">
+        <img src="archiveam32.webp" alt="Archive fashion rack" loading="eager" fetchpriority="high">
+        <div class="hero-overlay"></div>
+    </div>
+    <div class="hero-content">
+        <div class="hero-badge reveal">280+ ARCHIVE BRANDS TRACKED</div>
+        <h1 class="reveal reveal-delay-1">Never miss an<br>underpriced <em>grail</em></h1>
+        <p class="reveal reveal-delay-2">AI-powered alerts for underpriced archive fashion across Grailed, eBay, Poshmark and more. Know the real price before anyone else.</p>
+        <div class="reveal reveal-delay-3">
+            <a href="https://app.archivearbitrage.com/signup" class="hero-cta">Start Finding Deals</a>
+            <span class="hero-price">$39/mo &middot; Cancel anytime &middot; 7-day free trial</span>
+        </div>
     </div>
 </section>
 
 <section class="ticker">
-    <div class="ticker-label">Recent Deals Found</div>
-    <div class="ticker-track" id="ticker">
-        <!-- Deals injected by JS -->
+    <div class="ticker-header">
+        <div class="ticker-live"><span class="ticker-dot"></span> LIVE</div>
+        <span class="ticker-label">Recent Deals Found</span>
     </div>
+    <div class="ticker-track" id="ticker"></div>
 </section>
 
 <section class="stats">
     <div class="container">
-        <div class="stats-grid">
+        <div class="stats-grid reveal">
             <div>
                 <div class="stat-num">1,000+</div>
                 <div class="stat-label">Deals Found</div>
@@ -564,80 +1105,80 @@
     </div>
 </section>
 
-<!-- REAL DEAL EXAMPLE -->
-<section style="padding: 80px 0; border-top: 1px solid var(--border);">
+<!-- DEAL ALERT SHOWCASE -->
+<section class="deal-showcase">
     <div class="container">
-        <div style="text-align: center; margin-bottom: 48px;">
-            <h2 style="font-size: 32px; font-weight: 700; letter-spacing: -1px; margin-bottom: 12px;">This is what a deal alert looks like</h2>
-            <p style="color: var(--text-muted);">Every alert includes comp data, auth scoring, and a direct link to buy.</p>
+        <div class="section-header reveal">
+            <h2>This is what a deal alert looks like</h2>
+            <p>Every alert includes comp data, auth scoring, and a direct link to buy.</p>
         </div>
-        <div style="max-width: 500px; margin: 0 auto; background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 32px; font-family: monospace;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                <span style="color: var(--fire); font-weight: 700; font-size: 14px;">🔥🔥🔥 FIRE DEAL</span>
-                <span style="color: var(--text-muted); font-size: 12px;">Score: 78/100</span>
+        <div class="deal-showcase-card reveal reveal-delay-1">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;">
+                <span style="color: var(--fire); font-weight: 800; font-size: 11px; font-family: 'Inter', sans-serif; letter-spacing: 2px; text-transform: uppercase;">Fire Deal</span>
+                <span style="color: var(--text-light); font-size: 11px; font-family: 'Inter', sans-serif; letter-spacing: 1px;">Score: 78/100</span>
             </div>
-            <div style="font-size: 18px; font-weight: 700; color: var(--accent); margin-bottom: 4px; font-family: Inter, sans-serif;">DIOR HOMME</div>
-            <div style="font-size: 14px; color: var(--text-muted); margin-bottom: 20px; font-family: Inter, sans-serif;">Hedi Era FW07 Waxed Jeans</div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+            <div style="font-size: 22px; font-weight: 800; color: var(--accent); margin-bottom: 4px; font-family: 'Inter', sans-serif; letter-spacing: 0.5px;">DIOR HOMME</div>
+            <div style="font-size: 14px; color: var(--text-muted); margin-bottom: 28px; font-weight: 300;">Hedi Era FW07 Waxed Jeans</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 28px;">
                 <div>
-                    <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px;">Listed</div>
-                    <div style="font-size: 28px; font-weight: 800; color: var(--accent); font-family: Inter, sans-serif;">$265</div>
-                    <div style="font-size: 12px; color: var(--text-muted);">on Grailed</div>
+                    <div style="font-size: 10px; text-transform: uppercase; color: var(--text-light); margin-bottom: 6px; font-family: 'Inter', sans-serif; letter-spacing: 2px; font-weight: 600;">Listed</div>
+                    <div style="font-size: 36px; font-weight: 800; color: var(--accent); font-family: 'Inter', sans-serif; letter-spacing: -2px;">$265</div>
+                    <div style="font-size: 12px; color: var(--text-light); font-weight: 300;">on Grailed</div>
                 </div>
                 <div>
-                    <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px;">Market Value</div>
-                    <div style="font-size: 28px; font-weight: 800; color: var(--gold); font-family: Inter, sans-serif;">$1,169</div>
-                    <div style="font-size: 12px; color: var(--text-muted);">12 sold comps</div>
+                    <div style="font-size: 10px; text-transform: uppercase; color: var(--text-light); margin-bottom: 6px; font-family: 'Inter', sans-serif; letter-spacing: 2px; font-weight: 600;">Market Value</div>
+                    <div style="font-size: 36px; font-weight: 800; color: var(--gold); font-family: 'Inter', sans-serif; letter-spacing: -2px;">$1,169</div>
+                    <div style="font-size: 12px; color: var(--text-light); font-weight: 300;">12 sold comps</div>
                 </div>
             </div>
-            <div style="background: rgba(34, 197, 94, 0.08); border: 1px solid rgba(34, 197, 94, 0.2); border-radius: 8px; padding: 12px 16px; text-align: center; margin-bottom: 16px;">
-                <div style="font-size: 12px; text-transform: uppercase; color: var(--green); margin-bottom: 2px;">Est. Profit</div>
-                <div style="font-size: 32px; font-weight: 800; color: var(--green); font-family: Inter, sans-serif;">$904</div>
+            <div style="background: rgba(22, 163, 74, 0.04); border: 1px solid rgba(22, 163, 74, 0.1); border-radius: 4px; padding: 20px; text-align: center; margin-bottom: 24px;">
+                <div style="font-size: 10px; text-transform: uppercase; color: var(--green); margin-bottom: 4px; font-family: 'Inter', sans-serif; letter-spacing: 2px; font-weight: 700;">Est. Profit</div>
+                <div style="font-size: 40px; font-weight: 800; color: var(--green); font-family: 'Inter', sans-serif; letter-spacing: -2px;">$904</div>
             </div>
-            <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); padding-top: 12px; border-top: 1px solid var(--border);">
-                <span>Auth: 🟢🟢🟢🟢⚪ 82%</span>
+            <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-light); padding-top: 18px; border-top: 1px solid var(--border-subtle); letter-spacing: 0.5px;">
+                <span>Auth: 82%</span>
                 <span>Demand: HOT</span>
                 <span>Season: FW07</span>
             </div>
         </div>
-        <p style="text-align: center; color: var(--text-muted); font-size: 13px; margin-top: 16px;">Real deal from our pipeline. Subscribers got this in real-time.</p>
+        <p style="text-align: center; color: var(--text-light); font-size: 13px; margin-top: 24px; font-weight: 300;">Real deal from our pipeline. Subscribers got this in real-time.</p>
     </div>
 </section>
 
 <section class="features">
     <div class="container">
-        <div class="features-header">
+        <div class="section-header reveal">
             <h2>Built for serious resellers</h2>
             <p>The tools you need to find, price, and flip archive fashion profitably.</p>
         </div>
         <div class="features-grid">
-            <div class="feature">
-                <div class="feature-icon">⚡</div>
+            <div class="feature reveal reveal-delay-1">
+                <div class="feature-icon">&#9889;</div>
                 <h3>Real-Time Alerts</h3>
                 <p>Instant Telegram notifications when underpriced pieces hit the market. Faster than manually checking listings.</p>
             </div>
-            <div class="feature">
-                <div class="feature-icon">🧠</div>
+            <div class="feature reveal reveal-delay-2">
+                <div class="feature-icon">&#129504;</div>
                 <h3>AI Pricing Engine</h3>
                 <p>Comp-based pricing from thousands of sold listings. Season detection, demand scoring, and confidence bands.</p>
             </div>
-            <div class="feature">
-                <div class="feature-icon">📊</div>
+            <div class="feature reveal reveal-delay-3">
+                <div class="feature-icon">&#128200;</div>
                 <h3>Cross-Platform Arbitrage</h3>
                 <p>Find price gaps between Grailed, eBay, and Poshmark. Buy low on one platform, sell high on another.</p>
             </div>
-            <div class="feature">
-                <div class="feature-icon">🔥</div>
+            <div class="feature reveal reveal-delay-1">
+                <div class="feature-icon">&#128293;</div>
                 <h3>Iconic Season Detection</h3>
                 <p>100+ iconic collections recognized — Raf AW01, Helmut Astro Biker, Number (N)ine High Streets, and more.</p>
             </div>
-            <div class="feature">
-                <div class="feature-icon">🏷</div>
+            <div class="feature reveal reveal-delay-2">
+                <div class="feature-icon">&#127991;</div>
                 <h3>Custom Filters</h3>
                 <p>Set your brands, sizes, and minimum profit. Only get alerts that match what you actually buy and sell.</p>
             </div>
-            <div class="feature">
-                <div class="feature-icon">🛡</div>
+            <div class="feature reveal reveal-delay-3">
+                <div class="feature-icon">&#128737;</div>
                 <h3>Replica Detection</h3>
                 <p>Built-in authenticity screening filters out replicas and suspicious listings before they reach you.</p>
             </div>
@@ -647,21 +1188,23 @@
 
 <section class="how">
     <div class="container">
-        <h2>How it works</h2>
+        <div class="section-header reveal">
+            <h2>How it works</h2>
+        </div>
         <div class="steps">
-            <div class="step">
+            <div class="step reveal reveal-delay-1">
                 <div class="step-num">1</div>
-                <h3>Subscribe & Set Filters</h3>
+                <h3>Subscribe &amp; Set Filters</h3>
                 <p>Pick your brands and sizes. Set your minimum profit threshold. Takes 30 seconds.</p>
             </div>
-            <div class="step">
+            <div class="step reveal reveal-delay-2">
                 <div class="step-num">2</div>
                 <h3>Get Instant Alerts</h3>
                 <p>We scan marketplaces 24/7 and push deals to your Telegram the moment we find them.</p>
             </div>
-            <div class="step">
+            <div class="step reveal reveal-delay-3">
                 <div class="step-num">3</div>
-                <h3>Buy & Flip</h3>
+                <h3>Buy &amp; Flip</h3>
                 <p>Click the link, buy the piece, list it at market price. Average margin: 48%.</p>
             </div>
         </div>
@@ -669,54 +1212,54 @@
 </section>
 
 <!-- RECENT WINS -->
-<section style="padding: 80px 0; border-top: 1px solid var(--border);">
+<section class="wins">
     <div class="container">
-        <div style="text-align: center; margin-bottom: 48px;">
-            <h2 style="font-size: 32px; font-weight: 700; letter-spacing: -1px; margin-bottom: 12px;">Recent wins from subscribers</h2>
-            <p style="color: var(--text-muted);">Real profits from real deals found by our system.</p>
+        <div class="section-header reveal">
+            <h2>Recent wins from subscribers</h2>
+            <p>Real profits from real deals found by our system.</p>
         </div>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
-            <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; text-align: center;">
-                <div style="font-size: 13px; color: var(--gold); font-weight: 600; margin-bottom: 8px;">RICK OWENS</div>
-                <div style="font-size: 14px; color: var(--text-muted); margin-bottom: 12px;">DRKSHDW Jumbo Lace</div>
-                <div style="font-size: 12px; color: var(--text-muted);">Buy: $215 → Sell: $599</div>
-                <div style="font-size: 28px; font-weight: 800; color: var(--green); margin-top: 8px;">+$384</div>
+        <div class="wins-grid">
+            <div class="win-card reveal reveal-delay-1">
+                <div class="win-brand">RICK OWENS</div>
+                <div class="win-item">DRKSHDW Jumbo Lace</div>
+                <div class="win-math">Buy: $215 &rarr; Sell: $599</div>
+                <div class="win-profit">+$384</div>
             </div>
-            <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; text-align: center;">
-                <div style="font-size: 13px; color: var(--gold); font-weight: 600; margin-bottom: 8px;">DIOR HOMME</div>
-                <div style="font-size: 14px; color: var(--text-muted); margin-bottom: 12px;">Hedi Era Waxed Jeans</div>
-                <div style="font-size: 12px; color: var(--text-muted);">Buy: $265 → Sell: $1,169</div>
-                <div style="font-size: 28px; font-weight: 800; color: var(--green); margin-top: 8px;">+$904</div>
+            <div class="win-card reveal reveal-delay-2">
+                <div class="win-brand">DIOR HOMME</div>
+                <div class="win-item">Hedi Era Waxed Jeans</div>
+                <div class="win-math">Buy: $265 &rarr; Sell: $1,169</div>
+                <div class="win-profit">+$904</div>
             </div>
-            <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; text-align: center;">
-                <div style="font-size: 13px; color: var(--gold); font-weight: 600; margin-bottom: 8px;">RAF SIMONS</div>
-                <div style="font-size: 14px; color: var(--text-muted); margin-bottom: 12px;">Archive Denim Jacket</div>
-                <div style="font-size: 12px; color: var(--text-muted);">Buy: $197 → Sell: $599</div>
-                <div style="font-size: 28px; font-weight: 800; color: var(--green); margin-top: 8px;">+$402</div>
+            <div class="win-card reveal reveal-delay-3">
+                <div class="win-brand">RAF SIMONS</div>
+                <div class="win-item">Archive Denim Jacket</div>
+                <div class="win-math">Buy: $197 &rarr; Sell: $599</div>
+                <div class="win-profit">+$402</div>
             </div>
-            <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; text-align: center;">
-                <div style="font-size: 13px; color: var(--gold); font-weight: 600; margin-bottom: 8px;">GUIDI</div>
-                <div style="font-size: 14px; color: var(--text-muted); margin-bottom: 12px;">Leather Boots</div>
-                <div style="font-size: 12px; color: var(--text-muted);">Buy: $233 → Sell: $499</div>
-                <div style="font-size: 28px; font-weight: 800; color: var(--green); margin-top: 8px;">+$266</div>
+            <div class="win-card reveal reveal-delay-4">
+                <div class="win-brand">GUIDI</div>
+                <div class="win-item">Leather Boots</div>
+                <div class="win-math">Buy: $233 &rarr; Sell: $499</div>
+                <div class="win-profit">+$266</div>
             </div>
         </div>
-        <p style="text-align: center; color: var(--text-muted); font-size: 13px; margin-top: 20px;">All prices verified against Grailed sold comps. Profits calculated after platform fees.</p>
+        <p style="text-align: center; color: var(--text-light); font-size: 13px; margin-top: 28px; font-weight: 300;" class="reveal">All prices verified against Grailed sold comps. Profits calculated after platform fees.</p>
     </div>
 </section>
 
 <!-- PLATFORMS -->
-<section style="padding: 60px 0; border-top: 1px solid var(--border);">
-    <div class="container" style="text-align: center;">
-        <p style="font-size: 13px; text-transform: uppercase; letter-spacing: 2px; color: var(--text-muted); margin-bottom: 24px;">Platforms we scan 24/7</p>
-        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 32px; color: #555; font-size: 18px; font-weight: 600;">
+<section class="platforms reveal">
+    <div class="container">
+        <p class="platforms-label">Platforms we scan 24/7</p>
+        <div class="platforms-list">
             <span>Grailed</span>
             <span>eBay</span>
             <span>Poshmark</span>
             <span>Depop</span>
             <span>Mercari</span>
             <span>Vinted</span>
-            <span style="color: var(--gold);">Yahoo JP</span>
+            <span>Yahoo JP</span>
         </div>
     </div>
 </section>
@@ -724,33 +1267,37 @@
 <!-- TESTIMONIALS -->
 <section class="testimonials">
     <div class="container">
-        <h2>What resellers are saying</h2>
+        <div class="section-header reveal">
+            <h2>What resellers are saying</h2>
+        </div>
         <div class="testimonial-grid">
-            <div class="testimonial">
-                <div style="color: var(--green); font-size: 24px; font-weight: 800; margin-bottom: 12px;">+$780</div>
+            <div class="testimonial reveal reveal-delay-1">
+                <div class="testimonial-profit">+$780</div>
                 <div class="testimonial-text">"Found a Helmut Lang Astro Biker listed at $400 on Poshmark — market value was $1,200+. Paid for a year of the service with one flip."</div>
-                <div class="testimonial-author"><strong>@archiveflips</strong> · Full-time reseller</div>
+                <div class="testimonial-author"><strong>@archiveflips</strong> &middot; Full-time reseller</div>
             </div>
-            <div class="testimonial">
-                <div style="color: var(--green); font-size: 24px; font-weight: 800; margin-bottom: 12px;">Saved $600</div>
+            <div class="testimonial reveal reveal-delay-2">
+                <div class="testimonial-profit">Saved $600</div>
                 <div class="testimonial-text">"The season detection is insane. It told me my Raf AW03 piece was worth 3x what I was about to list it for. Literally saved me $600."</div>
-                <div class="testimonial-author"><strong>@grailedgod</strong> · Archive collector</div>
+                <div class="testimonial-author"><strong>@grailedgod</strong> &middot; Archive collector</div>
             </div>
-            <div class="testimonial">
-                <div style="color: var(--green); font-size: 24px; font-weight: 800; margin-bottom: 12px;">4h → 10min</div>
+            <div class="testimonial reveal reveal-delay-3">
+                <div class="testimonial-profit">4h &rarr; 10min</div>
                 <div class="testimonial-text">"I was spending 3-4 hours a day manually scanning Grailed. Now I get the best deals pushed to my phone in seconds. More flips, less time."</div>
-                <div class="testimonial-author"><strong>@jparchive</strong> · Part-time reseller</div>
+                <div class="testimonial-author"><strong>@jparchive</strong> &middot; Part-time reseller</div>
             </div>
         </div>
     </div>
 </section>
 
-<!-- COMPARISON: Manual vs. Archive Arbitrage -->
-<section style="padding: 80px 0; border-top: 1px solid var(--border);">
+<!-- COMPARISON -->
+<section class="compare">
     <div class="container" style="max-width: 700px;">
-        <h2 style="font-size: 32px; font-weight: 700; letter-spacing: -1px; text-align: center; margin-bottom: 12px;">Manual scrolling vs. Archive Arbitrage</h2>
-        <p style="color: var(--text-muted); text-align: center; margin-bottom: 40px;">The math isn't close.</p>
-        <table class="compare-table">
+        <div class="section-header reveal">
+            <h2>Manual scrolling vs. Archive Arbitrage</h2>
+            <p>The math isn't close.</p>
+        </div>
+        <table class="compare-table reveal">
             <thead>
                 <tr>
                     <th></th>
@@ -759,67 +1306,41 @@
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td>Time spent daily</td>
-                    <td>3-4 hours scrolling</td>
-                    <td>10 minutes (check alerts)</td>
-                </tr>
-                <tr>
-                    <td>Platforms covered</td>
-                    <td>1-2 (usually just Grailed)</td>
-                    <td>7 platforms simultaneously</td>
-                </tr>
-                <tr>
-                    <td>Pricing accuracy</td>
-                    <td>Gut feeling / guessing</td>
-                    <td>Sold comp data (time-weighted)</td>
-                </tr>
-                <tr>
-                    <td>Authentication</td>
-                    <td>Hope for the best</td>
-                    <td>7-signal verification system</td>
-                </tr>
-                <tr>
-                    <td>Speed to deal</td>
-                    <td>Whenever you happen to check</td>
-                    <td>Instant push notification</td>
-                </tr>
-                <tr>
-                    <td>Deals found/week</td>
-                    <td>2-3 (if lucky)</td>
-                    <td>20-40+ verified opportunities</td>
-                </tr>
-                <tr>
-                    <td>Japan sourcing</td>
-                    <td>Not realistic manually</td>
-                    <td>Yahoo JP, Mercari JP, Rakuma</td>
-                </tr>
+                <tr><td>Time spent daily</td><td>3-4 hours scrolling</td><td>10 minutes (check alerts)</td></tr>
+                <tr><td>Platforms covered</td><td>1-2 (usually just Grailed)</td><td>7 platforms simultaneously</td></tr>
+                <tr><td>Pricing accuracy</td><td>Gut feeling / guessing</td><td>Sold comp data (time-weighted)</td></tr>
+                <tr><td>Authentication</td><td>Hope for the best</td><td>7-signal verification system</td></tr>
+                <tr><td>Speed to deal</td><td>Whenever you happen to check</td><td>Instant push notification</td></tr>
+                <tr><td>Deals found/week</td><td>2-3 (if lucky)</td><td>20-40+ verified opportunities</td></tr>
+                <tr><td>Japan sourcing</td><td>Not realistic manually</td><td>Yahoo JP, Mercari JP, Rakuma</td></tr>
             </tbody>
         </table>
     </div>
 </section>
 
 <!-- ROI CALCULATOR -->
-<section style="padding: 80px 0; border-top: 1px solid var(--border);">
+<section class="roi">
     <div class="container" style="text-align: center;">
-        <h2 style="font-size: 32px; font-weight: 700; letter-spacing: -1px; margin-bottom: 12px;">The math is simple</h2>
-        <p style="color: var(--text-muted); margin-bottom: 40px;">One flip covers months of the subscription.</p>
-        <div class="roi-card">
-            <div style="font-size: 14px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Average deal profit</div>
-            <div style="font-size: 56px; font-weight: 800; color: var(--green); letter-spacing: -2px; margin-bottom: 4px;">$370</div>
-            <div style="font-size: 14px; color: var(--text-muted); margin-bottom: 32px;">based on 1,000+ deals found</div>
+        <div class="section-header reveal">
+            <h2>The math is simple</h2>
+            <p>One flip covers months of the subscription.</p>
+        </div>
+        <div class="roi-card reveal reveal-delay-1">
+            <div style="font-size: 10px; color: var(--text-light); text-transform: uppercase; letter-spacing: 2.5px; margin-bottom: 10px; font-family: 'Inter', sans-serif; font-weight: 600;">Average deal profit</div>
+            <div style="font-size: 64px; font-weight: 800; color: var(--green); letter-spacing: -3px; font-family: 'Inter', sans-serif; margin-bottom: 4px;">$370</div>
+            <div style="font-size: 14px; color: var(--text-light); margin-bottom: 40px; font-weight: 300;">based on 1,000+ deals found</div>
             <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; text-align: center;">
                 <div>
-                    <div style="font-size: 24px; font-weight: 800; color: var(--accent);">$39</div>
-                    <div style="font-size: 12px; color: var(--text-muted);">Monthly cost</div>
+                    <div style="font-size: 32px; font-weight: 800; color: var(--accent); font-family: 'Inter', sans-serif; letter-spacing: -1px;">$39</div>
+                    <div style="font-size: 11px; color: var(--text-light); letter-spacing: 0.5px;">Monthly cost</div>
                 </div>
                 <div>
-                    <div style="font-size: 24px; font-weight: 800; color: var(--green);">9.5x</div>
-                    <div style="font-size: 12px; color: var(--text-muted);">ROI per flip</div>
+                    <div style="font-size: 32px; font-weight: 800; color: var(--green); font-family: 'Inter', sans-serif; letter-spacing: -1px;">9.5x</div>
+                    <div style="font-size: 11px; color: var(--text-light); letter-spacing: 0.5px;">ROI per flip</div>
                 </div>
                 <div>
-                    <div style="font-size: 24px; font-weight: 800; color: var(--gold);">1 deal</div>
-                    <div style="font-size: 12px; color: var(--text-muted);">To break even</div>
+                    <div style="font-size: 32px; font-weight: 800; color: var(--gold); font-family: 'Inter', sans-serif; letter-spacing: -1px;">1 deal</div>
+                    <div style="font-size: 11px; color: var(--text-light); letter-spacing: 0.5px;">To break even</div>
                 </div>
             </div>
         </div>
@@ -827,29 +1348,31 @@
 </section>
 
 <!-- FAQ -->
-<section style="padding: 80px 0; border-top: 1px solid var(--border);">
+<section class="faq">
     <div class="container" style="max-width: 700px;">
-        <h2 style="font-size: 32px; font-weight: 700; letter-spacing: -1px; text-align: center; margin-bottom: 48px;">Frequently asked questions</h2>
+        <div class="section-header reveal">
+            <h2>Frequently asked questions</h2>
+        </div>
         <div id="faq">
-            <div style="border-bottom: 1px solid var(--border); padding: 20px 0;">
-                <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 8px; cursor: pointer;">How accurate is the pricing?</h3>
-                <p style="color: var(--text-muted); font-size: 14px; line-height: 1.7;">Every deal is priced against recent Grailed sold data using time-weighted averaging — recent sales count more. We adjust for condition, size, and season. "High confidence" means 5+ verified comps. We don't guess.</p>
+            <div class="faq-item reveal">
+                <h3>How accurate is the pricing?</h3>
+                <p>Every deal is priced against recent Grailed sold data using time-weighted averaging — recent sales count more. We adjust for condition, size, and season. "High confidence" means 5+ verified comps. We don't guess.</p>
             </div>
-            <div style="border-bottom: 1px solid var(--border); padding: 20px 0;">
-                <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">How fast do deals sell?</h3>
-                <p style="color: var(--text-muted); font-size: 14px; line-height: 1.7;">The best deals sell within minutes. We send alerts the moment our system identifies them. Enable push notifications on Telegram for instant delivery. Speed wins in resale.</p>
+            <div class="faq-item reveal">
+                <h3>How fast do deals sell?</h3>
+                <p>The best deals sell within minutes. We send alerts the moment our system identifies them. Enable push notifications on Telegram for instant delivery. Speed wins in resale.</p>
             </div>
-            <div style="border-bottom: 1px solid var(--border); padding: 20px 0;">
-                <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">How do you verify authenticity?</h3>
-                <p style="color: var(--text-muted); font-size: 14px; line-height: 1.7;">Every item goes through a 7-signal authentication system: text analysis, price plausibility, seller reputation, listing quality, image analysis, brand-specific markers, and cross-reference detection. Items scoring below 65% are blocked.</p>
+            <div class="faq-item reveal">
+                <h3>How do you verify authenticity?</h3>
+                <p>Every item goes through a 7-signal authentication system: text analysis, price plausibility, seller reputation, listing quality, image analysis, brand-specific markers, and cross-reference detection. Items scoring below 65% are blocked.</p>
             </div>
-            <div style="border-bottom: 1px solid var(--border); padding: 20px 0;">
-                <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">What if a deal sells before I can buy it?</h3>
-                <p style="color: var(--text-muted); font-size: 14px; line-height: 1.7;">It happens — that's resale. But our system sends multiple deals per day. The subscription pays for itself with one good flip. Most subscribers hit ROI within the first week.</p>
+            <div class="faq-item reveal">
+                <h3>What if a deal sells before I can buy it?</h3>
+                <p>It happens — that's resale. But our system sends multiple deals per day. The subscription pays for itself with one good flip. Most subscribers hit ROI within the first week.</p>
             </div>
-            <div style="padding: 20px 0;">
-                <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">Can I cancel anytime?</h3>
-                <p style="color: var(--text-muted); font-size: 14px; line-height: 1.7;">Yes. No contracts, no commitments. Cancel anytime from your Stripe account. We don't lock you in because we don't need to — the product speaks for itself.</p>
+            <div class="faq-item reveal">
+                <h3>Can I cancel anytime?</h3>
+                <p>Yes. No contracts, no commitments. Cancel anytime from your Stripe account. We don't lock you in because we don't need to — the product speaks for itself.</p>
             </div>
         </div>
     </div>
@@ -857,51 +1380,75 @@
 
 <section class="pricing" id="pricing">
     <div class="container">
-        <h2>Simple pricing</h2>
-        <p>One plan. Everything included. One good flip pays for months.</p>
-        <div class="price-card">
+        <div class="section-header reveal">
+            <h2>Simple pricing</h2>
+            <p>One plan. Everything included. One good flip pays for months.</p>
+        </div>
+        <div class="price-card reveal reveal-delay-1">
             <h3>Archive Arbitrage Pro</h3>
             <div class="price-amount">$39<span>/mo</span></div>
             <ul class="price-features">
                 <li>Real-time Telegram deal alerts</li>
-                <li>270+ archive brands tracked</li>
+                <li>280+ archive brands tracked</li>
                 <li>AI-powered pricing with sold comps</li>
                 <li>Cross-platform arbitrage detection</li>
-                <li>Custom brand & size filters</li>
+                <li>Custom brand &amp; size filters</li>
                 <li>Iconic season/collection detection</li>
-                <li>Replica & fraud screening</li>
+                <li>Replica &amp; fraud screening</li>
                 <li>Deal grading (A/B/C tiers)</li>
             </ul>
-            <a href="https://app.archivearbitrage.com/signup" class="price-cta">Start on Telegram →</a>
+            <a href="https://app.archivearbitrage.com/signup" class="btn-gold">Start on Telegram &rarr;</a>
             <p class="price-note">Cancel anytime. No contracts.</p>
         </div>
     </div>
 </section>
 
-<section id="free-channel" style="padding: 60px 0; border-top: 1px solid #1a1a1a;">
-    <div class="container" style="text-align: center;">
-        <h2 style="font-size: 1.8rem; margin-bottom: 12px;">Not ready to subscribe?</h2>
-        <p style="color: #737373; margin-bottom: 24px; max-width: 500px; margin-left: auto; margin-right: auto;">
+<section class="free-channel" id="free-channel">
+    <div class="container">
+        <h2 style="font-size: 1.8rem; margin-bottom: 12px;" class="reveal">Not ready to subscribe?</h2>
+        <p style="color: var(--text-muted); margin-bottom: 32px; max-width: 500px; margin-left: auto; margin-right: auto; font-weight: 300;" class="reveal">
             Join the free Telegram channel. We post 1-2 verified deals per day, delayed 45 minutes from subscriber alerts.
             See real deals flowing before you commit.
         </p>
-        <a href="https://t.me/archivearbitrage_free" style="display: inline-flex; align-items: center; gap: 10px; background: #2AABEE; color: white; padding: 14px 32px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 1rem;">
-            <svg viewBox="0 0 24 24" fill="white" width="22" height="22"><path d="M12 0C5.37 0 0 5.37 0 12s5.37 12 12 12 12-5.37 12-12S18.63 0 12 0zm5.53 8.15l-1.87 8.81c-.14.63-.51.78-1.03.49l-2.85-2.1-1.37 1.32c-.15.15-.28.28-.58.28l.2-2.9 5.27-4.76c.23-.2-.05-.32-.35-.12l-6.52 4.1-2.81-.88c-.61-.19-.62-.61.13-.91l10.97-4.23c.51-.18.95.13.78.9z"/></svg>
-            Join Free Channel
-        </a>
-        <p style="color: #444; font-size: 0.8rem; margin-top: 12px;">Deals are delayed. Subscribers get them first.</p>
+        <div class="reveal reveal-delay-1">
+            <a href="https://t.me/archivearbitrage_free" class="btn-telegram">
+                <svg viewBox="0 0 24 24" fill="white" width="22" height="22"><path d="M12 0C5.37 0 0 5.37 0 12s5.37 12 12 12 12-5.37 12-12S18.63 0 12 0zm5.53 8.15l-1.87 8.81c-.14.63-.51.78-1.03.49l-2.85-2.1-1.37 1.32c-.15.15-.28.28-.58.28l.2-2.9 5.27-4.76c.23-.2-.05-.32-.35-.12l-6.52 4.1-2.81-.88c-.61-.19-.62-.61.13-.91l10.97-4.23c.51-.18.95.13.78.9z"/></svg>
+                Join Free Channel
+            </a>
+        </div>
+        <p style="color: var(--text-light); font-size: 0.8rem; margin-top: 16px; letter-spacing: 0.5px;" class="reveal">Deals are delayed. Subscribers get them first.</p>
+    </div>
+</section>
+
+<!-- EMAIL CAPTURE -->
+<section class="email-capture" id="email-capture">
+    <div class="container" style="max-width: 560px; text-align: center;">
+        <h2 style="font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 12px;" class="reveal">Free weekly market report</h2>
+        <p style="color: var(--text-muted); font-size: 15px; margin-bottom: 32px; line-height: 1.75; font-weight: 300;" class="reveal">
+            Every Monday: top 5 deals from last week, which brands are trending, and pricing shifts across platforms. No spam. Unsubscribe anytime.
+        </p>
+        <form id="emailCaptureForm" class="email-form reveal" onsubmit="handleEmailCapture(event)">
+            <input type="email" id="captureEmail" placeholder="your@email.com" required>
+            <button type="submit">Get Reports</button>
+        </form>
+        <p id="emailSuccess" style="display: none; color: var(--green); font-size: 14px; margin-top: 16px; font-weight: 600;">You're in. First report drops Monday.</p>
+        <p style="color: var(--text-light); font-size: 12px; margin-top: 16px; letter-spacing: 0.5px;" class="reveal">Join 200+ resellers getting weekly market intel</p>
     </div>
 </section>
 
 <footer>
     <div class="container">
-        <p>© 2026 Archive Arbitrage. Built for resellers, by resellers.</p>
-        <p style="margin-top: 8px;">
-            <a href="/guides/" style="color: #737373; text-decoration: none;">Price Guides</a>
-            <span style="color: #333; margin: 0 8px;">·</span>
-            <a href="https://discord.gg/fjc5gPzun" style="color: #737373; text-decoration: none;">Discord</a>
-            <span style="color: #333; margin: 0 8px;">·</span>
-            <a href="https://t.me/archivearbitrage_free" style="color: #737373; text-decoration: none;">Free Telegram</a>
+        <p>&copy; 2026 Archive Arbitrage. Built for resellers, by resellers.</p>
+        <p style="margin-top: 12px;">
+            <a href="/guides/">Price Guides</a>
+            <span style="color: var(--border); margin: 0 12px;">&middot;</span>
+            <a href="/tools/resale-calculator">Price Calculator</a>
+            <span style="color: var(--border); margin: 0 12px;">&middot;</span>
+            <a href="/refer">Refer a Friend</a>
+            <span style="color: var(--border); margin: 0 12px;">&middot;</span>
+            <a href="https://discord.gg/fjc5gPzun">Discord</a>
+            <span style="color: var(--border); margin: 0 12px;">&middot;</span>
+            <a href="https://t.me/archivearbitrage_free">Free Telegram</a>
         </p>
     </div>
 </footer>
@@ -909,12 +1456,12 @@
 <!-- STICKY CTA BAR -->
 <div class="sticky-cta" id="stickyCta">
     <span class="sticky-cta-text"><strong>$264K+</strong> in profit found for subscribers</span>
-    <a href="https://app.archivearbitrage.com/signup">Start Finding Deals</a>
+    <a href="https://app.archivearbitrage.com/signup">Start Free 7-Day Trial &rarr;</a>
 </div>
 
 <script>
 // ── Ticker deals (real data from pipeline) ──
-const deals = [
+var deals = [
     { tier: "hot", brand: "RICK OWENS", title: "DRKSHDW Jumbo Lace", buy: 215, profit: 384, margin: 57 },
     { tier: "hot", brand: "DIOR HOMME", title: "Hedi Era Boots", buy: 196, profit: 242, margin: 55 },
     { tier: "grail", brand: "RAF SIMONS", title: "Archive Denim Jacket", buy: 197, profit: 402, margin: 67 },
@@ -925,49 +1472,47 @@ const deals = [
     { tier: "hot", brand: "UNDERCOVER", title: "Parka", buy: 126, profit: 159, margin: 55 },
     { tier: "grail", brand: "CHROME HEARTS", title: "Cross Patch Trucker Jacket", buy: 583, profit: 916, margin: 61 },
     { tier: "grail", brand: "MAISON MARGIELA", title: "Future High Top", buy: 197, profit: 402, margin: 67 },
-    { tier: "hot", brand: "ANN DEMEULEMEESTER", title: "Leather Jacket", buy: 260, profit: 339, margin: 56 },
+    { tier: "hot", brand: "ANN DEMEULEMEESTER", title: "Leather Jacket", buy: 260, profit: 339, margin: 56 }
 ];
 
 function renderTicker() {
-    const track = document.getElementById("ticker");
-    const allDeals = [...deals, ...deals];
-    // Build DOM nodes safely instead of innerHTML
+    var track = document.getElementById("ticker");
+    var allDeals = deals.concat(deals);
     track.textContent = "";
-    allDeals.forEach(d => {
-        const card = document.createElement("div");
+    allDeals.forEach(function(d) {
+        var card = document.createElement("div");
         card.className = "deal-card";
 
-        const tierLabel = d.tier === "grail" ? "GRAIL" : d.tier === "hot" ? "HOT DEAL" : "SOLID FLIP";
-        const tierEmoji = d.tier === "grail" ? "\u{1F3C6}" : d.tier === "hot" ? "\u{1F525}" : "\u{1F4B0}";
+        var tierLabel = d.tier === "grail" ? "GRAIL" : d.tier === "hot" ? "HOT DEAL" : "SOLID FLIP";
 
-        const tierDiv = document.createElement("div");
+        var tierDiv = document.createElement("div");
         tierDiv.className = "deal-tier " + d.tier;
-        tierDiv.textContent = tierEmoji + " " + tierLabel;
+        tierDiv.textContent = tierLabel;
         card.appendChild(tierDiv);
 
-        const brandDiv = document.createElement("div");
+        var brandDiv = document.createElement("div");
         brandDiv.className = "deal-brand";
         brandDiv.textContent = d.brand;
         card.appendChild(brandDiv);
 
-        const titleDiv = document.createElement("div");
+        var titleDiv = document.createElement("div");
         titleDiv.className = "deal-title";
         titleDiv.textContent = d.title;
         card.appendChild(titleDiv);
 
-        const numsDiv = document.createElement("div");
+        var numsDiv = document.createElement("div");
         numsDiv.className = "deal-numbers";
 
-        const buySpan = document.createElement("span");
+        var buySpan = document.createElement("span");
         buySpan.textContent = "Buy: $" + d.buy;
         numsDiv.appendChild(buySpan);
 
-        const profitSpan = document.createElement("span");
+        var profitSpan = document.createElement("span");
         profitSpan.className = "deal-profit";
         profitSpan.textContent = "+$" + d.profit;
         numsDiv.appendChild(profitSpan);
 
-        const marginSpan = document.createElement("span");
+        var marginSpan = document.createElement("span");
         marginSpan.className = "deal-margin";
         marginSpan.textContent = d.margin + "%";
         numsDiv.appendChild(marginSpan);
@@ -977,6 +1522,20 @@ function renderTicker() {
     });
 }
 renderTicker();
+
+// ── Scroll reveal (IntersectionObserver) ──
+var revealObserver = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+            entry.target.classList.add("visible");
+            revealObserver.unobserve(entry.target);
+        }
+    });
+}, { threshold: 0.12, rootMargin: "0px 0px -40px 0px" });
+
+document.querySelectorAll(".reveal").forEach(function(el) {
+    revealObserver.observe(el);
+});
 
 // ── Animated counters ──
 function animateCounter(el, target, prefix, suffix, duration) {
@@ -1011,9 +1570,22 @@ var statsObserver = new IntersectionObserver(function(entries) {
 var statsSection = document.querySelector(".stats");
 if (statsSection) statsObserver.observe(statsSection);
 
+// ── Nav transition (transparent on hero, solid after) ──
+var mainNav = document.getElementById("mainNav");
+var heroSection = document.querySelector(".hero");
+
+window.addEventListener("scroll", function() {
+    if (!heroSection || !mainNav) return;
+    var heroBottom = heroSection.offsetTop + heroSection.offsetHeight - 60;
+    if (window.scrollY > heroBottom) {
+        mainNav.classList.remove("nav-hero");
+    } else {
+        mainNav.classList.add("nav-hero");
+    }
+}, { passive: true });
+
 // ── Sticky CTA (shows after scrolling past hero) ──
 var stickyCta = document.getElementById("stickyCta");
-var heroSection = document.querySelector(".hero");
 window.addEventListener("scroll", function() {
     if (!heroSection || !stickyCta) return;
     var heroBottom = heroSection.offsetTop + heroSection.offsetHeight;
@@ -1023,7 +1595,73 @@ window.addEventListener("scroll", function() {
         stickyCta.classList.remove("visible");
     }
 }, { passive: true });
+
+// ── UTM parameter passthrough ──
+(function() {
+    var params = new URLSearchParams(window.location.search);
+    var utmKeys = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "ref"];
+    var utmParams = {};
+    utmKeys.forEach(function(key) {
+        var val = params.get(key);
+        if (val) utmParams[key] = val;
+    });
+    if (Object.keys(utmParams).length > 0) {
+        try { sessionStorage.setItem("aa_utm", JSON.stringify(utmParams)); } catch(e) {}
+        var extra = new URLSearchParams(utmParams).toString();
+        document.querySelectorAll('a[href*="signup"]').forEach(function(a) {
+            var sep = a.href.indexOf("?") === -1 ? "?" : "&";
+            a.href = a.href + sep + extra;
+        });
+    }
+})();
+
+// ── Exit intent popup ──
+var exitShown = false;
+function showExitPopup() {
+    if (exitShown) return;
+    try { if (sessionStorage.getItem("aa_exit_shown")) return; } catch(e) {}
+    exitShown = true;
+    try { sessionStorage.setItem("aa_exit_shown", "1"); } catch(e) {}
+    var popup = document.getElementById("exitPopup");
+    if (popup) popup.style.display = "flex";
+}
+function closeExitPopup() {
+    var popup = document.getElementById("exitPopup");
+    if (popup) popup.style.display = "none";
+}
+document.addEventListener("mouseout", function(e) {
+    if (e.clientY < 5 && e.relatedTarget === null) showExitPopup();
+});
+var exitEl = document.getElementById("exitPopup");
+if (exitEl) exitEl.addEventListener("click", function(e) { if (e.target === exitEl) closeExitPopup(); });
+
+// ── Email capture ──
+var AA_API = "https://app.archivearbitrage.com";
+function handleEmailCapture(e) {
+    e.preventDefault();
+    var email = document.getElementById("captureEmail").value;
+    var utm = {};
+    try { utm = JSON.parse(sessionStorage.getItem("aa_utm") || "{}"); } catch(err) {}
+    fetch(AA_API + "/api/subscribe", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({email: email, source: "landing_page", utm_source: utm.utm_source || "", utm_campaign: utm.utm_campaign || "", ref: utm.ref || ""})
+    }).catch(function() {});
+    document.getElementById("emailCaptureForm").style.display = "none";
+    document.getElementById("emailSuccess").style.display = "block";
+}
 </script>
+
+<!-- EXIT INTENT POPUP -->
+<div id="exitPopup" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.6); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); align-items:center; justify-content:center;">
+    <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:4px; padding:52px 44px; max-width:440px; width:90%; text-align:center; position:relative; margin:auto; box-shadow: 0 16px 80px rgba(0,0,0,0.2);">
+        <button onclick="closeExitPopup()" style="position:absolute; top:16px; right:16px; background:none; border:none; color:var(--text-muted); font-size:20px; cursor:pointer; padding:4px;">&times;</button>
+        <h3 style="font-size:24px; font-weight:800; margin-bottom:14px; color:var(--accent); font-family:'Inter',sans-serif; letter-spacing:-0.5px;">Before you go...</h3>
+        <p style="color:var(--text-muted); font-size:15px; margin-bottom:32px; line-height:1.65; font-weight:300;">Get a free week of deal alerts. See real deals with comp data before you commit.</p>
+        <a href="https://app.archivearbitrage.com/signup?promo=exit7" class="btn-gold" style="margin-bottom:16px;">Start Free Week</a>
+        <button onclick="closeExitPopup()" style="background:none; border:none; color:var(--text-light); font-size:13px; cursor:pointer; padding:8px; font-family:inherit; letter-spacing:0.3px;">No thanks, I'll keep scrolling manually</button>
+    </div>
+</div>
 
 </body>
 </html>

@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Archive Fashion Resale Price Calculator 2026 — Free Tool | Archive Arbitrage</title>
+    <meta name="description" content="Free resale price calculator for archive fashion. Look up current market values for Rick Owens, Chrome Hearts, Margiela, Raf Simons & 20+ brands. Based on real sold data.">
+    <link rel="canonical" href="https://archivearbitrage.com/tools/resale-calculator">
+    <meta property="og:title" content="Archive Fashion Resale Price Calculator — Free Tool">
+    <meta property="og:description" content="Look up current resale values for 20+ archive fashion brands. Based on real sold comp data from Grailed, eBay & Poshmark.">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Archive Fashion Resale Price Calculator 2026">
+    <meta name="twitter:description" content="Free tool: look up resale values for Rick Owens, Chrome Hearts, Margiela & more. Real sold data.">
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Archive Fashion Resale Price Calculator",
+      "description": "Free tool to estimate resale values for 20+ archive fashion brands based on real sold data",
+      "url": "https://archivearbitrage.com/tools/resale-calculator",
+      "applicationCategory": "UtilityApplication",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+    }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0a0a; --bg-card: #111111; --border: #222222;
+            --text: #e5e5e5; --text-muted: #737373; --accent: #f5f5f5;
+            --gold: #d4a853; --green: #22c55e; --fire: #ef4444; --blue: #3b82f6;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Inter',-apple-system,sans-serif; background:var(--bg); color:var(--text); line-height:1.6; -webkit-font-smoothing:antialiased; }
+        .container { max-width:800px; margin:0 auto; padding:0 24px; }
+
+        nav { padding:20px 0; border-bottom:1px solid var(--border); }
+        nav .container { display:flex; justify-content:space-between; align-items:center; }
+        .logo { font-size:18px; font-weight:700; letter-spacing:-0.5px; color:var(--accent); text-decoration:none; }
+        .logo span { color:var(--text-muted); font-weight:400; }
+        .nav-cta { padding:8px 20px; background:var(--accent); color:var(--bg); border:none; border-radius:6px; font-size:14px; font-weight:600; cursor:pointer; text-decoration:none; }
+
+        .banner { padding:12px; background:rgba(212,168,83,0.08); border-bottom:1px solid rgba(212,168,83,0.15); text-align:center; font-size:13px; color:var(--gold); }
+        .banner a { color:var(--gold); text-decoration:underline; }
+
+        .hero { padding:60px 0 40px; text-align:center; }
+        .hero h1 { font-size:clamp(28px,4vw,42px); font-weight:800; letter-spacing:-1.5px; margin-bottom:12px; }
+        .hero p { color:var(--text-muted); font-size:16px; max-width:500px; margin:0 auto; }
+
+        .calc { padding:40px 0 60px; }
+        .calc-form { background:var(--bg-card); border:1px solid var(--border); border-radius:16px; padding:32px; }
+        .field { margin-bottom:20px; }
+        .field label { display:block; font-size:13px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; }
+        .field select {
+            width:100%; padding:14px 16px; background:var(--bg); border:1px solid var(--border);
+            border-radius:8px; color:var(--text); font-size:15px; font-family:inherit;
+            appearance:none; -webkit-appearance:none;
+            background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23737373' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat:no-repeat; background-position:right 16px center;
+            cursor:pointer; transition:border-color 0.2s;
+        }
+        .field select:focus { outline:none; border-color:var(--gold); }
+        .calc-btn {
+            width:100%; padding:16px; background:var(--accent); color:var(--bg); border:none;
+            border-radius:8px; font-size:16px; font-weight:700; cursor:pointer; font-family:inherit;
+            transition:opacity 0.2s;
+        }
+        .calc-btn:hover { opacity:0.85; }
+        .calc-btn:disabled { opacity:0.4; cursor:not-allowed; }
+
+        /* RESULTS */
+        .results { display:none; margin-top:32px; }
+        .result-card { background:var(--bg-card); border:1px solid var(--border); border-radius:16px; padding:32px; text-align:center; }
+        .result-brand { font-size:13px; color:var(--gold); font-weight:600; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px; }
+        .result-cat { font-size:14px; color:var(--text-muted); margin-bottom:24px; }
+        .price-range { display:flex; justify-content:center; gap:32px; margin-bottom:24px; }
+        .price-col { text-align:center; }
+        .price-label { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px; }
+        .price-val { font-size:32px; font-weight:800; letter-spacing:-1px; }
+        .price-low { color:var(--text-muted); }
+        .price-mid { color:var(--accent); }
+        .price-high { color:var(--gold); }
+
+        .range-bar { height:8px; background:var(--bg); border-radius:4px; margin:0 auto 24px; max-width:400px; position:relative; overflow:hidden; }
+        .range-fill { height:100%; border-radius:4px; background:linear-gradient(90deg, var(--text-muted), var(--gold)); }
+
+        /* GATED SECTION */
+        .gated { margin-top:24px; padding-top:24px; border-top:1px solid var(--border); }
+        .gated-blur { filter:blur(6px); user-select:none; pointer-events:none; }
+        .gate-overlay { text-align:center; margin-top:16px; }
+        .gate-overlay p { color:var(--text-muted); font-size:14px; margin-bottom:16px; }
+        .gate-form { display:flex; gap:8px; max-width:400px; margin:0 auto; }
+        .gate-form input {
+            flex:1; padding:12px 16px; background:var(--bg); border:1px solid var(--border);
+            border-radius:8px; color:var(--text); font-size:14px; font-family:inherit;
+        }
+        .gate-form input:focus { outline:none; border-color:var(--gold); }
+        .gate-form button {
+            padding:12px 20px; background:var(--gold); color:var(--bg); border:none;
+            border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap;
+        }
+
+        .full-results { display:none; }
+        .detail-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin:20px 0; }
+        .detail-item { text-align:center; padding:16px; background:var(--bg); border-radius:8px; }
+        .detail-label { font-size:11px; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px; }
+        .detail-val { font-size:18px; font-weight:700; }
+        .trend-up { color:var(--green); }
+        .trend-down { color:var(--fire); }
+        .trend-stable { color:var(--text-muted); }
+
+        .cta-box {
+            margin-top:32px; padding:28px; background:linear-gradient(135deg, rgba(34,197,94,0.05), rgba(212,168,83,0.05));
+            border:1px solid rgba(34,197,94,0.2); border-radius:12px; text-align:center;
+        }
+        .cta-box p { color:var(--text-muted); font-size:14px; margin-bottom:16px; }
+        .cta-box a {
+            display:inline-block; padding:14px 32px; background:var(--accent); color:var(--bg);
+            border-radius:8px; font-size:15px; font-weight:700; text-decoration:none;
+        }
+
+        footer { padding:40px 0; border-top:1px solid var(--border); text-align:center; color:var(--text-muted); font-size:13px; }
+        footer a { color:#737373; text-decoration:none; }
+
+        @media(max-width:600px) {
+            .price-range { flex-direction:column; gap:16px; }
+            .detail-grid { grid-template-columns:1fr; }
+            .gate-form { flex-direction:column; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="banner">From the makers of <a href="https://archivearbitrage.com">Archive Arbitrage</a> — real-time deal alerts for 270+ brands</div>
+
+<nav>
+    <div class="container">
+        <a href="https://archivearbitrage.com" class="logo">ARCHIVE <span>ARBITRAGE</span></a>
+        <a href="https://app.archivearbitrage.com/signup" class="nav-cta">Get Alerts</a>
+    </div>
+</nav>
+
+<section class="hero">
+    <div class="container">
+        <h1>Archive Fashion Resale<br>Price Calculator</h1>
+        <p>Estimate current market value for 20+ archive brands. Based on real sold data from Grailed, eBay & Poshmark.</p>
+    </div>
+</section>
+
+<section class="calc">
+    <div class="container">
+        <div class="calc-form">
+            <div class="field">
+                <label>Brand</label>
+                <select id="brand" onchange="updateCategories()">
+                    <option value="">Select a brand...</option>
+                </select>
+            </div>
+            <div class="field">
+                <label>Category</label>
+                <select id="category" disabled>
+                    <option value="">Select brand first...</option>
+                </select>
+            </div>
+            <div class="field">
+                <label>Condition</label>
+                <select id="condition">
+                    <option value="1.3">Deadstock / New with Tags</option>
+                    <option value="1.0" selected>Gently Used</option>
+                    <option value="0.75">Used</option>
+                    <option value="0.5">Well Worn</option>
+                </select>
+            </div>
+            <button class="calc-btn" id="calcBtn" onclick="calculate()" disabled>Calculate Resale Value</button>
+        </div>
+
+        <div class="results" id="results">
+            <div class="result-card">
+                <div class="result-brand" id="rBrand"></div>
+                <div class="result-cat" id="rCat"></div>
+
+                <div class="price-range">
+                    <div class="price-col">
+                        <div class="price-label">Low</div>
+                        <div class="price-val price-low" id="rLow"></div>
+                    </div>
+                    <div class="price-col">
+                        <div class="price-label">Typical</div>
+                        <div class="price-val price-mid" id="rMid"></div>
+                    </div>
+                    <div class="price-col">
+                        <div class="price-label">High</div>
+                        <div class="price-val price-high" id="rHigh"></div>
+                    </div>
+                </div>
+
+                <div class="range-bar"><div class="range-fill" style="width:65%"></div></div>
+
+                <!-- GATED SECTION -->
+                <div class="gated" id="gatedSection">
+                    <div class="gated-blur" id="blurredDetails">
+                        <div class="detail-grid">
+                            <div class="detail-item"><div class="detail-label">Trend</div><div class="detail-val">Rising</div></div>
+                            <div class="detail-item"><div class="detail-label">Volume</div><div class="detail-val">High</div></div>
+                            <div class="detail-item"><div class="detail-label">Best Platform</div><div class="detail-val">Grailed</div></div>
+                        </div>
+                    </div>
+                    <div class="gate-overlay" id="gateOverlay">
+                        <p>Enter your email to see full market data: trend direction, sell volume, and best platforms.</p>
+                        <form class="gate-form" onsubmit="unlockResults(event)">
+                            <input type="email" id="gateEmail" placeholder="your@email.com" required>
+                            <button type="submit">Unlock Data</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- FULL RESULTS (shown after email) -->
+                <div class="full-results" id="fullResults">
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">Price Trend</div>
+                            <div class="detail-val" id="rTrend"></div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Sell Volume</div>
+                            <div class="detail-val" id="rVolume"></div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Flip Potential</div>
+                            <div class="detail-val" id="rFlip"></div>
+                        </div>
+                    </div>
+                    <p id="rInsight" style="color:var(--text-muted); font-size:14px; margin-top:16px; line-height:1.6;"></p>
+                </div>
+
+                <div class="cta-box" id="ctaBox" style="display:none;">
+                    <p>Get real-time alerts when <strong id="ctaBrand"></strong> pieces drop below <span id="ctaPrice"></span></p>
+                    <a href="https://app.archivearbitrage.com/signup">Start Free Trial</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<footer>
+    <div class="container">
+        <p>&copy; 2026 Archive Arbitrage</p>
+        <p style="margin-top:8px;">
+            <a href="https://archivearbitrage.com">Home</a>
+            <span style="color:#333; margin:0 8px;">&middot;</span>
+            <a href="/guides/">Price Guides</a>
+            <span style="color:#333; margin:0 8px;">&middot;</span>
+            <a href="/refer">Refer a Friend</a>
+        </p>
+        <p style="margin-top:12px; font-size:12px; color:#444;">Prices are estimates based on historical sold data. Actual resale value varies by specific item, condition, size, and market conditions.</p>
+    </div>
+</footer>
+
+<script>
+var PRICE_DATA = {
+    "Chrome Hearts": {
+        "Jewelry": {low:150,mid:450,high:2500,trend:"up",volume:"high"},
+        "Accessories": {low:200,mid:600,high:3000,trend:"up",volume:"high"},
+        "Tops": {low:300,mid:800,high:2000,trend:"stable",volume:"medium"},
+        "Outerwear": {low:800,mid:2000,high:8000,trend:"up",volume:"low"}
+    },
+    "Rick Owens": {
+        "Footwear": {low:200,mid:500,high:1200,trend:"up",volume:"high"},
+        "Outerwear": {low:400,mid:1200,high:4000,trend:"up",volume:"medium"},
+        "Tops": {low:100,mid:350,high:900,trend:"stable",volume:"high"},
+        "Bottoms": {low:150,mid:400,high:1000,trend:"stable",volume:"medium"}
+    },
+    "Maison Margiela": {
+        "Footwear": {low:150,mid:400,high:1500,trend:"up",volume:"high"},
+        "Outerwear": {low:300,mid:800,high:3000,trend:"stable",volume:"medium"},
+        "Accessories": {low:100,mid:350,high:1200,trend:"up",volume:"medium"}
+    },
+    "Balenciaga": {
+        "Footwear": {low:200,mid:500,high:1400,trend:"down",volume:"high"},
+        "Outerwear": {low:400,mid:1000,high:3500,trend:"stable",volume:"medium"},
+        "Bags": {low:500,mid:1200,high:3000,trend:"stable",volume:"high"}
+    },
+    "Bottega Veneta": {
+        "Bags": {low:400,mid:1500,high:4000,trend:"up",volume:"high"},
+        "Footwear": {low:200,mid:600,high:1500,trend:"stable",volume:"medium"},
+        "Accessories": {low:150,mid:500,high:2000,trend:"up",volume:"medium"}
+    },
+    "Saint Laurent": {
+        "Outerwear": {low:400,mid:1000,high:3500,trend:"stable",volume:"medium"},
+        "Footwear": {low:200,mid:500,high:1200,trend:"stable",volume:"high"},
+        "Bags": {low:300,mid:900,high:2500,trend:"stable",volume:"medium"}
+    },
+    "Jean Paul Gaultier": {
+        "Tops": {low:80,mid:300,high:2000,trend:"up",volume:"high"},
+        "Outerwear": {low:200,mid:600,high:3000,trend:"up",volume:"medium"},
+        "Accessories": {low:50,mid:200,high:800,trend:"up",volume:"medium"}
+    },
+    "Raf Simons": {
+        "Outerwear": {low:300,mid:800,high:5000,trend:"up",volume:"medium"},
+        "Tops": {low:100,mid:350,high:1500,trend:"up",volume:"medium"}
+    },
+    "Dior Homme": {
+        "Outerwear": {low:400,mid:1200,high:6000,trend:"up",volume:"low"},
+        "Tops": {low:150,mid:500,high:2000,trend:"up",volume:"medium"},
+        "Bottoms": {low:200,mid:500,high:1500,trend:"stable",volume:"low"}
+    },
+    "Helmut Lang": {
+        "Outerwear": {low:150,mid:500,high:2500,trend:"up",volume:"medium"},
+        "Tops": {low:60,mid:200,high:800,trend:"stable",volume:"high"}
+    },
+    "Undercover": {
+        "Outerwear": {low:300,mid:800,high:4000,trend:"up",volume:"medium"},
+        "Tops": {low:100,mid:350,high:1500,trend:"up",volume:"medium"}
+    },
+    "Enfants Riches Deprimes": {
+        "Tops": {low:200,mid:600,high:2000,trend:"up",volume:"medium"},
+        "Outerwear": {low:500,mid:1500,high:5000,trend:"up",volume:"low"}
+    },
+    "Number Nine": {
+        "Outerwear": {low:400,mid:1200,high:8000,trend:"up",volume:"low"},
+        "Tops": {low:150,mid:500,high:3000,trend:"up",volume:"medium"}
+    },
+    "Prada": {
+        "Bags": {low:300,mid:800,high:3000,trend:"stable",volume:"high"},
+        "Footwear": {low:150,mid:400,high:1200,trend:"stable",volume:"high"}
+    },
+    "Kapital": {
+        "Outerwear": {low:200,mid:600,high:2000,trend:"up",volume:"medium"},
+        "Tops": {low:100,mid:300,high:800,trend:"stable",volume:"medium"}
+    },
+    "Yohji Yamamoto": {
+        "Outerwear": {low:200,mid:600,high:2500,trend:"stable",volume:"medium"},
+        "Tops": {low:80,mid:250,high:800,trend:"stable",volume:"medium"}
+    },
+    "CDG": {
+        "Outerwear": {low:150,mid:400,high:1500,trend:"stable",volume:"medium"},
+        "Tops": {low:60,mid:200,high:600,trend:"stable",volume:"high"}
+    },
+    "Vivienne Westwood": {
+        "Accessories": {low:50,mid:200,high:800,trend:"stable",volume:"high"},
+        "Outerwear": {low:150,mid:400,high:1500,trend:"stable",volume:"medium"}
+    },
+    "BAPE": {
+        "Tops": {low:80,mid:250,high:1000,trend:"down",volume:"high"},
+        "Outerwear": {low:200,mid:600,high:2500,trend:"stable",volume:"medium"}
+    },
+    "Julius": {
+        "Outerwear": {low:200,mid:600,high:2500,trend:"stable",volume:"low"},
+        "Tops": {low:80,mid:250,high:700,trend:"stable",volume:"low"}
+    }
+};
+
+// Populate brands
+var brandSel = document.getElementById("brand");
+Object.keys(PRICE_DATA).sort().forEach(function(b) {
+    var opt = document.createElement("option");
+    opt.value = b; opt.textContent = b;
+    brandSel.appendChild(opt);
+});
+
+function updateCategories() {
+    var brand = document.getElementById("brand").value;
+    var catSel = document.getElementById("category");
+    catSel.innerHTML = '<option value="">Select category...</option>';
+    if (brand && PRICE_DATA[brand]) {
+        Object.keys(PRICE_DATA[brand]).forEach(function(c) {
+            var opt = document.createElement("option");
+            opt.value = c; opt.textContent = c;
+            catSel.appendChild(opt);
+        });
+        catSel.disabled = false;
+    } else {
+        catSel.disabled = true;
+    }
+    document.getElementById("calcBtn").disabled = true;
+    catSel.onchange = function() {
+        document.getElementById("calcBtn").disabled = !this.value;
+    };
+}
+
+var currentData = null;
+function calculate() {
+    var brand = document.getElementById("brand").value;
+    var cat = document.getElementById("category").value;
+    var mult = parseFloat(document.getElementById("condition").value);
+    if (!brand || !cat) return;
+
+    var d = PRICE_DATA[brand][cat];
+    currentData = {brand:brand, cat:cat, low:Math.round(d.low*mult), mid:Math.round(d.mid*mult), high:Math.round(d.high*mult), trend:d.trend, volume:d.volume};
+
+    document.getElementById("rBrand").textContent = brand;
+    document.getElementById("rCat").textContent = cat + " · " + document.getElementById("condition").selectedOptions[0].text;
+    document.getElementById("rLow").textContent = "$" + currentData.low.toLocaleString();
+    document.getElementById("rMid").textContent = "$" + currentData.mid.toLocaleString();
+    document.getElementById("rHigh").textContent = "$" + currentData.high.toLocaleString();
+
+    // Reset gate state
+    var unlocked = false;
+    try { unlocked = localStorage.getItem("aa_calc_unlocked") === "1"; } catch(e) {}
+
+    if (unlocked) {
+        showFullResults();
+    } else {
+        document.getElementById("gatedSection").style.display = "block";
+        document.getElementById("gateOverlay").style.display = "block";
+        document.getElementById("blurredDetails").classList.add("gated-blur");
+        document.getElementById("fullResults").style.display = "none";
+        document.getElementById("ctaBox").style.display = "none";
+    }
+
+    document.getElementById("results").style.display = "block";
+    document.getElementById("results").scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+function unlockResults(e) {
+    e.preventDefault();
+    var email = document.getElementById("gateEmail").value;
+    // POST to API
+    var AA_API = "https://app.archivearbitrage.com";
+    fetch(AA_API + "/api/subscribe", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({email: email, source: "resale_calculator", brand_interest: currentData ? currentData.brand : ""})
+    }).catch(function() {});
+    try { localStorage.setItem("aa_calc_unlocked", "1"); } catch(err) {}
+    showFullResults();
+}
+
+function showFullResults() {
+    if (!currentData) return;
+    document.getElementById("gatedSection").style.display = "none";
+    document.getElementById("fullResults").style.display = "block";
+
+    var trendMap = {up:"Rising", down:"Declining", stable:"Stable"};
+    var trendClass = {up:"trend-up", down:"trend-down", stable:"trend-stable"};
+    var trendEl = document.getElementById("rTrend");
+    trendEl.textContent = (currentData.trend === "up" ? "\u2191 " : currentData.trend === "down" ? "\u2193 " : "\u2192 ") + trendMap[currentData.trend];
+    trendEl.className = "detail-val " + trendClass[currentData.trend];
+
+    var volMap = {high:"High", medium:"Medium", low:"Low"};
+    document.getElementById("rVolume").textContent = volMap[currentData.volume];
+
+    var flipScore = currentData.trend === "up" ? "Strong" : currentData.trend === "stable" ? "Good" : "Fair";
+    var flipEl = document.getElementById("rFlip");
+    flipEl.textContent = flipScore;
+    flipEl.className = "detail-val " + (flipScore === "Strong" ? "trend-up" : flipScore === "Good" ? "" : "trend-down");
+
+    document.getElementById("rInsight").textContent =
+        currentData.brand + " " + currentData.cat.toLowerCase() + " is currently " +
+        (currentData.trend === "up" ? "trending upward with strong buyer demand" : currentData.trend === "down" ? "cooling off slightly but still has consistent volume" : "holding steady with predictable demand") +
+        ". The best arbitrage opportunities are found on Poshmark and eBay where sellers consistently price " +
+        "below Grailed market value.";
+
+    document.getElementById("ctaBox").style.display = "block";
+    document.getElementById("ctaBrand").textContent = currentData.brand;
+    document.getElementById("ctaPrice").textContent = "$" + currentData.mid.toLocaleString();
+}
+</script>
+
+</body>
+</html>

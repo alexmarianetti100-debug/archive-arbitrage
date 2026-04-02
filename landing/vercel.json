@@ -1,0 +1,44 @@
+{
+  "version": 2,
+  "name": "archive-arbitrage-landing",
+  "buildCommand": "",
+  "outputDirectory": ".",
+  "routes": [
+    {
+      "src": "/tools/resale-calculator/?$",
+      "dest": "/tools/resale-calculator.html"
+    },
+    {
+      "src": "/refer/?$",
+      "dest": "/refer.html"
+    },
+    {
+      "src": "/guides/(.*)\\.html",
+      "dest": "/guides/$1.html"
+    },
+    {
+      "src": "/guides/?$",
+      "dest": "/guides/index.html"
+    },
+    {
+      "src": "/guides/(.*)$",
+      "dest": "/guides/$1.html"
+    },
+    {
+      "src": "/success/?$",
+      "dest": "/success.html"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/guides/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=86400, s-maxage=604800" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>You've Been Referred — Archive Arbitrage</title>
+    <meta name="description" content="Your friend thinks you'd crush it in archive resale. Get a free week of real-time deal alerts across 7 platforms.">
+    <link rel="canonical" href="https://archivearbitrage.com/refer">
+    <meta property="og:title" content="Your friend thinks you'd be great at this — Archive Arbitrage">
+    <meta property="og:description" content="Free week of real-time archive fashion deal alerts. AI-powered pricing across 7 platforms. 270+ brands.">
+    <meta property="og:type" content="website">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --bg-card: #111111;
+            --border: #222222;
+            --text: #e5e5e5;
+            --text-muted: #737373;
+            --accent: #f5f5f5;
+            --gold: #d4a853;
+            --green: #22c55e;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'DM Sans', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+        h1, h2, h3, .logo, .step-num, .proof-profit, .hero-cta, .ref-badge { font-family: 'Inter', sans-serif; }
+        .container { max-width: 700px; margin: 0 auto; padding: 0 24px; }
+
+        /* NAV */
+        nav { padding: 20px 0; border-bottom: 1px solid var(--border); }
+        nav .container { display: flex; justify-content: space-between; align-items: center; max-width: 1100px; }
+        .logo { font-size: 16px; font-weight: 800; letter-spacing: 3.5px; text-transform: uppercase; color: var(--accent); text-decoration: none; }
+        .logo span { color: var(--text-muted); font-weight: 500; }
+
+        /* REFERRAL BADGE */
+        .ref-badge {
+            display: inline-block;
+            padding: 6px 16px;
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: 2px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: var(--green);
+            margin-bottom: 24px;
+        }
+
+        /* HERO */
+        .hero { padding: 80px 0 60px; text-align: center; }
+        .hero h1 {
+            font-size: clamp(32px, 5vw, 52px);
+            font-weight: 800;
+            letter-spacing: -2px;
+            line-height: 1.1;
+            color: var(--accent);
+            margin-bottom: 20px;
+        }
+        .hero p { font-size: 17px; color: var(--text-muted); max-width: 500px; margin: 0 auto 32px; line-height: 1.75; font-weight: 300; }
+        .hero-cta {
+            display: inline-block;
+            padding: 18px 44px;
+            background: var(--accent);
+            color: var(--bg);
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .hero-cta:hover { transform: translateY(-1px); box-shadow: 0 4px 24px rgba(255,255,255,0.1); }
+        .hero-sub { display: block; margin-top: 14px; font-size: 14px; color: var(--text-muted); font-weight: 300; }
+        .hero-sub strong { color: var(--green); font-weight: 700; }
+
+        /* STEPS */
+        .steps { padding: 60px 0; border-top: 1px solid var(--border); }
+        .steps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+        .step { text-align: center; }
+        .step-num {
+            width: 44px; height: 44px; border-radius: 2px;
+            background: var(--bg-card); border: 1px solid var(--border);
+            display: inline-flex; align-items: center; justify-content: center;
+            font-size: 16px; font-weight: 800; margin-bottom: 14px;
+        }
+        .step h3 { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+        .step p { font-size: 13px; color: var(--text-muted); font-weight: 300; }
+
+        /* PROOF */
+        .proof { padding: 60px 0; border-top: 1px solid var(--border); }
+        .proof h2 { font-size: 24px; font-weight: 800; text-align: center; margin-bottom: 32px; letter-spacing: -0.5px; }
+        .proof-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+        .proof-card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 4px; padding: 28px;
+        }
+        .proof-profit { font-size: 24px; font-weight: 800; color: var(--green); margin-bottom: 10px; letter-spacing: -0.5px; }
+        .proof-text { font-size: 14px; color: var(--text); line-height: 1.7; font-style: italic; margin-bottom: 10px; font-weight: 300; }
+        .proof-author { font-size: 12px; color: var(--text-muted); letter-spacing: 0.5px; }
+
+        /* SHARE */
+        .share { padding: 60px 0; border-top: 1px solid var(--border); text-align: center; }
+        .share h2 { font-size: 22px; font-weight: 800; margin-bottom: 12px; letter-spacing: -0.3px; }
+        .share p { color: var(--text-muted); font-size: 14px; margin-bottom: 24px; font-weight: 300; }
+        .share-box {
+            display: flex; gap: 8px; max-width: 500px; margin: 0 auto 16px;
+        }
+        .share-box input {
+            flex: 1; padding: 12px 16px; background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 4px; color: var(--text); font-size: 14px; font-family: 'DM Sans', sans-serif;
+        }
+        .share-box button {
+            padding: 12px 20px; background: var(--gold); color: var(--bg); border: none;
+            border-radius: 4px; font-size: 11px; font-weight: 800; cursor: pointer;
+            font-family: 'Inter', sans-serif; white-space: nowrap; letter-spacing: 1px; text-transform: uppercase;
+        }
+        .copied { color: var(--green); font-size: 13px; display: none; margin-top: 8px; }
+
+        /* FOOTER */
+        footer { padding: 32px 0; border-top: 1px solid var(--border); text-align: center; color: var(--text-muted); font-size: 13px; }
+
+        @media (max-width: 768px) {
+            .steps-grid { grid-template-columns: 1fr; gap: 20px; }
+            .hero { padding: 60px 0 40px; }
+            .share-box { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <div class="container">
+        <a href="https://archivearbitrage.com" class="logo">ARCHIVE <span>ARBITRAGE</span></a>
+    </div>
+</nav>
+
+<section class="hero">
+    <div class="container">
+        <div class="ref-badge" id="refBadge" style="display:none;">Referred by <strong id="refName"></strong></div>
+        <h1>Your friend thinks you'd be great at this.</h1>
+        <p>Archive Arbitrage finds underpriced archive fashion across 7 platforms — so you can buy and flip for $100-$500+ profit per piece.</p>
+        <a href="https://app.archivearbitrage.com/signup" class="hero-cta" id="mainCta">Start Free Week</a>
+        <span class="hero-sub"><strong>You both get a free week</strong> when you sign up.</span>
+    </div>
+</section>
+
+<section class="steps">
+    <div class="container">
+        <div class="steps-grid">
+            <div class="step">
+                <div class="step-num">1</div>
+                <h3>Sign up free</h3>
+                <p>7-day trial. No card required. Takes 30 seconds.</p>
+            </div>
+            <div class="step">
+                <div class="step-num">2</div>
+                <h3>Get real-time alerts</h3>
+                <p>Deals pushed to Telegram with comp data, auth scores, and direct links.</p>
+            </div>
+            <div class="step">
+                <div class="step-num">3</div>
+                <h3>Buy & flip</h3>
+                <p>One good flip pays for 6+ months of the subscription.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="proof">
+    <div class="container">
+        <h2>Real profits from real alerts</h2>
+        <div class="proof-grid">
+            <div class="proof-card">
+                <div class="proof-profit">+$288</div>
+                <div class="proof-text">"Bought Margiela Tabis from a deal alert for $132. Sold on Grailed for $420."</div>
+                <div class="proof-author">Starter subscriber</div>
+            </div>
+            <div class="proof-card">
+                <div class="proof-profit">+$320</div>
+                <div class="proof-text">"Chrome Hearts cross pendant at $180. Comps at $500+. Easiest money I've made."</div>
+                <div class="proof-author">Pro subscriber</div>
+            </div>
+            <div class="proof-card">
+                <div class="proof-profit">+$904</div>
+                <div class="proof-text">"Dior Homme waxed jeans for $265. Market value $1,169 based on 12 sold comps. Insane."</div>
+                <div class="proof-author">Pro subscriber</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section style="padding: 60px 0; border-top: 1px solid var(--border); text-align: center;">
+    <div class="container">
+        <a href="https://app.archivearbitrage.com/signup" class="hero-cta" id="bottomCta">Start Your Free Week</a>
+        <span class="hero-sub">$39/mo after trial. Cancel anytime. One flip covers months.</span>
+    </div>
+</section>
+
+<section class="share">
+    <div class="container">
+        <h2>Already a member? Share your link.</h2>
+        <p>You both get a free week when they sign up.</p>
+        <div class="share-box">
+            <input type="text" id="shareInput" value="archivearbitrage.com/refer?ref=" readonly>
+            <button onclick="copyLink()">Copy Link</button>
+        </div>
+        <p class="copied" id="copiedMsg">Copied to clipboard</p>
+        <p style="color: var(--text-muted); font-size: 12px; margin-top: 16px;">
+            Enter your username above, then share the link.
+        </p>
+    </div>
+</section>
+
+<footer>
+    <div class="container">
+        <p>&copy; 2026 Archive Arbitrage</p>
+        <p style="margin-top: 8px;">
+            <a href="https://archivearbitrage.com" style="color: #737373; text-decoration: none;">Home</a>
+            <span style="color: #333; margin: 0 8px;">&middot;</span>
+            <a href="/guides/" style="color: #737373; text-decoration: none;">Price Guides</a>
+        </p>
+    </div>
+</footer>
+
+<script>
+// ── Referral tracking ──
+(function() {
+    var params = new URLSearchParams(window.location.search);
+    var ref = params.get("ref");
+    if (ref) {
+        try { localStorage.setItem("aa_ref", ref); } catch(e) {}
+        document.getElementById("refBadge").style.display = "inline-block";
+        document.getElementById("refName").textContent = ref;
+        // Append ref to CTAs
+        document.querySelectorAll('a[href*="signup"]').forEach(function(a) {
+            a.href = a.href + (a.href.indexOf("?") === -1 ? "?" : "&") + "ref=" + encodeURIComponent(ref);
+        });
+    } else {
+        // Check localStorage
+        try {
+            var stored = localStorage.getItem("aa_ref");
+            if (stored) {
+                document.getElementById("refBadge").style.display = "inline-block";
+                document.getElementById("refName").textContent = stored;
+                document.querySelectorAll('a[href*="signup"]').forEach(function(a) {
+                    a.href = a.href + (a.href.indexOf("?") === -1 ? "?" : "&") + "ref=" + encodeURIComponent(stored);
+                });
+            }
+        } catch(e) {}
+    }
+
+    // Make share input editable for username
+    var input = document.getElementById("shareInput");
+    input.readOnly = false;
+    input.addEventListener("focus", function() {
+        if (this.value === "archivearbitrage.com/refer?ref=") {
+            this.setSelectionRange(this.value.length, this.value.length);
+        }
+    });
+})();
+
+function copyLink() {
+    var input = document.getElementById("shareInput");
+    navigator.clipboard.writeText(input.value).then(function() {
+        var msg = document.getElementById("copiedMsg");
+        msg.style.display = "block";
+        setTimeout(function() { msg.style.display = "none"; }, 2000);
+    });
+}
+</script>
+
+</body>
+</html>
