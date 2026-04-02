@@ -28,6 +28,11 @@ STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
 STRIPE_PRICE_ID = os.getenv("STRIPE_PRICE_ID", "")
 APP_URL = os.getenv("APP_URL", "https://archivearbitrage.com")
 
+# Per-tier Stripe Price IDs (for multi-tier checkout)
+STRIPE_PRICE_ID_STARTER = os.getenv("STRIPE_PRICE_ID_STARTER", "")
+STRIPE_PRICE_ID_PRO = os.getenv("STRIPE_PRICE_ID_PRO", "")
+STRIPE_PRICE_ID_WHALE = os.getenv("STRIPE_PRICE_ID_WHALE", "")
+
 STRIPE_API = "https://api.stripe.com/v1"
 
 
@@ -53,6 +58,39 @@ async def stripe_request(method: str, endpoint: str, data: dict = None) -> dict:
         if resp.status_code >= 400:
             logger.error(f"Stripe API error {resp.status_code}: {resp.text}")
         return resp.json()
+
+
+# ---------------------------------------------------------------------------
+# Tier resolution
+# ---------------------------------------------------------------------------
+
+def _build_price_tier_map() -> dict[str, str]:
+    """Build a mapping of Stripe Price ID → tier name."""
+    m = {}
+    if STRIPE_PRICE_ID_STARTER:
+        m[STRIPE_PRICE_ID_STARTER] = "starter"
+    if STRIPE_PRICE_ID_PRO:
+        m[STRIPE_PRICE_ID_PRO] = "pro"
+    if STRIPE_PRICE_ID_WHALE:
+        m[STRIPE_PRICE_ID_WHALE] = "whale"
+    # Legacy single-plan price ID defaults to starter
+    if STRIPE_PRICE_ID and STRIPE_PRICE_ID not in m:
+        m[STRIPE_PRICE_ID] = "starter"
+    return m
+
+
+def _resolve_tier_from_amount(amount_cents: int) -> str:
+    """Fallback: determine tier from checkout amount in cents.
+
+    Thresholds are midpoints between actual price points so minor
+    price changes don't break classification.
+    Starter ~$30, Pro ~$80, Whale ~$400.
+    """
+    if amount_cents >= 20_000:   # >= $200
+        return "whale"
+    if amount_cents >= 5_000:    # >= $50
+        return "pro"
+    return "starter"
 
 
 # ---------------------------------------------------------------------------
@@ -89,35 +127,110 @@ async def handle_checkout_completed(event_data: dict):
     session = event_data.get("object", {})
     telegram_id = session.get("client_reference_id") or session.get("metadata", {}).get("telegram_id")
     customer_id = session.get("customer")
+    customer_email = session.get("customer_details", {}).get("email", "")
+    customer_name = session.get("customer_details", {}).get("name", "")
+    subscription_id = session.get("subscription", "")
 
-    if not telegram_id:
-        logger.error("checkout.session.completed missing telegram_id")
-        return
+    # Determine tier — prefer Price ID match, fall back to amount
+    tier = None
+    session_id = session.get("id", "")
+    price_tier_map = _build_price_tier_map()
+    if session_id and price_tier_map:
+        line_items = await stripe_request("GET", f"checkout/sessions/{session_id}/line_items")
+        for item in line_items.get("data", []):
+            price_id = item.get("price", {}).get("id", "")
+            if price_id in price_tier_map:
+                tier = price_tier_map[price_id]
+                break
 
-    telegram_id = int(telegram_id)
+    if not tier:
+        tier = _resolve_tier_from_amount(session.get("amount_total", 0))
 
-    from telegram_bot import get_or_create_user, activate_user, send_message
+    logger.info(f"Checkout tier={tier} for session={session_id} (amount={session.get('amount_total', 0)}¢)")
 
-    # Ensure user exists
-    get_or_create_user(telegram_id)
-    activate_user(telegram_id, stripe_customer_id=customer_id)
+    # ── Telegram activation (if telegram_id provided) ──
+    if telegram_id:
+        try:
+            telegram_id = int(telegram_id)
+            from telegram_bot import get_or_create_user, activate_user, send_message
+            get_or_create_user(telegram_id)
+            activate_user(telegram_id, stripe_customer_id=customer_id)
+            logger.info(f"Activated Telegram subscription for telegram_id={telegram_id}")
 
-    logger.info(f"✅ Activated subscription for telegram_id={telegram_id}")
+            await send_message(telegram_id, (
+                "🎉 <b>Welcome to Archive Arbitrage!</b>\n\n"
+                "Your subscription is now active. You'll start receiving deal alerts.\n\n"
+                "Quick setup:\n"
+                "• /brands — Filter by brands you care about\n"
+                "• /sizes — Filter by your sizes\n"
+                "• /minprofit — Set minimum profit threshold\n"
+                "• /recent — See latest deals\n\n"
+                "Happy hunting! 🏴"
+            ))
+        except Exception as e:
+            logger.error(f"Telegram activation failed: {e}")
 
-    # Notify user
-    try:
-        await send_message(telegram_id, (
-            "🎉 <b>Welcome to Archive Arbitrage!</b>\n\n"
-            "Your subscription is now active. You'll start receiving deal alerts.\n\n"
-            "Quick setup:\n"
-            "• /brands — Filter by brands you care about\n"
-            "• /sizes — Filter by your sizes\n"
-            "• /minprofit — Set minimum profit threshold\n"
-            "• /recent — See latest deals\n\n"
-            "Happy hunting! 🏴"
-        ))
-    except Exception as e:
-        logger.error(f"Failed to send welcome message: {e}")
+    # ── Supabase dashboard activation ──
+    if customer_email:
+        try:
+            from core.supabase_sync import update_user_subscription
+            update_user_subscription(
+                email=customer_email,
+                tier=tier,
+                stripe_customer_id=customer_id or "",
+                stripe_subscription_id=subscription_id or "",
+                status="active",
+            )
+            logger.info(f"Activated Supabase subscription for {customer_email} (tier={tier})")
+        except Exception as e:
+            logger.error(f"Supabase activation failed: {e}")
+
+    # ── Onboarding email drip ──
+    if customer_email:
+        try:
+            from core.onboarding import on_new_subscription
+            on_new_subscription(
+                email=customer_email,
+                name=customer_name or "there",
+                tier=tier,
+                stripe_customer_id=customer_id or "",
+            )
+        except Exception as e:
+            logger.error(f"Onboarding drip registration failed: {e}")
+
+    # ── Referral tracking ──
+    if customer_email:
+        try:
+            import sqlite3 as _sql
+            db_path = os.path.join(os.path.dirname(__file__), "data", "archive.db")
+            conn = _sql.connect(db_path)
+            c = conn.cursor()
+            # Check if this user was referred (ref_code stored at email capture)
+            c.execute("SELECT ref_code FROM email_subscribers WHERE email=? AND ref_code IS NOT NULL AND ref_code != ''",
+                      (customer_email.lower().strip(),))
+            row = c.fetchone()
+            if row:
+                ref_code = row[0]
+                c.execute("""
+                    CREATE TABLE IF NOT EXISTS referral_conversions (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        ref_code TEXT NOT NULL,
+                        referee_email TEXT NOT NULL,
+                        converted_at TEXT DEFAULT (datetime('now')),
+                        free_week_granted INTEGER DEFAULT 0
+                    )
+                """)
+                c.execute("INSERT INTO referral_conversions (ref_code, referee_email) VALUES (?, ?)",
+                          (ref_code, customer_email.lower().strip()))
+                conn.commit()
+                logger.info(f"Referral conversion tracked: {customer_email} via ref={ref_code}")
+            conn.close()
+
+            # Remove from prospect nurture drip (they converted)
+            from core.marketing_emails import unregister_prospect
+            unregister_prospect(customer_email.lower().strip())
+        except Exception as e:
+            logger.error(f"Referral tracking failed: {e}")
 
 
 async def handle_subscription_deleted(event_data: dict):
@@ -139,16 +252,36 @@ async def handle_subscription_deleted(event_data: dict):
     from telegram_bot import deactivate_user, send_message
 
     deactivate_user(telegram_id)
-    logger.info(f"❌ Deactivated subscription for telegram_id={telegram_id}")
+    logger.info(f"Deactivated subscription for telegram_id={telegram_id}")
 
     try:
         await send_message(telegram_id, (
-            "😔 Your Archive Arbitrage subscription has been cancelled.\n\n"
+            "Your Archive Arbitrage subscription has been cancelled.\n\n"
             "You'll no longer receive deal alerts.\n"
             "Use /subscribe to reactivate anytime."
         ))
     except Exception:
         pass
+
+    # Deactivate in Supabase
+    try:
+        # Find email by customer_id in Supabase
+        import httpx as hx
+        supa_url = os.getenv("SUPABASE_URL", "")
+        supa_key = os.getenv("SUPABASE_SERVICE_KEY", "")
+        if supa_url and supa_key and customer_id:
+            resp = hx.get(
+                f"{supa_url}/rest/v1/profiles?stripe_customer_id=eq.{customer_id}&select=email",
+                headers={"apikey": supa_key, "Authorization": f"Bearer {supa_key}"},
+                timeout=10,
+            )
+            if resp.status_code == 200 and resp.json():
+                email = resp.json()[0]["email"]
+                from core.supabase_sync import update_user_subscription
+                update_user_subscription(email=email, status="cancelled")
+                logger.info(f"Deactivated Supabase subscription for {email}")
+    except Exception as e:
+        logger.error(f"Supabase deactivation failed: {e}")
 
 
 async def handle_payment_failed(event_data: dict):
