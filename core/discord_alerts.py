@@ -11,7 +11,7 @@ Setup:
         DISCORD_WEBHOOK_BEGINNER=https://discord.com/api/webhooks/...
         DISCORD_WEBHOOK_PRO=https://discord.com/api/webhooks/...
         DISCORD_WEBHOOK_WHALE=https://discord.com/api/webhooks/...
-    3. Each deal routes to exactly ONE channel based on tier metrics (exclusive routing)
+    3. Deals use nested entitlement: beginner→all channels, pro→pro+whale, whale→whale only
 """
 
 import os
@@ -30,7 +30,7 @@ logger = logging.getLogger("discord_alerts")
 # Config
 # ---------------------------------------------------------------------------
 
-# Tier-specific webhook URLs (exclusive routing: each deal → one channel only)
+# Tier-specific webhook URLs (nested entitlement: deals fan out to qualifying channels)
 DISCORD_WEBHOOK_BEGINNER = os.getenv("DISCORD_WEBHOOK_BEGINNER", "")
 DISCORD_WEBHOOK_PRO = os.getenv("DISCORD_WEBHOOK_PRO", "")
 DISCORD_WEBHOOK_WHALE = os.getenv("DISCORD_WEBHOOK_WHALE", "")
@@ -203,20 +203,6 @@ def build_embed(
     return embed
 
 
-def determine_tier(item: Any, profit: float = 0, margin: float = 0) -> str:
-    """Determine which tier a deal belongs to based on qualification criteria.
-
-    Exclusive routing — returns the SINGLE highest qualifying tier.
-    Simplified version (no brand check) — use classify_discord_tiers() for full routing.
-
-    Returns: 'beginner', 'pro', or 'whale'
-    """
-    if profit >= 500 and margin >= 0.15:
-        return "whale"
-    if profit >= 300 and margin >= 0.20:
-        return "pro"
-    return "beginner"
-
 
 async def send_discord_alert(
     item: Any,
@@ -227,11 +213,12 @@ async def send_discord_alert(
     tier: str = "beginner",
     tiers: Optional[List[str]] = None,
 ) -> bool:
-    """Send a deal alert to exactly ONE Discord channel based on tier.
+    """Send a deal alert to Discord channels using nested entitlement routing.
 
-    Brand-access routing: deals go to the channel(s) determined by brand exclusivity.
-    A Pro-exclusive brand deal goes to #pro-signals. A beginner brand with $500+ profit
-    goes to both #beginner-signals and #whale-signals.
+    Deals fan out to all channels at or above their minimum tier:
+      beginner deal → beginner + pro + whale
+      pro deal      → pro + whale
+      whale deal    → whale only
 
     Args:
         tier: fallback tier label

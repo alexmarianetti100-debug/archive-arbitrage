@@ -14,7 +14,7 @@
       "helmut lang",
       "issey miyake"
     ],
-    "routing": ["beginner"]
+    "routing": ["beginner", "pro", "whale"]
   },
   "pro": {
     "min_profit": 300,
@@ -59,7 +59,7 @@
       "vetements",
       "takahiromiyashita thesoloist", "soloist"
     ],
-    "routing": ["pro"]
+    "routing": ["pro", "whale"]
   },
   "big_baller": {
     "min_profit": 500,
