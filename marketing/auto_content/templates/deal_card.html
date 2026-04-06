@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    width: 1080px;
+    height: 1350px;
+    background: #080808;
+    font-family: 'Inter', -apple-system, sans-serif;
+    color: #f0ede8;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Subtle noise texture overlay */
+  body::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    background-size: 256px;
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  /* Top accent line */
+  .accent-line {
+    height: 3px;
+    background: linear-gradient(90deg, #c9a84c, #8b7332);
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 28px 48px 0;
+  }
+  .logo {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: #666;
+  }
+  .fire-badge {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: {{ fire_color }};
+  }
+
+  /* Image section */
+  .image-section {
+    margin: 24px 48px 0;
+    height: 380px;
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+    background: #111;
+  }
+  .image-section img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: brightness(0.7) contrast(1.1);
+  }
+  .no-image {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #111 0%, #1a1a1a 50%, #111 100%);
+  }
+  .no-image span {
+    color: #333;
+    font-size: 14px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+  /* Source badge on image */
+  .source-badge {
+    position: absolute;
+    bottom: 16px;
+    left: 16px;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(8px);
+    padding: 6px 14px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #999;
+  }
+
+  /* Content area */
+  .content {
+    padding: 32px 48px 0;
+  }
+
+  /* Brand */
+  .brand {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: {{ brand_color }};
+    margin-bottom: 8px;
+  }
+
+  /* Title */
+  .title {
+    font-size: 32px;
+    font-weight: 800;
+    line-height: 1.15;
+    color: #f0ede8;
+    margin-bottom: 20px;
+    max-height: 115px;
+    overflow: hidden;
+  }
+
+  /* Tags row */
+  .tags {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+  }
+  .tag {
+    padding: 5px 12px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    background: #1a1a1a;
+    color: #888;
+    border: 1px solid #222;
+  }
+
+  /* Price comparison */
+  .price-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 32px;
+    padding: 24px 0;
+    border-top: 1px solid #1a1a1a;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  .price-block {
+    flex: 1;
+  }
+  .price-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #555;
+    margin-bottom: 6px;
+  }
+  .price-listed {
+    font-size: 42px;
+    font-weight: 800;
+    color: #f0ede8;
+  }
+  .price-market {
+    font-size: 42px;
+    font-weight: 800;
+    color: #c9a84c;
+  }
+  .price-arrow {
+    flex: 0 0 80px;
+    text-align: center;
+  }
+  .price-arrow svg {
+    width: 36px;
+    height: 36px;
+    color: #333;
+  }
+
+  /* Stats grid */
+  .stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0;
+    margin-bottom: 28px;
+  }
+  .stat {
+    text-align: center;
+    padding: 16px 0;
+  }
+  .stat:not(:last-child) {
+    border-right: 1px solid #1a1a1a;
+  }
+  .stat-label {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #555;
+    margin-bottom: 8px;
+  }
+  .stat-value {
+    font-size: 28px;
+    font-weight: 800;
+  }
+  .stat-profit { color: #4ade80; }
+  .stat-gap { color: #4ade80; }
+  .stat-comps { color: #f0ede8; }
+
+  /* Auth bar */
+  .auth-section {
+    margin-bottom: 28px;
+  }
+  .auth-label {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #555;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .auth-bar {
+    height: 4px;
+    background: #1a1a1a;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .auth-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: linear-gradient(90deg, {{ auth_color_start }}, {{ auth_color_end }});
+    width: {{ auth_pct }}%;
+  }
+
+  /* Footer */
+  .footer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 24px 48px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #111;
+  }
+  .footer-brand {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #c9a84c;
+  }
+  .footer-cta {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #444;
+  }
+</style>
+</head>
+<body>
+  <div class="accent-line"></div>
+
+  <div class="header">
+    <div class="logo">Archive Arbitrage</div>
+    <div class="fire-badge">{{ fire_text }}</div>
+  </div>
+
+  <div class="image-section">
+    {% if image_url %}
+    <img src="{{ image_url }}" alt="">
+    {% else %}
+    <div class="no-image"><span></span></div>
+    {% endif %}
+    <div class="source-badge">{{ source }}</div>
+  </div>
+
+  <div class="content">
+    <div class="brand">{{ brand }}</div>
+    <div class="title">{{ title }}</div>
+
+    <div class="tags">
+      {% if season %}<div class="tag">{{ season }}</div>{% endif %}
+      {% if size %}<div class="tag">{{ size }}</div>{% endif %}
+      {% if condition %}<div class="tag">{{ condition }}</div>{% endif %}
+      {% if demand == 'hot' %}<div class="tag" style="color: #e87040; border-color: #3a2010;">{{ demand | upper }}</div>{% endif %}
+    </div>
+
+    <div class="price-row">
+      <div class="price-block">
+        <div class="price-label">Listed</div>
+        <div class="price-listed">${{ buy_price | int }}</div>
+      </div>
+      <div class="price-arrow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </div>
+      <div class="price-block" style="text-align: right;">
+        <div class="price-label">Market Value</div>
+        <div class="price-market">${{ market_price | int }}</div>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-label">Est. Profit</div>
+        <div class="stat-value stat-profit">${{ profit | int }}</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Below Market</div>
+        <div class="stat-value stat-gap">{{ gap_pct }}%</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Sold Comps</div>
+        <div class="stat-value stat-comps">{{ comp_count }}</div>
+      </div>
+    </div>
+
+    <div class="auth-section">
+      <div class="auth-label">
+        <span>Auth Confidence</span>
+        <span style="color: #888;">{{ auth_pct }}%</span>
+      </div>
+      <div class="auth-bar">
+        <div class="auth-fill"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-brand">@archivearbitrage</div>
+    <div class="footer-cta">Link in bio</div>
+  </div>
+</body>
+</html>

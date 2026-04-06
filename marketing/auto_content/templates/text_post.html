@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    width: 1080px;
+    height: 1080px;
+    background: #080808;
+    font-family: 'Inter', -apple-system, sans-serif;
+    color: #f0ede8;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+
+  body::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    background-size: 256px;
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  .accent-line {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #c9a84c, #8b7332);
+  }
+
+  .container {
+    width: 100%;
+    padding: 80px 72px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    flex: 1;
+  }
+
+  /* Headline style */
+  .headline {
+    font-size: {{ headline_size | default('52') }}px;
+    font-weight: 800;
+    line-height: 1.15;
+    color: #f0ede8;
+    margin-bottom: 40px;
+    max-width: 900px;
+  }
+  .headline .gold { color: #c9a84c; }
+  .headline .green { color: #4ade80; }
+  .headline .dim { color: #555; }
+
+  /* Body text */
+  .body {
+    font-size: 24px;
+    font-weight: 400;
+    line-height: 1.65;
+    color: #999;
+    max-width: 850px;
+  }
+  .body strong {
+    color: #f0ede8;
+    font-weight: 600;
+  }
+  .body .gold { color: #c9a84c; font-weight: 600; }
+
+  /* Stat callout */
+  .stat-callout {
+    margin: 40px 0;
+    padding: 32px 0;
+    border-top: 1px solid #1a1a1a;
+    border-bottom: 1px solid #1a1a1a;
+    display: flex;
+    gap: 48px;
+  }
+  .callout-item {
+    text-align: left;
+  }
+  .callout-value {
+    font-size: 48px;
+    font-weight: 800;
+    color: #f0ede8;
+    margin-bottom: 4px;
+  }
+  .callout-value.gold { color: #c9a84c; }
+  .callout-value.green { color: #4ade80; }
+  .callout-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #555;
+  }
+
+  /* Divider line */
+  .divider {
+    width: 60px;
+    height: 2px;
+    background: #c9a84c;
+    margin: 32px 0;
+  }
+
+  .footer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 24px 72px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #111;
+  }
+  .footer-brand {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #c9a84c;
+  }
+  .footer-cta {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #444;
+  }
+</style>
+</head>
+<body>
+  <div class="accent-line"></div>
+
+  <div class="container">
+    {{ content }}
+  </div>
+
+  <div class="footer">
+    <div class="footer-brand">@archivearbitrage</div>
+    <div class="footer-cta">Link in bio</div>
+  </div>
+</body>
+</html>
