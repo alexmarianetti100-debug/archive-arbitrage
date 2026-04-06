@@ -1,0 +1,58 @@
+version: "3.9"
+
+services:
+  # ── Primary: gap_hunter pipeline (one-shot or long-running) ──
+  gap-hunter:
+    build: .
+    container_name: archive-gap-hunter
+    env_file: .env
+    volumes:
+      - scraper-data:/app/data
+      - scraper-logs:/app/logs
+    restart: unless-stopped
+    # Override for one-shot runs: docker compose run --rm gap-hunter gap_hunter.py --once
+    command: ["gap_hunter.py"]
+
+  # ── Scheduled scraper (cron-driven inside container) ──
+  scheduler:
+    build: .
+    container_name: archive-scheduler
+    env_file: .env
+    volumes:
+      - scraper-data:/app/data
+      - scraper-logs:/app/logs
+      - ./cron/scraper-cron:/etc/cron.d/scraper-cron:ro
+    entrypoint: [""]
+    command: >
+      sh -c "
+        env | grep -v '^_=' | grep -v '^PWD=' | sed 's/^/export /' > /app/.cronenv &&
+        cp /etc/cron.d/scraper-cron /etc/cron.d/scraper-cron-active &&
+        chmod 0644 /etc/cron.d/scraper-cron-active &&
+        crontab /etc/cron.d/scraper-cron-active &&
+        cron -f
+      "
+    user: root
+    restart: unless-stopped
+
+  # ── API server (serves deal data to frontend/subscribers) ──
+  api:
+    build: .
+    container_name: archive-api
+    env_file: .env
+    volumes:
+      - scraper-data:/app/data
+    ports:
+      - "${API_PORT:-8000}:8000"
+    command: ["-m", "uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/stats"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  scraper-data:
+    driver: local
+  scraper-logs:
+    driver: local

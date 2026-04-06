@@ -1,0 +1,19 @@
+# Archive Arbitrage - Scheduled Scraper Cron
+# Runs inside the 'scheduler' container via docker-compose
+#
+# Format: min hour dom month dow command
+# All output goes to /app/logs/cron.log for debugging
+# Each job sources .cronenv to get container env vars (Telegram tokens, etc.)
+
+# Gap hunter: every 2 hours (primary deal-finding pipeline)
+0 */2 * * * . /app/.cronenv; cd /app && python -u gap_hunter.py >> /app/logs/cron.log 2>&1
+
+# Scheduled scrape: every 4 hours, offset from gap_hunter
+30 1,5,9,13,17,21 * * * . /app/.cronenv; cd /app && python -u scrapers/scheduled_scrape.py >> /app/logs/cron.log 2>&1
+
+# Trend engine: daily at 3 AM UTC
+0 3 * * * . /app/.cronenv; cd /app && python -u trend_engine.py >> /app/logs/cron.log 2>&1
+
+# Log rotation: keep last 7 days, daily at midnight
+0 0 * * * find /app/logs -name '*.log' -mtime +7 -delete 2>/dev/null
+

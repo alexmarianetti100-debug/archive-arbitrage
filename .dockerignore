@@ -1,0 +1,62 @@
+# Virtual environments
+venv/
+venv.bak/
+env/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Data (mounted as volume, not baked in)
+data/
+logs/
+*.db
+*.db-shm
+*.db-wal
+dump.rdb
+
+# Frontend (not needed in scraper image)
+frontend-react/
+frontend-legacy/
+frontend-dist/
+frontend-user/
+landing/
+
+# Testing / dev
+tests/
+htmlcov/
+.pytest_cache/
+.coverage
+.mypy_cache/
+__pycache__/
+
+# Docs / marketing
+docs/
+marketing/instagram_content.md
+outreach_tracker.xlsx
+BACKLOG.md
+BACKLOG.csv
+CLI_GUIDE.md
+PROXY_SETUP.md
+README.md
+
+# Cookies / secrets
+cookies/
+.env
+.env.*
+
+# Build artifacts
+*.pyc
+*.egg-info/
+build/
+dist/
+
+# Paperclip / Claude
+.claude/
+.paperclip/
