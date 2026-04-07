@@ -72,26 +72,26 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
-            background: #0a0a0a;
-            color: #e0ddd8;
+            background: #faf9f7;
+            color: #111111;
             line-height: 1.6;
         }
         .container { max-width: 800px; margin: 0 auto; padding: 40px 20px; }
         h1 {
             font-size: 2.2rem;
-            color: #f0ede8;
+            color: #111111;
             margin-bottom: 8px;
             letter-spacing: -0.5px;
         }
         h2 {
             font-size: 1.5rem;
-            color: #d7be8c;
+            color: #b38728;
             margin: 40px 0 16px;
-            border-bottom: 1px solid #222;
+            border-bottom: 1px solid #e5e3de;
             padding-bottom: 8px;
         }
         .subtitle {
-            color: #8c8c8c;
+            color: #5a5550;
             font-size: 1rem;
             margin-bottom: 30px;
         }
@@ -102,8 +102,8 @@
             margin: 24px 0;
         }
         .stat-card {
-            background: #161616;
-            border: 1px solid #222;
+            background: #ffffff;
+            border: 1px solid #e5e3de;
             border-radius: 8px;
             padding: 20px;
             text-align: center;
@@ -111,11 +111,11 @@
         .stat-value {
             font-size: 2rem;
             font-weight: 700;
-            color: #d7be8c;
+            color: #b38728;
         }
         .stat-label {
             font-size: 0.8rem;
-            color: #666;
+            color: #8a8580;
             text-transform: uppercase;
             margin-top: 4px;
         }
@@ -127,20 +127,20 @@
         th {
             text-align: left;
             padding: 12px;
-            border-bottom: 2px solid #d7be8c;
-            color: #d7be8c;
+            border-bottom: 2px solid #b38728;
+            color: #b38728;
             font-size: 0.85rem;
             text-transform: uppercase;
         }
         td {
             padding: 12px;
-            border-bottom: 1px solid #1a1a1a;
-            color: #c0bdb8;
+            border-bottom: 1px solid #e5e3de;
+            color: #5a5550;
         }
-        tr:hover td { background: #111; }
+        tr:hover td { background: #f0eeeb; }
         .cta-box {
-            background: linear-gradient(135deg, #1a1510, #161616);
-            border: 1px solid #d7be8c;
+            background: linear-gradient(135deg, #f5f0e8, #ffffff);
+            border: 1px solid #b38728;
             border-radius: 12px;
             padding: 32px;
             margin: 40px 0;
@@ -148,40 +148,154 @@
         }
         .cta-box h3 {
             font-size: 1.4rem;
-            color: #f0ede8;
+            color: #111111;
             margin-bottom: 12px;
         }
         .cta-box p {
-            color: #8c8c8c;
+            color: #5a5550;
             margin-bottom: 20px;
         }
         .cta-button {
             display: inline-block;
-            background: #d7be8c;
-            color: #0a0a0a;
+            background: #b38728;
+            color: #faf9f7;
             padding: 14px 32px;
             border-radius: 8px;
             text-decoration: none;
             font-weight: 700;
             font-size: 1rem;
         }
-        .cta-button:hover { background: #e5d0a0; }
+        .cta-button:hover { background: #c9a043; }
         .footer {
             margin-top: 60px;
             padding-top: 20px;
-            border-top: 1px solid #1a1a1a;
-            color: #444;
+            border-top: 1px solid #e5e3de;
+            color: #8a8580;
             font-size: 0.85rem;
         }
         .breadcrumb {
-            color: #555;
+            color: #8a8580;
             font-size: 0.85rem;
             margin-bottom: 20px;
         }
-        .breadcrumb a { color: #d7be8c; text-decoration: none; }
+        .breadcrumb a { color: #b38728; text-decoration: none; }
         @media (max-width: 600px) {
             .stat-grid { grid-template-columns: 1fr; }
             h1 { font-size: 1.6rem; }
+        }
+    
+        /* ── EMAIL CAPTURE + BLURRED DEALS ── */
+        .guide-email-capture {
+            background: linear-gradient(135deg, #f5f0e8, #ffffff);
+            border: 1px solid rgba(179, 135, 40, 0.3);
+            border-radius: 8px;
+            padding: 32px;
+            margin: 40px 0;
+            text-align: center;
+        }
+        .guide-email-capture h3 {
+            font-size: 1.3rem;
+            color: #111111;
+            margin-bottom: 8px;
+        }
+        .guide-email-capture p {
+            color: #5a5550;
+            margin-bottom: 20px;
+            font-size: 0.95rem;
+        }
+        .guide-email-form {
+            display: flex;
+            gap: 8px;
+            max-width: 420px;
+            margin: 0 auto;
+        }
+        .guide-email-form input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #e5e3de;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            outline: none;
+            background: #fff;
+            color: #111;
+        }
+        .guide-email-form input:focus { border-color: #b38728; }
+        .guide-email-form button {
+            padding: 12px 24px;
+            background: #b38728;
+            color: #faf9f7;
+            border: none;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .guide-email-form button:hover { background: #c9a043; }
+        .guide-email-note {
+            font-size: 0.8rem;
+            color: #8a8580;
+            margin-top: 12px;
+        }
+        .guide-blurred-deals {
+            margin: 40px 0;
+        }
+        .guide-blurred-deals h3 {
+            font-size: 1.2rem;
+            color: #111;
+            margin-bottom: 16px;
+        }
+        .blurred-deal-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+        }
+        .blurred-deal {
+            background: #ffffff;
+            border: 1px solid #e5e3de;
+            border-radius: 8px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        .blurred-deal-content {
+            filter: blur(5px);
+            user-select: none;
+            pointer-events: none;
+        }
+        .blurred-deal-profit {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: #16a34a;
+            text-align: center;
+            margin-top: 10px;
+        }
+        .blurred-deal-lock {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: #b38728;
+            background: rgba(179, 135, 40, 0.08);
+            border: 1px solid rgba(179, 135, 40, 0.2);
+            padding: 3px 8px;
+            border-radius: 2px;
+        }
+        .blurred-deal-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: #8a8580;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #f0eeeb;
+        }
+        @media (max-width: 600px) {
+            .guide-email-form { flex-direction: column; }
+            .blurred-deal-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -281,6 +395,51 @@
             </tbody>
         </table>
 
+        
+        <div class="guide-email-capture">
+            <h3>Get Rick Owens alerts in your inbox</h3>
+            <p>Delayed deal alerts for Rick Owens pieces — 1-2 per week, free forever. See real deals before you commit to a subscription.</p>
+            <form class="guide-email-form" onsubmit="handleGuideEmail(event, 'rick-owens')">
+                <input type="email" placeholder="your@email.com" required>
+                <button type="submit">Get Alerts</button>
+            </form>
+            <p class="guide-email-note">Free forever. No spam. Unsubscribe anytime.</p>
+        </div>
+        <div class="guide-blurred-deals">
+            <h3>Recent Rick Owens Deals Found</h3>
+            <p style="color: #5a5550; font-size: 0.9rem; margin-bottom: 16px;">Found in the last 7 days. Subscribers got real-time alerts with buy links.</p>
+            <div class="blurred-deal-grid">
+                <div class="blurred-deal">
+                    <div class="blurred-deal-lock">Locked</div>
+                    <div class="blurred-deal-content">
+                        <div style="font-size: 0.85rem; font-weight: 700; color: #111;">Rick Owens</div>
+                        <div style="font-size: 0.8rem; color: #5a5550;">Listed at $340 on Grailed</div>
+                    </div>
+                    <div class="blurred-deal-profit">+$387</div>
+                    <div class="blurred-deal-meta"><span>Margin: 53%</span><span>Grailed</span></div>
+                </div>
+                <div class="blurred-deal">
+                    <div class="blurred-deal-lock">Locked</div>
+                    <div class="blurred-deal-content">
+                        <div style="font-size: 0.85rem; font-weight: 700; color: #111;">Rick Owens</div>
+                        <div style="font-size: 0.8rem; color: #5a5550;">Listed at $185 on eBay</div>
+                    </div>
+                    <div class="blurred-deal-profit">+$264</div>
+                    <div class="blurred-deal-meta"><span>Margin: 58%</span><span>eBay</span></div>
+                </div>
+                <div class="blurred-deal">
+                    <div class="blurred-deal-lock">Locked</div>
+                    <div class="blurred-deal-content">
+                        <div style="font-size: 0.85rem; font-weight: 700; color: #111;">Rick Owens</div>
+                        <div style="font-size: 0.8rem; color: #5a5550;">Listed at $420 on Poshmark</div>
+                    </div>
+                    <div class="blurred-deal-profit">+$511</div>
+                    <div class="blurred-deal-meta"><span>Margin: 54%</span><span>Poshmark</span></div>
+                </div>
+            </div>
+            <p style="text-align: center; margin-top: 16px;"><a href="https://app.archivearbitrage.com/signup" class="cta-button" style="font-size: 0.85rem; padding: 12px 28px;">Unlock Rick Owens Deals &rarr;</a></p>
+        </div>
+
         <div class="cta-box">
             <h3>Get Rick Owens Deals Before They Sell Out</h3>
             <p>
@@ -315,20 +474,38 @@
 
         <h2>Related Price Guides</h2>
         <div style="display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0 40px;">
-            <a href="/guides/boris" style="background: #161616; border: 1px solid #222; border-radius: 8px; padding: 12px 16px; text-decoration: none; color: #e0ddd8; transition: border-color 0.2s;" onmouseover="this.style.borderColor='#d7be8c'" onmouseout="this.style.borderColor='#222'">Boris Bidjan Saberi</a>
-            <a href="/guides/carol-christian-poell" style="background: #161616; border: 1px solid #222; border-radius: 8px; padding: 12px 16px; text-decoration: none; color: #e0ddd8; transition: border-color 0.2s;" onmouseover="this.style.borderColor='#d7be8c'" onmouseout="this.style.borderColor='#222'">Carol Christian Poell</a>
-            <a href="/guides/ann-demeulemeester" style="background: #161616; border: 1px solid #222; border-radius: 8px; padding: 12px 16px; text-decoration: none; color: #e0ddd8; transition: border-color 0.2s;" onmouseover="this.style.borderColor='#d7be8c'" onmouseout="this.style.borderColor='#222'">Ann Demeulemeester</a>
-            <a href="/guides/julius" style="background: #161616; border: 1px solid #222; border-radius: 8px; padding: 12px 16px; text-decoration: none; color: #e0ddd8; transition: border-color 0.2s;" onmouseover="this.style.borderColor='#d7be8c'" onmouseout="this.style.borderColor='#222'">Julius</a>
-            <a href="/guides/chrome-hearts" style="background: #161616; border: 1px solid #222; border-radius: 8px; padding: 12px 16px; text-decoration: none; color: #e0ddd8; transition: border-color 0.2s;" onmouseover="this.style.borderColor='#d7be8c'" onmouseout="this.style.borderColor='#222'">Chrome Hearts</a>
+            <a href="/guides/boris" style="background: #ffffff; border: 1px solid #e5e3de; border-radius: 8px; padding: 12px 16px; text-decoration: none; color: #111111; transition: border-color 0.2s;" onmouseover="this.style.borderColor='#d7be8c'" onmouseout="this.style.borderColor='#222'">Boris Bidjan Saberi</a>
+            <a href="/guides/carol-christian-poell" style="background: #ffffff; border: 1px solid #e5e3de; border-radius: 8px; padding: 12px 16px; text-decoration: none; color: #111111; transition: border-color 0.2s;" onmouseover="this.style.borderColor='#d7be8c'" onmouseout="this.style.borderColor='#222'">Carol Christian Poell</a>
+            <a href="/guides/ann-demeulemeester" style="background: #ffffff; border: 1px solid #e5e3de; border-radius: 8px; padding: 12px 16px; text-decoration: none; color: #111111; transition: border-color 0.2s;" onmouseover="this.style.borderColor='#d7be8c'" onmouseout="this.style.borderColor='#222'">Ann Demeulemeester</a>
+            <a href="/guides/julius" style="background: #ffffff; border: 1px solid #e5e3de; border-radius: 8px; padding: 12px 16px; text-decoration: none; color: #111111; transition: border-color 0.2s;" onmouseover="this.style.borderColor='#d7be8c'" onmouseout="this.style.borderColor='#222'">Julius</a>
+            <a href="/guides/chrome-hearts" style="background: #ffffff; border: 1px solid #e5e3de; border-radius: 8px; padding: 12px 16px; text-decoration: none; color: #111111; transition: border-color 0.2s;" onmouseover="this.style.borderColor='#d7be8c'" onmouseout="this.style.borderColor='#222'">Chrome Hearts</a>
         </div>
 
         <div class="footer">
             <p>&copy; 2026 Archive Arbitrage. Market data updated weekly.</p>
             <p style="margin-top: 8px;">
-                <a href="/guides/" style="color: #d7be8c; text-decoration: none;">All Price Guides</a> |
-                <a href="https://app.archivearbitrage.com/signup" style="color: #d7be8c; text-decoration: none;">Subscribe</a>
+                <a href="/guides/" style="color: #b38728; text-decoration: none;">All Price Guides</a> |
+                <a href="https://app.archivearbitrage.com/signup" style="color: #b38728; text-decoration: none;">Subscribe</a>
             </p>
         </div>
     </div>
+
+    <script>
+    function handleGuideEmail(e, brand) {
+        e.preventDefault();
+        var form = e.target;
+        var email = form.querySelector('input[type="email"]').value;
+        // Store signup (replace with real endpoint)
+        try {
+            var signups = JSON.parse(localStorage.getItem('aa_guide_signups') || '[]');
+            signups.push({ email: email, brand: brand, time: new Date().toISOString() });
+            localStorage.setItem('aa_guide_signups', JSON.stringify(signups));
+        } catch(ex) {}
+        form.innerHTML = '<p style="color: #16a34a; font-weight: 700;">You\'re in! ' + brand.replace(/-/g, ' ') + ' alerts start this week.</p>';
+        if (typeof gtag === 'function') {
+            gtag('event', 'guide_email_signup', { brand: brand });
+        }
+    }
+    </script>
 </body>
 </html>

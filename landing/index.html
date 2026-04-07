@@ -512,6 +512,95 @@
             font-weight: 300;
         }
 
+        /* ── DEALS YOU'RE MISSING ── */
+        .missing {
+            padding: 120px 0;
+            border-top: 1px solid var(--border);
+            background: linear-gradient(180deg, var(--bg) 0%, #f3f1ed 100%);
+        }
+        .missing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+        }
+        .missing-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 28px;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.3s;
+        }
+        .missing-card:hover {
+            transform: translateY(-3px);
+        }
+        .missing-blurred {
+            filter: blur(6px);
+            user-select: none;
+            pointer-events: none;
+        }
+        .missing-profit {
+            font-size: 32px;
+            font-weight: 800;
+            color: var(--green);
+            letter-spacing: -1.5px;
+            margin-top: 14px;
+            text-align: center;
+        }
+        .missing-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: var(--text-light);
+            padding-top: 14px;
+            border-top: 1px solid var(--border-subtle);
+            margin-top: 14px;
+            letter-spacing: 0.5px;
+        }
+        .missing-lock {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: var(--gold);
+            background: rgba(179, 135, 40, 0.08);
+            border: 1px solid rgba(179, 135, 40, 0.2);
+            padding: 4px 10px;
+            border-radius: 2px;
+        }
+        .missing-cta {
+            text-align: center;
+            margin-top: 40px;
+        }
+        .missing-cta a {
+            display: inline-block;
+            padding: 18px 48px;
+            background: linear-gradient(135deg, #b38728, #d4a853);
+            color: #fff;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            text-decoration: none;
+            box-shadow: 0 4px 24px var(--gold-glow);
+            transition: all 0.3s;
+        }
+        .missing-cta a:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 40px rgba(179, 135, 40, 0.5);
+        }
+        .missing-cta p {
+            font-size: 13px;
+            color: var(--text-light);
+            margin-top: 14px;
+            font-weight: 300;
+        }
+
         /* ── HOW IT WORKS ── */
         .how {
             padding: 120px 0;
@@ -1104,7 +1193,7 @@
         <div class="logo">ARCHIVE <span>ARBITRAGE</span></div>
         <div class="nav-links">
             <a href="/guides/" class="nav-link">Price Guides</a>
-            <a href="/tools/resale-calculator" class="nav-link">Calculator</a>
+            <a href="/case-study" class="nav-link">30-Day Challenge</a>
             <a href="https://app.archivearbitrage.com/signup" class="nav-cta">Get Started</a>
         </div>
     </div>
@@ -1234,6 +1323,74 @@
                 <h3>Replica Detection</h3>
                 <p>Built-in authenticity screening filters out replicas and suspicious listings before they reach you.</p>
             </div>
+        </div>
+    </div>
+</section>
+
+<!-- DEALS YOU'RE MISSING -->
+<section class="missing">
+    <div class="container">
+        <div class="section-header reveal">
+            <h2>Deals you're missing right now</h2>
+            <p>These were found in the last 48 hours. Subscribers got them in real-time.</p>
+        </div>
+        <div class="missing-grid">
+            <div class="missing-card reveal reveal-delay-1">
+                <div class="missing-lock">Subscribers Only</div>
+                <div class="missing-blurred">
+                    <div style="font-size: 10px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--gold); margin-bottom: 8px;">GRAIL</div>
+                    <div style="font-size: 16px; font-weight: 800; color: var(--text);">Rick Owens</div>
+                    <div style="font-size: 12px; color: var(--text-muted);">DRKSHDW Cargo Pants</div>
+                </div>
+                <div class="missing-profit">+$438</div>
+                <div class="missing-meta">
+                    <span>Margin: 62%</span>
+                    <span>Grailed</span>
+                </div>
+            </div>
+            <div class="missing-card reveal reveal-delay-2">
+                <div class="missing-lock">Subscribers Only</div>
+                <div class="missing-blurred">
+                    <div style="font-size: 10px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--fire); margin-bottom: 8px;">HOT DEAL</div>
+                    <div style="font-size: 16px; font-weight: 800; color: var(--text);">Helmut Lang</div>
+                    <div style="font-size: 12px; color: var(--text-muted);">Astro Biker Jacket</div>
+                </div>
+                <div class="missing-profit">+$780</div>
+                <div class="missing-meta">
+                    <span>Margin: 54%</span>
+                    <span>Poshmark</span>
+                </div>
+            </div>
+            <div class="missing-card reveal reveal-delay-3">
+                <div class="missing-lock">Subscribers Only</div>
+                <div class="missing-blurred">
+                    <div style="font-size: 10px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--gold); margin-bottom: 8px;">GRAIL</div>
+                    <div style="font-size: 16px; font-weight: 800; color: var(--text);">Raf Simons</div>
+                    <div style="font-size: 12px; color: var(--text-muted);">AW03 Consumed Hoodie</div>
+                </div>
+                <div class="missing-profit">+$612</div>
+                <div class="missing-meta">
+                    <span>Margin: 71%</span>
+                    <span>eBay</span>
+                </div>
+            </div>
+            <div class="missing-card reveal reveal-delay-4">
+                <div class="missing-lock">Subscribers Only</div>
+                <div class="missing-blurred">
+                    <div style="font-size: 10px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--fire); margin-bottom: 8px;">HOT DEAL</div>
+                    <div style="font-size: 16px; font-weight: 800; color: var(--text);">Chrome Hearts</div>
+                    <div style="font-size: 12px; color: var(--text-muted);">Cross Patch Trucker</div>
+                </div>
+                <div class="missing-profit">+$916</div>
+                <div class="missing-meta">
+                    <span>Margin: 61%</span>
+                    <span>Yahoo JP</span>
+                </div>
+            </div>
+        </div>
+        <div class="missing-cta reveal">
+            <a href="https://app.archivearbitrage.com/signup">Unlock All Deals &rarr;</a>
+            <p>7 days free. See every deal the moment it drops.</p>
         </div>
     </div>
 </section>
@@ -1539,7 +1696,7 @@
         <p style="margin-top: 12px;">
             <a href="/guides/">Price Guides</a>
             <span style="color: var(--border); margin: 0 12px;">&middot;</span>
-            <a href="/tools/resale-calculator">Price Calculator</a>
+            <a href="/case-study">30-Day Challenge</a>
             <span style="color: var(--border); margin: 0 12px;">&middot;</span>
             <a href="/refer">Refer a Friend</a>
             <span style="color: var(--border); margin: 0 12px;">&middot;</span>

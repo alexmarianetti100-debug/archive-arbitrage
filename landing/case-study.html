@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>I Flipped Archive Fashion for 30 Days Using AI — Here's Every Deal</title>
+    <meta name="description" content="A transparent 30-day experiment: using AI-powered alerts to find and flip underpriced archive fashion. Every purchase, sale, and profit documented with receipts.">
+    <meta name="robots" content="index, follow">
+
+    <meta property="og:title" content="I Flipped Archive Fashion for 30 Days Using AI — Here's Every Deal">
+    <meta property="og:description" content="30-day flip experiment with full receipts. Total capital deployed, every purchase, every sale, net profit after fees.">
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://archivearbitrage.com/case-study">
+
+    <link rel="canonical" href="https://archivearbitrage.com/case-study">
+
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": "I Flipped Archive Fashion for 30 Days Using AI \u2014 Here's Every Deal",
+        "description": "A transparent 30-day experiment using AI alerts to flip underpriced archive fashion, with full receipts and profit documentation.",
+        "author": { "@type": "Person", "name": "Alex Marianetti" },
+        "publisher": { "@type": "Organization", "name": "Archive Arbitrage" },
+        "datePublished": "2026-04-07",
+        "dateModified": "2026-04-07"
+    }
+    </script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg: #faf9f7;
+            --bg-card: #ffffff;
+            --border: #e5e3de;
+            --text: #111111;
+            --text-muted: #5a5550;
+            --text-light: #8a8580;
+            --gold: #b38728;
+            --green: #16a34a;
+            --fire: #dc2626;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
+        }
+        .container { max-width: 720px; margin: 0 auto; padding: 60px 24px; }
+
+        /* Nav */
+        .case-nav {
+            padding: 18px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 720px;
+            margin: 0 auto;
+        }
+        .case-nav a { color: var(--gold); text-decoration: none; font-size: 13px; font-weight: 600; }
+
+        /* Header */
+        .case-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background: rgba(22, 163, 74, 0.08);
+            border: 1px solid rgba(22, 163, 74, 0.2);
+            border-radius: 2px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--green);
+            margin-bottom: 20px;
+        }
+        h1 {
+            font-size: clamp(28px, 5vw, 40px);
+            font-weight: 800;
+            letter-spacing: -1.5px;
+            line-height: 1.15;
+            margin-bottom: 16px;
+        }
+        .case-subtitle {
+            font-size: 16px;
+            color: var(--text-muted);
+            font-weight: 300;
+            margin-bottom: 40px;
+            line-height: 1.75;
+        }
+
+        /* Summary Stats */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 48px;
+        }
+        .summary-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 20px 16px;
+            text-align: center;
+        }
+        .summary-value {
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: -1px;
+        }
+        .summary-value.profit { color: var(--green); }
+        .summary-value.capital { color: var(--text); }
+        .summary-value.roi { color: var(--gold); }
+        .summary-label {
+            font-size: 10px;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-top: 4px;
+            font-weight: 600;
+        }
+
+        /* Progress Bar */
+        .progress {
+            margin-bottom: 48px;
+        }
+        .progress-bar {
+            height: 6px;
+            background: var(--border);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--gold), var(--green));
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+        .progress-label {
+            font-size: 12px;
+            color: var(--text-light);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* Flip Log */
+        h2 {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            margin: 48px 0 24px;
+            padding-top: 32px;
+            border-top: 1px solid var(--border);
+        }
+        .flip {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--green);
+            border-radius: 4px;
+            padding: 24px;
+            margin-bottom: 16px;
+        }
+        .flip.pending {
+            border-left-color: var(--gold);
+        }
+        .flip.loss {
+            border-left-color: var(--fire);
+        }
+        .flip-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+        .flip-brand {
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--gold);
+        }
+        .flip-date {
+            font-size: 12px;
+            color: var(--text-light);
+        }
+        .flip-item {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 14px;
+        }
+        .flip-numbers {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            padding-top: 14px;
+            border-top: 1px solid var(--border);
+        }
+        .flip-num-label {
+            font-size: 10px;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+        .flip-num-value {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+        .flip-note {
+            font-size: 13px;
+            color: var(--text-muted);
+            font-style: italic;
+            margin-top: 12px;
+            line-height: 1.6;
+            font-weight: 300;
+        }
+        .flip-status {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 2px;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .flip-status.sold { background: rgba(22,163,74,0.08); color: var(--green); }
+        .flip-status.listed { background: rgba(179,135,40,0.08); color: var(--gold); }
+        .flip-status.missed { background: rgba(220,38,38,0.08); color: var(--fire); }
+
+        /* CTA */
+        .case-cta {
+            background: var(--bg-card);
+            border: 1px solid var(--gold);
+            border-radius: 4px;
+            padding: 48px 32px;
+            text-align: center;
+            margin: 60px 0 40px;
+        }
+        .case-cta h3 {
+            font-size: 22px;
+            font-weight: 800;
+            margin-bottom: 12px;
+            letter-spacing: -0.5px;
+        }
+        .case-cta p {
+            color: var(--text-muted);
+            font-size: 15px;
+            margin-bottom: 24px;
+            font-weight: 300;
+            max-width: 480px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .case-cta a {
+            display: inline-block;
+            padding: 16px 40px;
+            background: linear-gradient(135deg, #b38728, #d4a853);
+            color: #fff;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            text-decoration: none;
+            box-shadow: 0 4px 24px rgba(179, 135, 40, 0.3);
+            transition: all 0.3s;
+        }
+        .case-cta a:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 40px rgba(179, 135, 40, 0.5);
+        }
+
+        /* Footer */
+        .case-footer {
+            text-align: center;
+            color: var(--text-light);
+            font-size: 13px;
+            padding: 24px 0 40px;
+            border-top: 1px solid var(--border);
+        }
+        .case-footer a { color: var(--gold); text-decoration: none; }
+
+        /* Methodology */
+        .methodology {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 28px;
+            margin: 24px 0;
+            font-size: 14px;
+            color: var(--text-muted);
+            line-height: 1.75;
+        }
+        .methodology strong { color: var(--text); }
+
+        @media (max-width: 600px) {
+            .summary-grid { grid-template-columns: repeat(2, 1fr); }
+            .flip-numbers { grid-template-columns: 1fr; gap: 8px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="case-nav">
+        <a href="/">&larr; Archive Arbitrage</a>
+        <a href="#cta">Try It Yourself &rarr;</a>
+    </div>
+
+    <div class="container">
+        <div class="case-badge">Live Experiment</div>
+        <h1>I Flipped Archive Fashion for 30 Days Using AI Alerts</h1>
+        <p class="case-subtitle">
+            A fully transparent experiment. I used Archive Arbitrage's deal alerts to find underpriced archive fashion across 7 platforms, bought the pieces, and flipped them at market price. Every purchase, every sale, every dollar is documented here — including the misses.
+        </p>
+
+        <!-- ═══ SUMMARY — UPDATE THESE AS YOU GO ═══ -->
+        <div class="summary-grid">
+            <div class="summary-card">
+                <div class="summary-value capital">$0</div>
+                <div class="summary-label">Capital Deployed</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-value profit">$0</div>
+                <div class="summary-label">Net Profit</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-value roi">0x</div>
+                <div class="summary-label">ROI on Sub</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-value">0</div>
+                <div class="summary-label">Flips Completed</div>
+            </div>
+        </div>
+
+        <!-- ═══ PROGRESS BAR — UPDATE width % (day/30 * 100) ═══ -->
+        <div class="progress">
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: 0%"></div>
+            </div>
+            <div class="progress-label">
+                <span>Day 0 of 30</span>
+                <span>Started April 7, 2026</span>
+            </div>
+        </div>
+
+        <!-- ═══ METHODOLOGY ═══ -->
+        <div class="methodology">
+            <strong>Rules of the experiment:</strong> I only buy pieces flagged by Archive Arbitrage alerts. Every buy/sell price is net of platform fees and shipping. I include missed deals (sold before I could buy) for transparency. Auth score must be 65%+ to qualify. No cherry-picking — if it was an alert I acted on, it's logged here.
+        </div>
+
+        <!-- ═══════════════════════════════════════════════
+             FLIP LOG — ADD NEW ENTRIES BELOW
+
+             Copy this template for each flip:
+
+             <div class="flip">  (or class="flip pending" / "flip loss")
+                 <div class="flip-header">
+                     <div class="flip-brand">BRAND NAME</div>
+                     <div><span class="flip-status sold">SOLD</span></div>
+                 </div>
+                 <div class="flip-item">Item Description</div>
+                 <div class="flip-numbers">
+                     <div>
+                         <div class="flip-num-label">Bought</div>
+                         <div class="flip-num-value">$XXX</div>
+                     </div>
+                     <div>
+                         <div class="flip-num-label">Sold</div>
+                         <div class="flip-num-value">$XXX</div>
+                     </div>
+                     <div>
+                         <div class="flip-num-label">Profit</div>
+                         <div class="flip-num-value" style="color: var(--green);">+$XXX</div>
+                     </div>
+                 </div>
+                 <div class="flip-note">Optional note about the flip.</div>
+             </div>
+
+             Status options: sold, listed, missed
+             ═══════════════════════════════════════════════ -->
+
+        <h2>Flip Log</h2>
+
+        <!-- EXAMPLE ENTRY (remove this once real flips are logged) -->
+        <div class="flip pending">
+            <div class="flip-header">
+                <div class="flip-brand">EXPERIMENT STARTS</div>
+                <div><span class="flip-status listed">DAY 1</span></div>
+            </div>
+            <div class="flip-item">Waiting for first alert...</div>
+            <div class="flip-note">Filters set: all brands, all sizes, minimum $100 profit threshold. Let's see what comes in.</div>
+        </div>
+
+        <!-- ═══ MISSED DEALS SECTION ═══ -->
+        <h2>Deals I Missed</h2>
+        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px; font-weight: 300;">
+            Deals that sold before I could pull the trigger. Included for transparency — not every alert converts to a buy.
+        </p>
+
+        <!-- Add missed deals here with class="flip missed" -->
+
+        <!-- ═══ CTA ═══ -->
+        <div class="case-cta" id="cta">
+            <h3>Want to run this experiment yourself?</h3>
+            <p>
+                Every deal in this log was found by Archive Arbitrage's AI pipeline.
+                The same alerts go to all subscribers in real-time.
+            </p>
+            <a href="https://app.archivearbitrage.com/signup">Start Your Free 7-Day Trial &rarr;</a>
+        </div>
+
+        <div class="case-footer">
+            <p>&copy; 2026 Archive Arbitrage</p>
+            <p style="margin-top: 8px;">
+                <a href="/">Home</a> &middot;
+                <a href="/guides/">Price Guides</a> &middot;
+                <a href="https://app.archivearbitrage.com/signup">Subscribe</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>
