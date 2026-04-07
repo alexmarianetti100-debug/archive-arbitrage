@@ -21,6 +21,7 @@ import time
 import signal
 import logging
 import hashlib
+import re
 import io
 from dataclasses import dataclass
 from datetime import datetime
@@ -65,7 +66,7 @@ from scrapers.auction_sniper import AuctionSniper
 from core.authenticity_v2 import AuthenticityCheckerV2, format_auth_bar, format_auth_grade, MIN_AUTH_SCORE
 from core.desirability import check_desirability, REJECT_PATTERNS
 from telegram_bot import send_deal_to_subscribers, send_message, init_telegram_db, get_active_subscribers, TELEGRAM_CHANNEL_ID
-from core.discord_alerts import send_discord_alert, DISCORD_ENABLED
+from core.discord_alerts import send_discord_alert, DISCORD_ENABLED, queue_free_deal, flush_free_deals
 from core.tier_policy import classify_discord_tiers
 from core.whop_alerts import send_whop_alert, format_whop_deal_content
 from marketing.auto_content.pipeline_hook import on_deal_alert
@@ -97,6 +98,32 @@ from core.deal_tracker import DealPrediction, record_prediction
 from db.sqlite_models import save_item as db_save_item, update_item_qualification, Item as DbItem
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(name)s] %(message)s')
+
+# Secret redaction filter — strips API keys, tokens, and passwords from all log output
+_SECRET_PATTERNS = re.compile(
+    r'(sk_live_[A-Za-z0-9]{20,})'           # Stripe secret keys
+    r'|(whsec_[A-Za-z0-9]{20,})'            # Stripe webhook secrets
+    r'|(\d{8,12}:[A-Za-z0-9_-]{30,})'       # Telegram bot tokens
+    r'|(xox[bpras]-[A-Za-z0-9-]{10,})'      # Slack tokens
+    r'|(ghp_[A-Za-z0-9]{30,})'              # GitHub PATs
+    r'|(re_[A-Za-z0-9_]{20,})'              # Resend API keys
+    r'|(apik_[A-Za-z0-9_]{20,})'            # Whop API keys
+    r'|(eyJ[A-Za-z0-9_-]{50,}\.eyJ[A-Za-z0-9_-]+)',  # JWTs (Supabase, etc.)
+    re.IGNORECASE
+)
+
+class _SecretRedactionFilter(logging.Filter):
+    def filter(self, record):
+        if isinstance(record.msg, str):
+            record.msg = _SECRET_PATTERNS.sub('[REDACTED]', record.msg)
+        if record.args:
+            new_args = []
+            for a in (record.args if isinstance(record.args, tuple) else (record.args,)):
+                new_args.append(_SECRET_PATTERNS.sub('[REDACTED]', str(a)) if isinstance(a, str) else a)
+            record.args = tuple(new_args)
+        return True
+
+logging.getLogger().addFilter(_SecretRedactionFilter())
 logging.getLogger("vinted").setLevel(logging.CRITICAL)         # suppress proxy 403/502 noise
 logging.getLogger("vinted.client").setLevel(logging.CRITICAL)  # suppress "Exception in context" tracebacks
 logger = logging.getLogger("gap_hunter")
@@ -1155,11 +1182,20 @@ class GapHunter:
             if os.path.exists(SOLD_CACHE_FILE):
                 with open(SOLD_CACHE_FILE) as f:
                     raw = json.load(f)
+                    now = time.time()
+                    loaded, expired = 0, 0
                     for k, v in raw.items():
-                        if time.time() - v.get("timestamp", 0) < SOLD_CACHE_TTL:
+                        if now - v.get("timestamp", 0) < SOLD_CACHE_TTL:
                             self.sold_cache[k] = SoldData(**v)
-        except Exception:
-            pass
+                            loaded += 1
+                        else:
+                            expired += 1
+                    logger.info(f"📦 Sold cache: {loaded} valid entries loaded, {expired} expired entries skipped")
+                    if expired > 0:
+                        self._save_sold_cache()
+                        logger.info(f"🧹 Flushed {expired} expired entries from disk cache")
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to load sold cache: {e}")
 
     def _save_sold_cache(self):
         try:
@@ -1185,8 +1221,8 @@ class GapHunter:
                 }
             with open(SOLD_CACHE_FILE, "w") as f:
                 json.dump(raw, f)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to save sold cache: {e}")
 
     def _load_blocklist(self):
         """Deprecated: Use self.seller_manager instead."""
@@ -3368,7 +3404,7 @@ class GapHunter:
                 f"(profit: ${deal.expected_net_profit:.0f}, downside: ${deal.downside_net_profit:.0f}, MOS: {deal.margin_of_safety_score:.0f}, margin: {deal.gap_percent*100:.0f}%)"
             )
             
-            # Post to Discord using nested entitlement routing
+            # Post to Discord using exclusive brand-tier routing
             if DISCORD_ENABLED and tier_decision.channel_tiers:
                 try:
                     await send_discord_alert(
@@ -3382,6 +3418,9 @@ class GapHunter:
                     )
                 except Exception as e:
                     logger.warning(f"Discord alert failed: {e}")
+
+            # Queue for free deals channel (delayed 45 min, no buy link)
+            queue_free_deal(item=item, fire_level=signals.fire_level, signals=signals)
 
             # Post to Whop
             try:
@@ -4088,6 +4127,12 @@ class GapHunter:
             except Exception as e:
                 logger.warning(f"  ⚠️ Auction snipe failed: {e}")
 
+        # Flush any delayed free deals that are ready to post
+        try:
+            await flush_free_deals()
+        except Exception as e:
+            logger.debug(f"Free deal flush error: {e}")
+
         elapsed = time.time() - cycle_start
 
         if total_deals:
@@ -4148,6 +4193,7 @@ class GapHunter:
             logger.info(f"   🔨 eBay auctions: SKIPPED (CLI flag)")
         else:
             logger.info(f"   🔨 eBay auctions: {'ENABLED' if os.getenv('EBAY_APP_ID') else 'DISABLED (no API key)'}")
+        logger.info(f"   📦 Sold cache: {len(self.sold_cache)} valid entries")
         logger.info("=" * 60)
 
         # ── Embedding backfill check ──

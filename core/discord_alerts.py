@@ -14,9 +14,11 @@ Setup:
     3. Deals use nested entitlement: beginner→all channels, pro→pro+whale, whale→whale only
 """
 
+import asyncio
 import os
 import re
 import logging
+import time
 from typing import Optional, Dict, Any, List
 
 import httpx
@@ -34,6 +36,10 @@ logger = logging.getLogger("discord_alerts")
 DISCORD_WEBHOOK_BEGINNER = os.getenv("DISCORD_WEBHOOK_BEGINNER", "")
 DISCORD_WEBHOOK_PRO = os.getenv("DISCORD_WEBHOOK_PRO", "")
 DISCORD_WEBHOOK_WHALE = os.getenv("DISCORD_WEBHOOK_WHALE", "")
+
+# Free deals channel — delayed public preview to drive conversions
+DISCORD_WEBHOOK_FREE = os.getenv("DISCORD_WEBHOOK_FREE", "")
+FREE_DEAL_DELAY_SECONDS = int(os.getenv("FREE_DEAL_DELAY_SECONDS", "2700"))  # 45 minutes
 
 DISCORD_ENABLED = bool(DISCORD_WEBHOOK_BEGINNER or DISCORD_WEBHOOK_PRO or DISCORD_WEBHOOK_WHALE)
 
@@ -292,3 +298,152 @@ async def send_discord_message(text: str, webhook_url: str = "") -> bool:
         except Exception as e:
             logger.error(f"Discord message error: {e}")
             return False
+
+
+# ---------------------------------------------------------------------------
+# Free Deals Channel — delayed, no buy links, CTA to subscribe
+# ---------------------------------------------------------------------------
+
+# In-memory queue of deals waiting to be posted to the free channel
+_free_deal_queue: List[Dict[str, Any]] = []
+
+
+def build_free_embed(
+    item: Any,
+    fire_level: int = 0,
+    signals: Any = None,
+) -> Dict[str, Any]:
+    """Build a Discord embed for the free deals channel.
+
+    Key differences from paid embeds:
+    - No direct buy link (URL points to signup page)
+    - Adds a subscribe CTA
+    - Shows the deal is delayed
+    """
+    title = getattr(item, "title", "Deal Alert") or "Deal Alert"
+    brand = getattr(item, "brand", "") or ""
+    price = getattr(item, "price", 0) or 0
+    source = getattr(item, "source", "") or ""
+    size = getattr(item, "size", "") or ""
+
+    fire_str = "🔥" * fire_level if fire_level > 0 else ""
+
+    embed: Dict[str, Any] = {
+        "title": f"{fire_str} {title[:200]}".strip(),
+        "color": EMBED_COLORS.get(fire_level, 0x808080),
+        "url": "https://app.archivearbitrage.com/signup",
+    }
+
+    fields: List[Dict[str, Any]] = []
+
+    fields.append({
+        "name": "💰 Listed Price",
+        "value": f"**${price:,.0f}**",
+        "inline": True,
+    })
+
+    if signals:
+        gap = getattr(signals, "gap_percent", 0)
+        profit = getattr(signals, "profit_estimate", 0)
+        fields.append({
+            "name": "📉 Below Market",
+            "value": f"{gap * 100:.0f}%",
+            "inline": True,
+        })
+        fields.append({
+            "name": "💵 Est. Profit",
+            "value": f"**${profit:,.0f}**",
+            "inline": True,
+        })
+
+    if brand:
+        fields.append({
+            "name": "🏷️ Brand",
+            "value": brand,
+            "inline": True,
+        })
+
+    if size:
+        fields.append({
+            "name": "📏 Size",
+            "value": str(size),
+            "inline": True,
+        })
+
+    if source:
+        fields.append({
+            "name": "🌐 Platform",
+            "value": source.capitalize(),
+            "inline": True,
+        })
+
+    # Subscribe CTA field
+    fields.append({
+        "name": "⚡ Want real-time alerts?",
+        "value": "Subscribers got this deal **45 min ago** with a direct buy link.\n[Start Free Trial →](https://app.archivearbitrage.com/signup)",
+        "inline": False,
+    })
+
+    embed["fields"] = fields
+
+    # Thumbnail from item images
+    images = getattr(item, "images", []) or []
+    if images and images[0]:
+        embed["thumbnail"] = {"url": images[0]}
+
+    embed["footer"] = {"text": "⏱️ Delayed 45 min | #free-deals | Archive Arbitrage"}
+
+    return embed
+
+
+def queue_free_deal(item: Any, fire_level: int = 0, signals: Any = None):
+    """Queue a deal for delayed posting to the free channel."""
+    if not DISCORD_WEBHOOK_FREE:
+        return
+
+    _free_deal_queue.append({
+        "item": item,
+        "fire_level": fire_level,
+        "signals": signals,
+        "send_at": time.time() + FREE_DEAL_DELAY_SECONDS,
+    })
+    logger.debug(f"Queued free deal: {getattr(item, 'title', '')[:50]} (sends in {FREE_DEAL_DELAY_SECONDS}s)")
+
+
+async def flush_free_deals():
+    """Send any queued free deals that have passed their delay window."""
+    if not DISCORD_WEBHOOK_FREE or not _free_deal_queue:
+        return
+
+    now = time.time()
+    ready = [d for d in _free_deal_queue if d["send_at"] <= now]
+
+    if not ready:
+        return
+
+    sent_count = 0
+    async with httpx.AsyncClient(timeout=10) as client:
+        for deal in ready:
+            embed = build_free_embed(
+                deal["item"],
+                deal["fire_level"],
+                deal["signals"],
+            )
+            payload = {"username": "Archive Arbitrage — Free Deals", "embeds": [embed]}
+
+            try:
+                resp = await client.post(DISCORD_WEBHOOK_FREE, json=payload)
+                if resp.status_code in (200, 204):
+                    sent_count += 1
+                else:
+                    logger.warning(f"Free deal webhook returned {resp.status_code}: {resp.text[:200]}")
+            except Exception as e:
+                logger.error(f"Free deal webhook error: {e}")
+
+            _free_deal_queue.remove(deal)
+
+            # Rate limit: Discord allows 30 requests per minute per webhook
+            await asyncio.sleep(2)
+
+    if sent_count:
+        logger.info(f"📢 Posted {sent_count} deal(s) to #free-deals")
