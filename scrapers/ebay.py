@@ -63,6 +63,33 @@ class EbayScraper(BaseScraper):
     def __init__(self, proxy_manager=None):
         super().__init__(proxy_manager)
         self._proxy = _proxy_url()
+        self._session: Optional[AsyncSession] = None
+        self._session_request_count = 0
+        self._session_max_requests = 50  # Recycle session every N requests
+
+    async def _get_session(self) -> AsyncSession:
+        """Get or create a reusable curl_cffi session."""
+        if (self._session is None or
+            self._session_request_count >= self._session_max_requests):
+            # Close old session if exists
+            if self._session is not None:
+                try:
+                    await self._session.close()
+                except Exception:
+                    pass
+            self._session = AsyncSession(impersonate="chrome120")
+            self._session_request_count = 0
+        self._session_request_count += 1
+        return self._session
+
+    async def close(self):
+        """Close the reusable session."""
+        if self._session is not None:
+            try:
+                await self._session.close()
+            except Exception:
+                pass
+            self._session = None
 
     async def _enforce_rate_limit(self):
         """Enforce minimum time between requests."""
@@ -78,47 +105,41 @@ class EbayScraper(BaseScraper):
         await self._enforce_rate_limit()
         
         proxies = {"https": self._proxy} if self._proxy else None
-        session = None
         try:
-            # Use chrome120 (latest supported by curl_cffi)
-            session = AsyncSession(impersonate="chrome120")
+            session = await self._get_session()
             url = SEARCH_URL + "?" + urlencode(params)
-            
+
             # Use longer timeout for eBay
             resp = await session.get(
-                url, 
-                proxies=proxies, 
+                url,
+                proxies=proxies,
                 timeout=REQUEST_TIMEOUT
             )
-            
+
             # Check for rate limiting
             if resp.status_code == 429:
                 self._rate_limit_hits += 1
                 logger.warning(f"eBay rate limited (429)")
                 return None
-            
+
             if resp.status_code != 200 or "splashui/challenge" in str(resp.url):
                 logger.debug(f"eBay bot challenge or non-200: {resp.status_code}")
                 return None
-            
-            # Parse HTML before closing session to avoid event loop issues
+
             soup = BeautifulSoup(resp.text, "html.parser")
             return soup
-            
+
         except asyncio.TimeoutError:
             logger.warning(f"eBay request timed out after {REQUEST_TIMEOUT}s")
             return None
         except Exception as e:
             logger.debug(f"eBay fetch error: {e}")
+            # Recycle session on error
+            try:
+                await self.close()
+            except Exception:
+                pass
             return None
-        finally:
-            # Close session without using async context manager
-            # to avoid event loop issues on macOS
-            if session:
-                try:
-                    await session.close()
-                except Exception:
-                    pass
 
     # Minimum credible price for archive fashion on eBay.
     # Auction starting bids ($1, $4, $13) and international placeholder prices
@@ -313,5 +334,4 @@ class EbayScraper(BaseScraper):
     async def check_availability(self, item_id: str) -> bool:
         return True
 
-    async def close(self):
-        pass  # curl_cffi AsyncSession is context-managed per request
+    # close() defined in __init__ section — reuses shared session
