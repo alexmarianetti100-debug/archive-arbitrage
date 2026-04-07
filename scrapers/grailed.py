@@ -4,6 +4,7 @@ Grailed scraper - for price reference on sold items.
 Uses Grailed's internal API when possible, with HTML fallback.
 """
 
+import asyncio
 import json
 import os
 import re
@@ -36,13 +37,14 @@ class GrailedScraper(BaseScraper):
         self,
         query: str,
         max_results: int = 20,
+        page: int = 0,
     ) -> list[ScrapedItem]:
         """Search for sold items to get market pricing."""
         items = []
-        
+
         # Try Algolia API first (faster and more reliable)
         try:
-            items = await self._search_algolia(query, max_results, sold=True)
+            items = await self._search_algolia(query, max_results, sold=True, page=page)
             if items:
                 return items
         except Exception as e:
@@ -504,32 +506,43 @@ class GrailedScraper(BaseScraper):
         }
     
     async def search(self, query: str, max_results: int = 50) -> list[ScrapedItem]:
-        """Search active listings (for reference, not for sourcing)."""
+        """Search active listings with multi-page support.
+
+        Fetches GRAILED_SEARCH_PAGES pages (default 2) from Algolia to widen
+        the item pool beyond page-1 results.  Deduplicates by source_id.
+        """
+        import os as _os
+        pages = int(_os.getenv("GRAILED_SEARCH_PAGES", "2"))
+        per_page = max_results  # items per page sent to Algolia
         items = []
-        
-        # Try Algolia API first
+        seen_ids: set = set()
+
+        # Try Algolia API first — multi-page
         try:
-            items = await self._search_algolia(query, max_results, sold=False)
+            for page in range(pages):
+                page_items = await self._search_algolia(query, per_page, sold=False, page=page)
+                for item in page_items:
+                    if item.source_id not in seen_ids:
+                        seen_ids.add(item.source_id)
+                        items.append(item)
+                # Stop if this page returned fewer items than requested (no more pages)
+                if len(page_items) < per_page:
+                    break
+                if page < pages - 1:
+                    await asyncio.sleep(0.3)  # Brief pause between pages
             if items:
-                return items
+                return items[:max_results * pages]  # Cap total
         except Exception as e:
             print(f"Algolia search failed: {e}")
-        
-        # Fallback to HTTP
+
+        # Fallback to HTTP (single page)
         try:
             items = await self._search_http(query, max_results, sold=False)
             if items:
                 return items
         except Exception as e:
             print(f"HTTP scraping failed: {e}")
-        
-        # Last resort: Playwright
-        if False:  # Playwright disabled
-            try:
-                items = await self._search_playwright(query, max_results, sold=False)
-            except Exception as e:
-                print(f"Playwright failed: {e}")
-        
+
         return items
     
     def _parse_active_listing(self, listing) -> Optional[ScrapedItem]:

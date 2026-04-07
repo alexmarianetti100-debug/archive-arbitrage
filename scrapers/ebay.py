@@ -147,7 +147,33 @@ class EbayScraper(BaseScraper):
     MIN_PRICE = 30.0
 
     async def search(self, query: str, max_results: int = 20) -> List[ScrapedItem]:
-        """Search eBay with error handling and health tracking."""
+        """Search eBay — API first (if EBAY_APP_ID set), HTML fallback."""
+        # Try Browse API first — higher volume, no bot detection
+        if os.getenv("EBAY_APP_ID") and os.getenv("EBAY_CERT_ID"):
+            try:
+                items = await self._search_api(query, max_results)
+                if items:
+                    self._record_success()
+                    logger.info(f"  eBay API: {len(items)} results for '{query}'")
+                    return items
+            except Exception as e:
+                logger.debug(f"  eBay API failed, falling back to HTML: {e}")
+
+        # Fallback to HTML scraping
+        return await self._search_html(query, max_results)
+
+    async def _search_api(self, query: str, max_results: int) -> List[ScrapedItem]:
+        """Search eBay using the official Browse API (up to 200 results)."""
+        from .ebay_api import EbayApiScraper
+        if not hasattr(self, '_api_scraper'):
+            self._api_scraper = EbayApiScraper()
+            await self._api_scraper._get_token()
+        else:
+            await self._api_scraper._get_token()  # Refresh token if needed
+        return await self._api_scraper.search(query, max_results=max_results)
+
+    async def _search_html(self, query: str, max_results: int = 20) -> List[ScrapedItem]:
+        """Search eBay via HTML scraping (fallback)."""
         params = {
             "_nkw": query,
             "_sacat": "11450",  # Clothing, Shoes & Accessories
@@ -156,20 +182,20 @@ class EbayScraper(BaseScraper):
             "_sop": "10",       # Sort: newly listed
             "_ipg": "60",
         }
-        
+
         soup = await self._fetch(params)
         if soup is None:
             self._record_failure("fetch_failed")
             return []
-            
+
         items = self._parse_items(soup, max_results)
-        
+
         if items:
             self._record_success()
             logger.info(f"  eBay: {len(items)} results for '{query}'")
         else:
             self._record_failure("parse_failed")
-            
+
         return items
     
     def _parse_items(self, soup: BeautifulSoup, max_results: int) -> List[ScrapedItem]:

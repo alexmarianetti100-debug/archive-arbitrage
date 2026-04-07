@@ -3746,85 +3746,103 @@ class GapHunter:
 
         total_deals = 0
 
-        for i, query in enumerate(targets):
+        # ── Parallel query scanning ──
+        # Process queries in batches of PARALLEL_QUERY_BATCH for faster cycles.
+        # Scanning (sold data + gap finding) runs in parallel; deal processing
+        # remains sequential to avoid duplicate alerts.
+        PARALLEL_BATCH = int(os.getenv("PARALLEL_QUERY_BATCH", "4"))
+
+        async def _scan_query(idx: int, query: str):
+            """Scan a single query: fetch sold data + find gaps. Returns (query, idx, sold, gaps)."""
+            try:
+                sold = await self.get_hyper_sold_data(query)
+                if not sold:
+                    logger.debug(f"  [{idx+1}] {query}: insufficient sold data")
+                    return (query, idx, None, [])
+
+                is_hyper = getattr(sold, '_hyper_pricing', False)
+                price_type = "💎 hyper" if is_hyper else "standard"
+                tier_tag = _tier_labels.get(query, "B")
+                logger.info(f"  [{idx+1}/{len(targets)}] [{tier_tag}] {query} - {price_type} avg: ${sold.avg_price:.0f} ({sold.count} comps)")
+
+                gaps = await self.find_gaps(query, sold)
+                return (query, idx, sold, gaps)
+            except Exception as e:
+                logger.warning(f"  [{idx+1}] {query}: scan error: {e}")
+                return (query, idx, None, [])
+
+        # Process targets in batches
+        for batch_start in range(0, len(targets), PARALLEL_BATCH):
             if not self.running:
                 break
+
+            batch = list(enumerate(targets[batch_start:batch_start + PARALLEL_BATCH], start=batch_start))
 
             # Emit progress for UI
             if self._progress_callback:
                 try:
                     await self._progress_callback({
                         "phase": "scanning",
-                        "query": query,
-                        "query_index": i + 1,
+                        "query": f"batch {batch_start//PARALLEL_BATCH + 1}",
+                        "query_index": batch_start + 1,
                         "query_total": len(targets),
-                        "message": f"Scanning {i+1}/{len(targets)}: {query}",
+                        "message": f"Scanning batch {batch_start//PARALLEL_BATCH + 1}: {len(batch)} queries in parallel",
                         "deals_so_far": total_deals,
                     })
                 except Exception:
                     pass
 
-            # Get sold data (use hyper-accurate pricing)
-            sold = await self.get_hyper_sold_data(query)
-            if not sold:
-                logger.debug(f"  [{i+1}] {query}: insufficient sold data")
-                continue
+            # Run batch in parallel
+            scan_results = await asyncio.gather(*[_scan_query(idx, q) for idx, q in batch])
 
-            # Log whether we're using hyper-pricing or standard
-            is_hyper = getattr(sold, '_hyper_pricing', False)
-            price_type = "💎 hyper" if is_hyper else "standard"
-            tier_tag = _tier_labels.get(query, "B")
-            logger.info(f"  [{i+1}/{len(targets)}] [{tier_tag}] {query} - {price_type} avg: ${sold.avg_price:.0f} ({sold.count} comps)")
+            # Process found deals sequentially (prevents duplicate sends)
+            for query, idx, sold, gaps in scan_results:
+                if not gaps:
+                    if sold:
+                        logger.info(f"    📊 No gaps found for '{query}' - checking filter stats...")
+                    continue
 
-            # Find gaps
-            gaps = await self.find_gaps(query, sold)
-            
-            # Debug: Log why no gaps were found
-            if not gaps:
-                logger.info(f"    📊 No gaps found for '{query}' - checking filter stats...")
+                query_alerts_sent = 0
+                query_validation_failed = 0
+                for deal in gaps:
+                    logger.info(
+                        f"    💰 ${deal.item.price:.0f} → ${deal.sold_avg:.0f} "
+                        f"(gap {deal.gap_percent*100:.0f}%, +${deal.expected_net_profit:.0f}, downside +${deal.downside_net_profit:.0f}, MOS {deal.margin_of_safety_score:.0f}) "
+                        f"- {deal.item.title[:50]}"
+                    )
 
-            query_alerts_sent = 0
-            query_validation_failed = 0
-            for deal in gaps:
-                logger.info(
-                    f"    💰 ${deal.item.price:.0f} → ${deal.sold_avg:.0f} "
-                    f"(gap {deal.gap_percent*100:.0f}%, +${deal.expected_net_profit:.0f}, downside +${deal.downside_net_profit:.0f}, MOS {deal.margin_of_safety_score:.0f}) "
-                    f"- {deal.item.title[:50]}"
-                )
-                
-                # ── Validate deal before alerting ──
-                # Skip validation for Grailed items — purchase verification already ensures availability
-                if deal.item.source != "grailed":
+                    # ── Validate deal before alerting ──
+                    if deal.item.source != "grailed":
+                        try:
+                            validation = await validate_deal(deal, customer_tier="intermediate")
+                            if validation.status != ValidationStatus.VALID:
+                                logger.info(f"    ⚠️ Deal failed validation: {validation.reason}")
+                                self.stats['validation_failed'] = self.stats.get('validation_failed', 0) + 1
+                                query_validation_failed += 1
+                                continue
+
+                            logger.debug(f"    ✅ Deal validated: {len(validation.checks_passed)} checks passed")
+                        except Exception as e:
+                            logger.warning(f"    ⚠️ Validation error (proceeding anyway): {e}")
+                    else:
+                        logger.debug(f"    ✅ Grailed item — skipping validation (purchase verified)")
+
+                    if await self.process_deal(deal):
+                        total_deals += 1
+                        query_alerts_sent += 1
+
+                # Log query performance for trend feedback loop
+                if trend_engine:
+                    best_gap = max((d.gap_percent for d in gaps), default=0) if gaps else 0
+                    query_metrics = dict(getattr(self, '_last_query_metrics', {}) or {})
+                    query_metrics['public_alerts_sent'] = query_alerts_sent
+                    query_metrics['validation_failed'] = query_validation_failed
                     try:
-                        validation = await validate_deal(deal, customer_tier="intermediate")
-                        if validation.status != ValidationStatus.VALID:
-                            logger.info(f"    ⚠️ Deal failed validation: {validation.reason}")
-                            self.stats['validation_failed'] = self.stats.get('validation_failed', 0) + 1
-                            query_validation_failed += 1
-                            continue
-                        
-                        logger.debug(f"    ✅ Deal validated: {len(validation.checks_passed)} checks passed")
-                    except Exception as e:
-                        logger.warning(f"    ⚠️ Validation error (proceeding anyway): {e}")
-                else:
-                    logger.debug(f"    ✅ Grailed item — skipping validation (purchase verified)")
-                
-                if await self.process_deal(deal):
-                    total_deals += 1
-                    query_alerts_sent += 1
+                        trend_engine.log_query_performance(query, len(gaps), best_gap, metrics=query_metrics)
+                    except Exception:
+                        pass
 
-            # Log query performance for trend feedback loop
-            if trend_engine:
-                best_gap = max((d.gap_percent for d in gaps), default=0) if gaps else 0
-                query_metrics = dict(getattr(self, '_last_query_metrics', {}) or {})
-                query_metrics['public_alerts_sent'] = query_alerts_sent
-                query_metrics['validation_failed'] = query_validation_failed
-                try:
-                    trend_engine.log_query_performance(query, len(gaps), best_gap, metrics=query_metrics)
-                except Exception:
-                    pass
-
-            await asyncio.sleep(1.5)  # Rate limiting
+            await asyncio.sleep(0.5)  # Brief pause between batches
 
         # ── Japan Arbitrage Scan ──
         # Run every cycle for maximum opportunity capture unless explicitly skipped
