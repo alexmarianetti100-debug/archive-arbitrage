@@ -147,6 +147,14 @@ MIN_GAP_PERCENT = float(os.getenv("GAP_MIN_PERCENT", "0.30"))  # 30% below sold 
 MIN_PROFIT_DOLLARS = float(os.getenv("GAP_MIN_PROFIT", "75"))   # At least $75 profit
 MIN_SOLD_COMPS = int(os.getenv("GAP_MIN_COMPS", "8"))            # Need 8+ sold comps (was 20, too high for niche items)
 
+# Per-platform active listing fetch limits (higher = more items scanned per query)
+FETCH_LIMIT_GRAILED = int(os.getenv("FETCH_LIMIT_GRAILED", "25"))
+FETCH_LIMIT_POSHMARK = int(os.getenv("FETCH_LIMIT_POSHMARK", "25"))
+FETCH_LIMIT_EBAY = int(os.getenv("FETCH_LIMIT_EBAY", "25"))
+FETCH_LIMIT_VINTED = int(os.getenv("FETCH_LIMIT_VINTED", "15"))
+FETCH_LIMIT_MERCARI = int(os.getenv("FETCH_LIMIT_MERCARI", "15"))
+FETCH_LIMIT_DEPOP = int(os.getenv("FETCH_LIMIT_DEPOP", "15"))
+
 # Platform fee rates (commission + payment processing)
 PLATFORM_FEES = {
     "grailed": 0.142,       # 12% commission + 2.2% payment
@@ -2276,27 +2284,29 @@ class GapHunter:
         async def _grailed():
             try:
                 async with GrailedScraper() as scraper:
-                    return await scraper.search(query, max_results=15)
+                    return await scraper.search(query, max_results=FETCH_LIMIT_GRAILED)
             except Exception:
                 return []
 
         async def _poshmark():
             try:
                 async with PoshmarkScraper() as scraper:
-                    return await scraper.search(query, max_results=15)
+                    return await scraper.search(query, max_results=FETCH_LIMIT_POSHMARK)
             except Exception:
                 return []
 
         async def _depop():
-            # Depop disabled — Playwright consistently crashes on macOS
-            # Re-enable only if/when Depop scraper is fixed to use HTTP instead of browser
-            return []
+            try:
+                async with DepopScraper() as scraper:
+                    return await scraper.search(query, max_results=FETCH_LIMIT_DEPOP)
+            except Exception:
+                return []
 
         async def _vinted():
             try:
                 if not hasattr(self, '_vinted'):
                     self._vinted = VintedScraper()
-                return await self._vinted.search(query, max_results=10)
+                return await self._vinted.search(query, max_results=FETCH_LIMIT_VINTED)
             except Exception as e:
                 logger.debug(f"    Vinted search failed: {e}")
                 return []
@@ -2305,7 +2315,7 @@ class GapHunter:
             try:
                 if not hasattr(self, '_ebay'):
                     self._ebay = EbayScraper()
-                return await asyncio.wait_for(self._ebay.search(query, max_results=15), timeout=15.0)
+                return await asyncio.wait_for(self._ebay.search(query, max_results=FETCH_LIMIT_EBAY), timeout=15.0)
             except asyncio.TimeoutError:
                 logger.debug(f"    eBay timed out for '{query}'")
                 return []
@@ -2317,7 +2327,7 @@ class GapHunter:
             try:
                 if not hasattr(self, '_mercari'):
                     self._mercari = MercariScraper()
-                return await asyncio.wait_for(self._mercari.search(query, max_results=10), timeout=45.0)
+                return await asyncio.wait_for(self._mercari.search(query, max_results=FETCH_LIMIT_MERCARI), timeout=45.0)
             except asyncio.TimeoutError:
                 logger.warning(f"    ⚠️ Mercari timed out for '{query}'")
                 return []

@@ -70,13 +70,13 @@ TIER3_MIN_VOLUME = 2
 
 # ── Rotation model ────────────────────────────────────────────────────────────
 # Replaces the old "tier1 always runs" logic.
-ANCHOR_POOL_SIZE       = 10   # Top N by opp-score → anchor pool
-ANCHOR_CYCLE_INTERVAL  = 3    # Anchors run once every N cycles
-ROTATION_CYCLE_SIZE    = 20   # Queries drawn from rotation pool per cycle
-QUERY_COOLDOWN_MINUTES = 90   # Skip query if ran less than this many minutes ago
-                               # (sold_cache TTL is 4 hours — cache survives one cooldown cycle)
-LONGTAIL_PER_CYCLE     = 3    # Long-tail queries included per cycle
-PROMOTED_PER_CYCLE     = 4    # Explicit liquidity-first exact queries guaranteed per cycle when available
+ANCHOR_POOL_SIZE       = int(os.getenv("ANCHOR_POOL_SIZE", "10"))
+ANCHOR_CYCLE_INTERVAL  = int(os.getenv("ANCHOR_CYCLE_INTERVAL", "3"))
+ROTATION_CYCLE_SIZE    = int(os.getenv("ROTATION_CYCLE_SIZE", "30"))
+QUERY_COOLDOWN_MINUTES = int(os.getenv("QUERY_COOLDOWN_MINUTES", "45"))
+LONGTAIL_PER_CYCLE     = int(os.getenv("LONGTAIL_PER_CYCLE", "8"))
+PROMOTED_PER_CYCLE     = int(os.getenv("PROMOTED_PER_CYCLE", "6"))
+PROBATION_PER_CYCLE    = int(os.getenv("PROBATION_PER_CYCLE", "3"))
 BROAD_ANCHOR_CAP       = 2    # Prevent broad umbrella queries from dominating anchor slots
 
 # ── Dead query exclusion ──────────────────────────────────────────────────────
@@ -88,18 +88,13 @@ DEAD_QUERY_MAX_DEALS = 0    # …with zero deals → excluded from rotation
 # Based on successful sellers like 4gseller and archivethreads
 
 CORE_TARGETS = [
-    # Rick Owens — footwear + outerwear
+    # Rick Owens (1.16 ratio) — footwear + outerwear
     "rick owens dunks",
     "rick owens leather jacket",
     "rick owens stooges",
     "rick owens kiss boots",
     "rick owens sneakers",
-    "rick owens champion",
-    # Rick Owens — pants + bags
-    "rick owens cargo pants",
-    "rick owens drkshdw pants",
-    "rick owens bag",
-    # Chrome Hearts — piece-specific (10 CORE queries, ~14% allocation)
+    # Chrome Hearts (1.71 ratio) — piece-specific
     "chrome hearts baby fat cross pendant",
     "chrome hearts tiny e",
     "chrome hearts forever ring",
@@ -110,56 +105,68 @@ CORE_TARGETS = [
     "chrome hearts trypoleagain glasses",
     "chrome hearts vagilante glasses",
     "chrome hearts paper chain",
-    # Margiela
+    # CH audit additions
+    "chrome hearts ch cross pendant",
+    "chrome hearts roll chain necklace",
+    "chrome hearts wallet",
+    "chrome hearts cross patch trucker jacket",
+    # Margiela (1.31 ratio) — killed GAT (20 deals / 600+ runs)
     "maison margiela tabi boots",
-    "maison margiela replica gat",
     "maison margiela boots",
     "maison margiela leather jacket",
-    # Saint Laurent (Hedi era)
+    "maison margiela glam slam",
+    # Saint Laurent (1.70 ratio)
     "saint laurent wyatt boots",
     "saint laurent leather jacket",
     "saint laurent paris oil",
-    # Vetements
-    "vetements hoodie",
-    "vetements total fucking darkness",
-    "vetements raincoat",
-    "vetements polizei hoodie",
-    # JPG
+    # JPG (0.82 ratio)
     "jean paul gaultier mesh",
     "jean paul gaultier tattoo",
     "jean paul gaultier corset",
-    # Raf Simons (archive)
+    "jean paul gaultier soleil",
+    # Raf Simons (0.61 ratio)
     "raf simons consumed hoodie",
     "raf simons riot riot riot",
-    # Balenciaga (proven performers)
+    # Balenciaga — piece-specific only (broad = 0/14)
     "balenciaga runner",
-    "balenciaga skater sweatpants",
-    # Dior Homme (Hedi era)
+    "balenciaga skater baggy sweatpants",
+    "balenciaga lamborghini hoodie",
+    # Dior Homme (0.83 ratio)
     "dior homme leather jacket",
     "dior homme jacket",
-    # Number Nine
+    # Number Nine — piece-specific (broad = 0.04 ratio)
     "number nine leather jacket",
-    # Prada
-    "prada monolith boots",
-    "prada derby",
-    "prada america's cup",
-    # Helmut Lang (archive)
+    # Prada — piece-specific only (broad = 0/29)
+    "prada america's cup sneakers",
+    "prada cotton velvet blouson",
+    # Helmut Lang (0.75 ratio)
     "helmut lang leather jacket",
-    # ERD (generic + piece-specific grails)
+    # ERD (4.00 ratio — BEST in system)
     "enfants riches deprimes hoodie",
     "enfants riches deprimes leather jacket",
     "enfants riches deprimes classic logo hoodie",
     "enfants riches deprimes classic logo tee",
     "enfants riches deprimes safety pin earring",
     "enfants riches deprimes classic logo long sleeve",
-    # Bottega Veneta
+    # ERD audit additions
+    "enfants riches deprimes subhumans leather jacket",
+    "enfants riches deprimes bathroom stall tee",
+    "enfants riches deprimes high risk hoodie",
+    # Bottega Veneta (3.12 ratio)
     "bottega veneta intrecciato",
     "bottega veneta bag",
-    # Other archive
-    "undercover bomber jacket",
-    "undercover tee",
-    "vivienne westwood orb",
-    "ann demeulemeester boots",
+    # Carol Christian Poell (chronic mispricing)
+    "carol christian poell leather jacket",
+    # Vetements — rewritten (old queries 0/50)
+    "vetements polizei hoodie",
+    "vetements total darkness hoodie",
+    "vetements dhl tee",
+    "vetements metal logo hoodie",
+    # Piece-specific other
+    "undercover arts and crafts",
+    "ann demeulemeester leather boots",
+    "vivienne westwood orb necklace",
+    "thierry mugler leather jacket",
 ]
 
 # ── Extended luxury targets (high-value accessories and watches) ─
@@ -279,76 +286,61 @@ EXTENDED_TARGETS = [
     "enfants riches deprimes menendez pants",
     "enfants riches deprimes rose buckle belt",
 
-    # Wacko Maria
-    "wacko maria leopard", "wacko maria hawaiian", "wacko maria shirt",
-    "wacko maria leather jacket", "wacko maria varsity jacket",
-    "wacko maria knit cardigan",
-
-    # Ann Demeulemeester
+    # Ann Demeulemeester — leather focus (boots 67%)
     "ann demeulemeester leather jacket", "ann demeulemeester leather boots",
-    "ann demeulemeester lace up boots",
+    "ann demeulemeester backlace boots",
 
-    # CCP
-    "carol christian poell leather jacket", "carol christian poell coat",
+    # CCP — chronic mispricing
+    "carol christian poell coat",
     "carol christian poell drip sneaker",
+    "carol christian poell tornado boots",
 
-    # Vivienne Westwood
-    "vivienne westwood orb necklace", "vivienne westwood armor ring",
-    "vivienne westwood corset", "vivienne westwood pearl necklace",
+    # Vivienne Westwood — jewelry/corset only (clothing = 0 deals)
+    "vivienne westwood armor ring",
+    "vivienne westwood corset",
 
-    # Julius
-    "julius cargo pants", "julius boots", "julius bomber jacket",
-    "julius gas mask hoodie", "julius leather jacket",
+    # Julius — leather jacket (43%) + boots
+    "julius boots", "julius leather jacket",
 
-    # BBS
-    "boris bidjan saberi leather", "boris bidjan saberi jacket",
+    # Thierry Mugler — vintage leather (67%)
+    "mugler vintage", "mugler bodysuit",
 
-    # Thierry Mugler
-    "thierry mugler leather jacket", "thierry mugler blazer",
+    # Kapital — boro is the play (2.33 ratio)
+    "kapital boro jacket", "kapital century denim",
+    "kapital smiley boro", "kapital kountry patchwork",
 
-    # Kapital
-    "kapital boro jacket", "kapital kountry", "kapital denim",
-    "kapital kountry coat", "kapital denim jacket",
-
-    # Hysteric Glamour
-    "hysteric glamour leather jacket", "hysteric glamour denim jacket",
-    "hysteric glamour jeans", "hysteric glamour tee", "hysteric glamour archive",
-
-    # Prada
-    "prada re-nylon", "prada nylon jacket", "prada leather jacket",
-    "prada chocolate loafers", "prada leather loafers",
-    "prada cotton velvet blouson",
-
-    # Celine (Hedi era)
-    "celine leather jacket", "celine teddy jacket", "celine boots",
-    "celine western boots", "celine varsity jacket", "celine triomphe belt",
+    # Prada — piece-specific only (broad = 0/29)
+    "prada chocolate loafers",
 
     # Haider Ackermann
     "haider ackermann leather jacket", "haider ackermann blazer",
     "haider ackermann velvet blazer", "haider ackermann silk bomber",
 
-    # Dries Van Noten
-    "dries van noten embroidered jacket", "dries van noten velvet blazer",
-    "dries van noten floral jacket", "dries van noten coat",
+    # Dries Van Noten — post-retirement appreciation
+    "dries van noten embroidered jacket", "dries van noten velvet",
+    "dries van noten floral jacket",
 
-    # Sacai
-    "sacai leather jacket", "sacai bomber jacket", "sacai coat",
+    # Guidi — niche leather
+    "guidi boots", "guidi back zip boots",
 
-    # Guidi
-    "guidi boots", "guidi back zip boots", "guidi horse leather",
-    "guidi 988", "guidi 995", "guidi 986",
+    # Louis Vuitton — Murakami only (strict auth)
+    "louis vuitton murakami",
 
-    # Acne Studios
-    "acne studios leather jacket", "acne studios velocite jacket",
+    # Tom Ford Gucci — Tom Ford era only
+    "tom ford gucci",
 
-    # The Soloist
-    "soloist leather jacket", "takahiromiyashita soloist",
-
-    # Louis Vuitton
-    "louis vuitton murakami bag", "louis vuitton trainer",
-
-    # Alexander McQueen
+    # Alexander McQueen — leather jacket + skull ring
     "alexander mcqueen leather jacket", "alexander mcqueen skull ring",
+
+    # Yohji Yamamoto — targeted
+    "yohji yamamoto pour homme coat", "yohji yamamoto pour homme blazer",
+
+    # Undercover — collection-specific
+    "undercover bug denim", "undercover witches",
+    "undercover nike", "undercover parka",
+
+    # Number Nine — piece-specific
+    "number nine mohair", "number nine hoodie", "number nine skull",
 ]
 
 # ── Long-tail pool ─────────────────────────────────────────────────────────────
@@ -359,26 +351,19 @@ LONGTAIL_TARGETS = [
     # Helmut Lang deep cuts
     "helmut lang archive jacket", "helmut lang nylon jacket",
     "helmut lang mesh top", "helmut lang leather shirt",
-    # Kapital
-    "kapital kountry denim", "kapital century denim",
     # Raf Simons deep archive
-    "raf simons knit sweater", "raf simons antwerp jacket",
+    "raf simons antwerp jacket",
     "raf simons 2001", "raf simons 2002",
     "raf simons peter saville joy division",
+    "raf simons parka", "raf simons tape bomber",
     # Number (N)ine
     "number nine quilted",
     # Undercover deep cuts
     "undercover scab tour", "undercover witch cell division",
     # Carol Christian Poell
-    "carol christian poell boots",
+    "carol christian poell boots", "carol christian poell prosthetic",
     # Dries Van Noten
     "dries van noten printed jacket",
-    # Thierry Mugler
-    "thierry mugler coat",
-    # Vetements niche
-    "vetements inside out", "vetements haute couture",
-    # Wacko Maria niche
-    "wacko maria guilty parties", "wacko maria tim lehi",
     # ERD collector/grail pieces
     "enfants riches deprimes frozen beauties flannel",
     "enfants riches deprimes le rosey tee",
@@ -390,8 +375,6 @@ LONGTAIL_TARGETS = [
     "chrome hearts star stud earring",
     "chrome hearts fleur knee jeans",
     "chrome hearts bone prone glasses",
-    "chrome hearts rolling stones",
-    "chrome hearts boots",
 ]
 
 
@@ -520,6 +503,27 @@ class TrendEngine:
             logger.warning("⚠️  Golden catalog unavailable — falling back to static targets")
             return self._fallback_targets(n, dead)
 
+        # ── Supplement thin catalogs with static targets ─────────────────
+        # When catalog has <60 queries after filtering, merge in EXTENDED + LONGTAIL
+        # static targets to ensure the rotation pool has enough diversity.
+        MIN_POOL_SIZE = 60
+        if len(catalog_queries) < MIN_POOL_SIZE:
+            static_supplement = _clean_pool(
+                [q for q in CORE_TARGETS + EXTENDED_TARGETS + LONGTAIL_TARGETS]
+            )
+            # Add static queries not already in catalog, with default opp score
+            catalog_set = set(q.lower() for q in catalog_queries)
+            added = 0
+            for q in static_supplement:
+                if q.lower() not in catalog_set:
+                    catalog_queries.append(q)
+                    catalog_set.add(q.lower())
+                    opp_scores.setdefault(q.lower(), 1.0)
+                    added += 1
+            if added > 0:
+                logger.info(f"  📊 Supplemented thin catalog: +{added} static targets "
+                           f"({len(catalog_queries)} total)")
+
         # ── Split into anchor and rotation pools ───────────────────────────
         anchor_pool   = catalog_queries[:ANCHOR_POOL_SIZE]
         rotation_pool = catalog_queries[ANCHOR_POOL_SIZE:]
@@ -562,6 +566,28 @@ class TrendEngine:
                 used.add(q.lower())
                 used_families.add(family_id)
                 promoted_added += 1
+
+        # ── 2b. Probation queries from query researcher ────────────────────
+        probation_added = 0
+        try:
+            from core.query_researcher import get_probation_queries
+            probation_pool = [
+                q for q in get_probation_queries()
+                if q.lower() not in dead
+                and q.lower() not in used
+                and family_id_for_query(q) not in used_families
+                and not _in_cooldown(q)
+            ]
+            random.shuffle(probation_pool)
+            for q in probation_pool[:PROBATION_PER_CYCLE]:
+                family_id = family_id_for_query(q)
+                if q.lower() not in used and family_id not in used_families:
+                    selected.append(q)
+                    used.add(q.lower())
+                    used_families.add(family_id)
+                    probation_added += 1
+        except ImportError:
+            pass  # query_researcher not available
 
         # ── 3. Never-run queries get priority slots ─────────────────────────
         never_run = [
@@ -653,11 +679,13 @@ class TrendEngine:
 
         # ── Log summary ───────────────────────────────────────────────────
         never_run_count = sum(1 for q in selected if _never_run(q))
+        rotation_count = len(selected) - anchors_added - promoted_added - probation_added - min(LONGTAIL_PER_CYCLE, len(lt_candidates))
         logger.info(
             f"🎯 Cycle targets: {len(selected)} queries | "
             f"anchors={anchors_added} (due={anchor_due}, broad={broad_anchors_added}) | "
             f"promoted={promoted_added} | "
-            f"rotation={len(selected) - anchors_added - promoted_added - LONGTAIL_PER_CYCLE} | "
+            f"probation={probation_added} | "
+            f"rotation={rotation_count} | "
             f"long-tail={min(LONGTAIL_PER_CYCLE, len(lt_candidates))} | "
             f"never-run={never_run_count} | "
             f"{len(dead)} dead excluded | "
