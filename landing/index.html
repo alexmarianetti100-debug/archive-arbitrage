@@ -3,13 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Archive Arbitrage — Never Miss an Underpriced Grail</title>
-    <meta name="description" content="Real-time alerts for underpriced archive fashion. AI-powered pricing across Grailed, eBay, Poshmark & more. 280+ brands tracked.">
+
+    <!-- Google Analytics 4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-D31R4VFYX1"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-D31R4VFYX1');
+    </script>
+
+    <title>Archive Arbitrage — AI-Powered Resale Alerts for Archive Fashion</title>
+    <meta name="description" content="AI finds underpriced archive fashion across 7 platforms. Average flip profit: $370. 280+ brands tracked 24/7. One deal pays for months of the subscription.">
     <link rel="canonical" href="https://archivearbitrage.com/">
 
     <!-- Open Graph -->
-    <meta property="og:title" content="Archive Arbitrage — Never Miss an Underpriced Grail">
-    <meta property="og:description" content="Real-time alerts for underpriced archive fashion across 7 platforms. $264K+ in profit found. 280+ brands tracked.">
+    <meta property="og:title" content="Archive Arbitrage — AI-Powered Resale Alerts for Archive Fashion">
+    <meta property="og:description" content="AI finds underpriced archive fashion across 7 platforms. Average flip profit: $370. One deal pays for months of the subscription.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://archivearbitrage.com/">
     <meta property="og:site_name" content="Archive Arbitrage">
@@ -19,8 +29,8 @@
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Archive Arbitrage — Never Miss an Underpriced Grail">
-    <meta name="twitter:description" content="AI-powered alerts for underpriced archive fashion across 7 platforms. $264K+ in profit found for subscribers.">
+    <meta name="twitter:title" content="Archive Arbitrage — AI-Powered Resale Alerts for Archive Fashion">
+    <meta name="twitter:description" content="AI finds underpriced archive fashion across 7 platforms. Average flip profit: $370. One deal pays for months of the subscription.">
     <meta name="twitter:image" content="https://archivearbitrage.com/og-image.png">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -31,7 +41,7 @@
         :root {
             --bg: #faf9f7;
             --bg-card: #ffffff;
-            --bg-dark: #0a0a0a;
+            --bg-dark: #f0eeeb;
             --border: #e5e3de;
             --border-subtle: #f0eeeb;
             --text: #111111;
@@ -93,10 +103,10 @@
             transition: background 0.4s, border-color 0.4s;
         }
         nav.nav-hero {
-            background: rgba(10, 10, 10, 0.2);
+            background: rgba(250, 249, 247, 0.6);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
-            border-bottom: 1px solid rgba(255,255,255,0.06);
+            border-bottom: 1px solid rgba(229, 227, 222, 0.3);
         }
         nav .container {
             display: flex;
@@ -111,9 +121,9 @@
             color: var(--accent);
             transition: color 0.3s;
         }
-        nav.nav-hero .logo { color: #fff; }
+        nav.nav-hero .logo { color: var(--accent); }
         .logo span { color: var(--text-light); font-weight: 500; transition: color 0.3s; }
-        nav.nav-hero .logo span { color: rgba(255,255,255,0.4); }
+        nav.nav-hero .logo span { color: var(--text-light); }
         .nav-links { display: flex; align-items: center; gap: 32px; }
         .nav-link {
             color: var(--text-muted);
@@ -124,8 +134,8 @@
             transition: color 0.2s;
         }
         .nav-link:hover { color: var(--text); }
-        nav.nav-hero .nav-link { color: rgba(255,255,255,0.5); }
-        nav.nav-hero .nav-link:hover { color: #fff; }
+        nav.nav-hero .nav-link { color: var(--text-muted); }
+        nav.nav-hero .nav-link:hover { color: var(--text); }
         .nav-cta {
             padding: 10px 28px;
             background: var(--gold);
@@ -172,9 +182,9 @@
             inset: 0;
             background: linear-gradient(
                 180deg,
-                rgba(10, 10, 10, 0.5) 0%,
-                rgba(10, 10, 10, 0.65) 40%,
-                rgba(10, 10, 10, 0.82) 100%
+                rgba(250, 249, 247, 0.7) 0%,
+                rgba(250, 249, 247, 0.82) 40%,
+                rgba(250, 249, 247, 0.95) 100%
             );
             z-index: 1;
         }
@@ -194,7 +204,7 @@
             letter-spacing: 3px;
             text-transform: uppercase;
             font-weight: 700;
-            color: var(--gold-light);
+            color: var(--gold);
             margin-bottom: 36px;
         }
         .hero h1 {
@@ -202,7 +212,7 @@
             font-weight: 800;
             letter-spacing: -3px;
             line-height: 0.95;
-            color: #ffffff;
+            color: var(--text);
             margin-bottom: 28px;
         }
         .hero h1 em {
@@ -214,7 +224,7 @@
         }
         .hero p {
             font-size: 17px;
-            color: rgba(255,255,255,0.55);
+            color: var(--text-muted);
             max-width: 500px;
             margin: 0 auto 48px;
             line-height: 1.75;
@@ -250,7 +260,7 @@
             display: block;
             margin-top: 20px;
             font-size: 13px;
-            color: rgba(255,255,255,0.3);
+            color: var(--text-light);
             letter-spacing: 1px;
             font-family: 'Inter', sans-serif;
         }
@@ -316,7 +326,7 @@
             font-size: 11px;
             text-transform: uppercase;
             letter-spacing: 3px;
-            color: rgba(255,255,255,0.3);
+            color: var(--text-light);
             font-weight: 600;
         }
         .ticker-track {
@@ -331,18 +341,20 @@
         }
         .deal-card {
             flex-shrink: 0;
-            background: rgba(255,255,255,0.04);
-            border: 1px solid rgba(255,255,255,0.08);
+            background: var(--bg-card);
+            border: 1px solid var(--border);
             border-left: 2px solid var(--gold);
             border-radius: 2px;
             padding: 18px 22px;
             min-width: 270px;
             transition: background 0.3s, border-color 0.3s;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
         }
         .deal-card:hover {
-            background: rgba(255,255,255,0.07);
+            background: var(--bg-card);
             border-color: rgba(179, 135, 40, 0.4);
             border-left-color: var(--gold-light);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         }
         .deal-tier {
             font-size: 10px;
@@ -357,13 +369,13 @@
         .deal-brand {
             font-size: 14px;
             font-weight: 800;
-            color: #ffffff;
+            color: var(--text);
             margin-bottom: 2px;
             letter-spacing: 0.5px;
         }
         .deal-title {
             font-size: 12px;
-            color: rgba(255,255,255,0.4);
+            color: var(--text-muted);
             margin-bottom: 14px;
             white-space: nowrap;
             overflow: hidden;
@@ -375,12 +387,12 @@
             justify-content: space-between;
             font-size: 12px;
             padding-top: 12px;
-            border-top: 1px solid rgba(255,255,255,0.06);
+            border-top: 1px solid var(--border);
             font-family: 'Inter', sans-serif;
         }
-        .deal-numbers span:first-child { color: rgba(255,255,255,0.5); }
+        .deal-numbers span:first-child { color: var(--text-muted); }
         .deal-profit { color: #4ade80; font-weight: 700; font-family: 'Inter', sans-serif !important; }
-        .deal-margin { color: rgba(255,255,255,0.25); }
+        .deal-margin { color: var(--text-light); }
 
         /* ── STATS ── */
         .stats {
@@ -731,17 +743,36 @@
             padding: 120px 0;
             border-top: 1px solid var(--border);
         }
-        .price-card {
-            max-width: 420px;
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            max-width: 900px;
             margin: 0 auto;
+            align-items: start;
+        }
+        .price-card {
             background: var(--bg-card);
-            border: 1px solid var(--gold);
+            border: 1px solid var(--border);
             border-radius: 4px;
-            padding: 48px;
+            padding: 40px 32px;
             text-align: center;
-            box-shadow: 0 8px 48px rgba(179, 135, 40, 0.1);
             position: relative;
             overflow: hidden;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .price-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 48px rgba(0,0,0,0.08);
+        }
+        .price-card.featured {
+            border-color: var(--gold);
+            box-shadow: 0 8px 48px rgba(179, 135, 40, 0.1);
+            transform: scale(1.03);
+        }
+        .price-card.featured:hover {
+            transform: scale(1.03) translateY(-4px);
+            box-shadow: 0 12px 56px rgba(179, 135, 40, 0.18);
         }
         .price-card::before {
             content: '';
@@ -750,7 +781,23 @@
             left: 0;
             right: 0;
             height: 2px;
+            background: var(--border);
+        }
+        .price-card.featured::before {
             background: linear-gradient(90deg, var(--gold), var(--gold-light), var(--gold));
+        }
+        .price-popular {
+            display: inline-block;
+            padding: 4px 14px;
+            background: rgba(179, 135, 40, 0.1);
+            border: 1px solid rgba(179, 135, 40, 0.25);
+            border-radius: 2px;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--gold);
+            margin-bottom: 16px;
         }
         .price-card h3 {
             font-size: 18px;
@@ -891,7 +938,7 @@
 
         /* ── FOOTER ── */
         footer {
-            padding: 56px 0;
+            padding: 56px 0 100px;
             border-top: 1px solid var(--border);
             text-align: center;
             color: var(--text-light);
@@ -965,6 +1012,9 @@
             .compare-table { font-size: 13px; }
             .compare-table td, .compare-table th { padding: 12px 14px; }
             .email-form { flex-direction: column; }
+            .pricing-grid { grid-template-columns: 1fr; max-width: 400px; }
+            .price-card.featured { transform: none; }
+            .price-card.featured:hover { transform: translateY(-4px); }
             .section-header h2 { font-size: 32px; letter-spacing: -1.5px; }
             .features, .how, .wins, .testimonials, .compare, .roi, .faq, .pricing {
                 padding: 80px 0;
@@ -1038,9 +1088,11 @@
       "applicationCategory": "BusinessApplication",
       "description": "AI-powered alerts for underpriced archive fashion across 7 resale platforms",
       "offers": {
-        "@type": "Offer",
-        "price": "39",
-        "priceCurrency": "USD"
+        "@type": "AggregateOffer",
+        "lowPrice": "30",
+        "highPrice": "400",
+        "priceCurrency": "USD",
+        "offerCount": "3"
       }
     }
     </script>
@@ -1064,12 +1116,12 @@
         <div class="hero-overlay"></div>
     </div>
     <div class="hero-content">
-        <div class="hero-badge reveal">280+ ARCHIVE BRANDS TRACKED</div>
-        <h1 class="reveal reveal-delay-1">Never miss an<br>underpriced <em>grail</em></h1>
-        <p class="reveal reveal-delay-2">AI-powered alerts for underpriced archive fashion across Grailed, eBay, Poshmark and more. Know the real price before anyone else.</p>
+        <div class="hero-badge reveal">7 PLATFORMS &middot; 280+ BRANDS &middot; 24/7 SCANNING</div>
+        <h1 class="reveal reveal-delay-1">Find <em>$300+ flips</em><br>before anyone else</h1>
+        <p class="reveal reveal-delay-2">AI scans Grailed, eBay, Poshmark and 4 more platforms around the clock. When an underpriced piece hits the market, you get the alert — with comp-verified pricing and profit math — before the listing is an hour old.</p>
         <div class="reveal reveal-delay-3">
-            <a href="https://app.archivearbitrage.com/signup" class="hero-cta">Start Finding Deals</a>
-            <span class="hero-price">$39/mo &middot; Cancel anytime &middot; 7-day free trial</span>
+            <a href="https://app.archivearbitrage.com/signup" class="hero-cta">Start Your Free Trial</a>
+            <span class="hero-price">7 days free &middot; Plans from $30/mo &middot; One flip covers months</span>
         </div>
     </div>
 </section>
@@ -1082,30 +1134,7 @@
     <div class="ticker-track" id="ticker"></div>
 </section>
 
-<section class="stats">
-    <div class="container">
-        <div class="stats-grid reveal">
-            <div>
-                <div class="stat-num">1,000+</div>
-                <div class="stat-label">Deals Found</div>
-            </div>
-            <div>
-                <div class="stat-num" style="color: var(--green);">$264K+</div>
-                <div class="stat-label">Total Profit Flagged</div>
-            </div>
-            <div>
-                <div class="stat-num">7</div>
-                <div class="stat-label">Platforms Scanned</div>
-            </div>
-            <div>
-                <div class="stat-num">24/7</div>
-                <div class="stat-label">Monitoring</div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- DEAL ALERT SHOWCASE -->
+<!-- DEAL ALERT SHOWCASE (moved above stats for immediate proof) -->
 <section class="deal-showcase">
     <div class="container">
         <div class="section-header reveal">
@@ -1145,11 +1174,34 @@
     </div>
 </section>
 
+<section class="stats">
+    <div class="container">
+        <div class="stats-grid reveal">
+            <div>
+                <div class="stat-num" style="color: var(--green);">$370</div>
+                <div class="stat-label">Avg Profit Per Flip</div>
+            </div>
+            <div>
+                <div class="stat-num">20-40</div>
+                <div class="stat-label">Deals Found Per Week</div>
+            </div>
+            <div>
+                <div class="stat-num">7</div>
+                <div class="stat-label">Platforms Scanned</div>
+            </div>
+            <div>
+                <div class="stat-num">48%</div>
+                <div class="stat-label">Avg Margin After Fees</div>
+            </div>
+        </div>
+    </div>
+</section>
+
 <section class="features">
     <div class="container">
         <div class="section-header reveal">
-            <h2>Built for serious resellers</h2>
-            <p>The tools you need to find, price, and flip archive fashion profitably.</p>
+            <h2>Your unfair advantage</h2>
+            <p>Everything a reseller needs to find, verify, and flip faster than anyone scrolling manually.</p>
         </div>
         <div class="features-grid">
             <div class="feature reveal reveal-delay-1">
@@ -1264,27 +1316,28 @@
     </div>
 </section>
 
-<!-- TESTIMONIALS -->
+<!-- PIPELINE PROOF -->
 <section class="testimonials">
     <div class="container">
         <div class="section-header reveal">
-            <h2>What resellers are saying</h2>
+            <h2>Live from the pipeline</h2>
+            <p>Real numbers from our deal-finding engine. Updated weekly.</p>
         </div>
         <div class="testimonial-grid">
             <div class="testimonial reveal reveal-delay-1">
-                <div class="testimonial-profit">+$780</div>
-                <div class="testimonial-text">"Found a Helmut Lang Astro Biker listed at $400 on Poshmark — market value was $1,200+. Paid for a year of the service with one flip."</div>
-                <div class="testimonial-author"><strong>@archiveflips</strong> &middot; Full-time reseller</div>
+                <div class="testimonial-profit">$904</div>
+                <div class="testimonial-text">Best single flip found this month: Dior Homme Hedi Era FW07 Waxed Jeans listed at $265 on Grailed. Market value verified at $1,169 across 12 sold comps.</div>
+                <div class="testimonial-author"><strong>Top Deal</strong> &middot; Found April 2026</div>
             </div>
             <div class="testimonial reveal reveal-delay-2">
-                <div class="testimonial-profit">Saved $600</div>
-                <div class="testimonial-text">"The season detection is insane. It told me my Raf AW03 piece was worth 3x what I was about to list it for. Literally saved me $600."</div>
-                <div class="testimonial-author"><strong>@grailedgod</strong> &middot; Archive collector</div>
+                <div class="testimonial-profit">34 deals</div>
+                <div class="testimonial-text">Deals flagged in the last 7 days across all 7 platforms. Each one comp-verified with sold data, auth-scored, and delivered with a direct buy link.</div>
+                <div class="testimonial-author"><strong>Weekly Volume</strong> &middot; Avg $370 profit per deal</div>
             </div>
             <div class="testimonial reveal reveal-delay-3">
-                <div class="testimonial-profit">4h &rarr; 10min</div>
-                <div class="testimonial-text">"I was spending 3-4 hours a day manually scanning Grailed. Now I get the best deals pushed to my phone in seconds. More flips, less time."</div>
-                <div class="testimonial-author"><strong>@jparchive</strong> &middot; Part-time reseller</div>
+                <div class="testimonial-profit">82% auth</div>
+                <div class="testimonial-text">Average authenticity score on deals sent to subscribers. Our 7-signal system filters replicas, suspicious pricing, and low-reputation sellers before you ever see a listing.</div>
+                <div class="testimonial-author"><strong>Trust Score</strong> &middot; Items below 65% are blocked</div>
             </div>
         </div>
     </div>
@@ -1331,11 +1384,11 @@
             <div style="font-size: 14px; color: var(--text-light); margin-bottom: 40px; font-weight: 300;">based on 1,000+ deals found</div>
             <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; text-align: center;">
                 <div>
-                    <div style="font-size: 32px; font-weight: 800; color: var(--accent); font-family: 'Inter', sans-serif; letter-spacing: -1px;">$39</div>
-                    <div style="font-size: 11px; color: var(--text-light); letter-spacing: 0.5px;">Monthly cost</div>
+                    <div style="font-size: 32px; font-weight: 800; color: var(--accent); font-family: 'Inter', sans-serif; letter-spacing: -1px;">$30</div>
+                    <div style="font-size: 11px; color: var(--text-light); letter-spacing: 0.5px;">Starter plan</div>
                 </div>
                 <div>
-                    <div style="font-size: 32px; font-weight: 800; color: var(--green); font-family: 'Inter', sans-serif; letter-spacing: -1px;">9.5x</div>
+                    <div style="font-size: 32px; font-weight: 800; color: var(--green); font-family: 'Inter', sans-serif; letter-spacing: -1px;">12x</div>
                     <div style="font-size: 11px; color: var(--text-light); letter-spacing: 0.5px;">ROI per flip</div>
                 </div>
                 <div>
@@ -1381,41 +1434,71 @@
 <section class="pricing" id="pricing">
     <div class="container">
         <div class="section-header reveal">
-            <h2>Simple pricing</h2>
-            <p>One plan. Everything included. One good flip pays for months.</p>
+            <h2>Pick your edge</h2>
+            <p>Every plan pays for itself with one flip. Cancel anytime.</p>
         </div>
-        <div class="price-card reveal reveal-delay-1">
-            <h3>Archive Arbitrage Pro</h3>
-            <div class="price-amount">$39<span>/mo</span></div>
-            <ul class="price-features">
-                <li>Real-time Telegram deal alerts</li>
-                <li>280+ archive brands tracked</li>
-                <li>AI-powered pricing with sold comps</li>
-                <li>Cross-platform arbitrage detection</li>
-                <li>Custom brand &amp; size filters</li>
-                <li>Iconic season/collection detection</li>
-                <li>Replica &amp; fraud screening</li>
-                <li>Deal grading (A/B/C tiers)</li>
-            </ul>
-            <a href="https://app.archivearbitrage.com/signup" class="btn-gold">Start on Telegram &rarr;</a>
-            <p class="price-note">Cancel anytime. No contracts.</p>
+        <div class="pricing-grid">
+            <!-- STARTER -->
+            <div class="price-card reveal reveal-delay-1">
+                <h3>Starter</h3>
+                <div class="price-amount">$30<span>/mo</span></div>
+                <ul class="price-features">
+                    <li>Real-time Telegram alerts</li>
+                    <li>280+ archive brands</li>
+                    <li>AI pricing with sold comps</li>
+                    <li>Replica screening</li>
+                    <li>Deal grading (A/B/C tiers)</li>
+                </ul>
+                <a href="https://app.archivearbitrage.com/signup?plan=starter" class="btn-gold" style="background: var(--accent);">Start Free Trial &rarr;</a>
+                <p class="price-note">7 days free. Perfect for getting started.</p>
+            </div>
+            <!-- PRO (featured) -->
+            <div class="price-card featured reveal reveal-delay-2">
+                <div class="price-popular">MOST POPULAR</div>
+                <h3>Pro</h3>
+                <div class="price-amount">$80<span>/mo</span></div>
+                <ul class="price-features">
+                    <li>Everything in Starter</li>
+                    <li>Cross-platform arbitrage alerts</li>
+                    <li>Custom brand &amp; size filters</li>
+                    <li>Iconic season detection</li>
+                    <li>Japan sourcing (Yahoo JP, Mercari JP)</li>
+                    <li>Priority alert delivery</li>
+                </ul>
+                <a href="https://app.archivearbitrage.com/signup?plan=pro" class="btn-gold">Start Free Trial &rarr;</a>
+                <p class="price-note">7 days free. Best value for serious flippers.</p>
+            </div>
+            <!-- WHALE -->
+            <div class="price-card reveal reveal-delay-3">
+                <h3>Whale</h3>
+                <div class="price-amount">$400<span>/mo</span></div>
+                <ul class="price-features">
+                    <li>Everything in Pro</li>
+                    <li>First access to all deals</li>
+                    <li>Exclusive high-value grails ($500+ profit)</li>
+                    <li>Direct pipeline API access</li>
+                    <li>Custom brand watchlists</li>
+                    <li>1-on-1 onboarding call</li>
+                </ul>
+                <a href="https://app.archivearbitrage.com/signup?plan=whale" class="btn-gold" style="background: var(--accent);">Start Free Trial &rarr;</a>
+                <p class="price-note">7 days free. For full-time operations.</p>
+            </div>
         </div>
     </div>
 </section>
 
 <section class="free-channel" id="free-channel">
-    <div class="container">
+    <div class="container" style="max-width: 560px; text-align: center;">
         <h2 style="font-size: 1.8rem; margin-bottom: 12px;" class="reveal">Not ready to subscribe?</h2>
         <p style="color: var(--text-muted); margin-bottom: 32px; max-width: 500px; margin-left: auto; margin-right: auto; font-weight: 300;" class="reveal">
-            Join the free Telegram channel. We post 1-2 verified deals per day, delayed 45 minutes from subscriber alerts.
-            See real deals flowing before you commit.
+            Get delayed deal alerts straight to your inbox. We send 1-2 verified deals per day,
+            45 minutes after subscriber alerts. See real deals flowing before you commit.
         </p>
-        <div class="reveal reveal-delay-1">
-            <a href="https://t.me/archivearbitrage_free" class="btn-telegram">
-                <svg viewBox="0 0 24 24" fill="white" width="22" height="22"><path d="M12 0C5.37 0 0 5.37 0 12s5.37 12 12 12 12-5.37 12-12S18.63 0 12 0zm5.53 8.15l-1.87 8.81c-.14.63-.51.78-1.03.49l-2.85-2.1-1.37 1.32c-.15.15-.28.28-.58.28l.2-2.9 5.27-4.76c.23-.2-.05-.32-.35-.12l-6.52 4.1-2.81-.88c-.61-.19-.62-.61.13-.91l10.97-4.23c.51-.18.95.13.78.9z"/></svg>
-                Join Free Channel
-            </a>
-        </div>
+        <form id="freeAlertsForm" class="email-form reveal" onsubmit="handleFreeAlerts(event)">
+            <input type="email" id="freeAlertsEmail" placeholder="your@email.com" required>
+            <button type="submit">Get Free Alerts</button>
+        </form>
+        <p id="freeAlertsSuccess" style="display: none; color: var(--green); font-size: 14px; margin-top: 16px; font-weight: 600;">You're in. Delayed deal alerts start today.</p>
         <p style="color: var(--text-light); font-size: 0.8rem; margin-top: 16px; letter-spacing: 0.5px;" class="reveal">Deals are delayed. Subscribers get them first.</p>
     </div>
 </section>
@@ -1432,7 +1515,21 @@
             <button type="submit">Get Reports</button>
         </form>
         <p id="emailSuccess" style="display: none; color: var(--green); font-size: 14px; margin-top: 16px; font-weight: 600;">You're in. First report drops Monday.</p>
-        <p style="color: var(--text-light); font-size: 12px; margin-top: 16px; letter-spacing: 0.5px;" class="reveal">Join 200+ resellers getting weekly market intel</p>
+        <p style="color: var(--text-light); font-size: 12px; margin-top: 16px; letter-spacing: 0.5px;" class="reveal">Free forever. No spam. Unsubscribe anytime.</p>
+    </div>
+</section>
+
+<!-- REFERRAL PROMO -->
+<section style="padding: 56px 0; background: var(--bg-dark); border-top: 1px solid rgba(179,135,40,0.15); border-bottom: 1px solid rgba(179,135,40,0.15); text-align: center;" class="reveal">
+    <div class="container" style="max-width: 560px;">
+        <div style="font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--gold); margin-bottom: 16px; font-weight: 700;">Referral Program</div>
+        <h2 style="font-size: 24px; font-weight: 800; color: var(--text); margin-bottom: 12px; letter-spacing: -0.5px;">Know someone who flips?</h2>
+        <p style="color: var(--text-muted); font-size: 15px; margin-bottom: 28px; line-height: 1.75; font-weight: 300;">
+            Share your referral link. When they sign up, you both get a free week added to your subscription.
+        </p>
+        <a href="/refer" style="display: inline-block; padding: 16px 36px; background: var(--bg-card); border: 1px solid var(--border); color: var(--text); border-radius: 4px; font-size: 12px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; text-decoration: none; transition: all 0.2s;" onmouseover="this.style.background='var(--bg)';this.style.borderColor='var(--gold)'" onmouseout="this.style.background='var(--bg-card)';this.style.borderColor='var(--border)'">
+            Get Your Referral Link &rarr;
+        </a>
     </div>
 </section>
 
@@ -1446,16 +1543,14 @@
             <span style="color: var(--border); margin: 0 12px;">&middot;</span>
             <a href="/refer">Refer a Friend</a>
             <span style="color: var(--border); margin: 0 12px;">&middot;</span>
-            <a href="https://discord.gg/fjc5gPzun">Discord</a>
-            <span style="color: var(--border); margin: 0 12px;">&middot;</span>
-            <a href="https://t.me/archivearbitrage_free">Free Telegram</a>
+            <a href="https://discord.gg/FRHbP9rRSP">Discord</a>
         </p>
     </div>
 </footer>
 
 <!-- STICKY CTA BAR -->
 <div class="sticky-cta" id="stickyCta">
-    <span class="sticky-cta-text"><strong>$264K+</strong> in profit found for subscribers</span>
+    <span class="sticky-cta-text">Avg flip profit: <strong>$370</strong> &middot; Plans from $30/mo</span>
     <a href="https://app.archivearbitrage.com/signup">Start Free 7-Day Trial &rarr;</a>
 </div>
 
@@ -1559,9 +1654,10 @@ var statsObserver = new IntersectionObserver(function(entries) {
             var counters = entry.target.querySelectorAll(".stat-num");
             counters.forEach(function(c) {
                 var text = c.textContent.trim();
-                if (text.indexOf("$264K") !== -1) animateCounter(c, 264, "$", "K+", 1000);
-                else if (text.indexOf("1,000") !== -1) animateCounter(c, 1000, "", "+", 900);
+                if (text.indexOf("$370") !== -1) animateCounter(c, 370, "$", "", 1000);
+                else if (text.indexOf("20-40") !== -1) { /* skip animation for range */ }
                 else if (text === "7") animateCounter(c, 7, "", "", 400);
+                else if (text.indexOf("48%") !== -1) animateCounter(c, 48, "", "%", 800);
             });
         }
     });
@@ -1584,12 +1680,14 @@ window.addEventListener("scroll", function() {
     }
 }, { passive: true });
 
-// ── Sticky CTA (shows after scrolling past hero) ──
+// ── Sticky CTA (shows after scrolling past hero, hides at footer) ──
 var stickyCta = document.getElementById("stickyCta");
+var siteFooter = document.querySelector("footer");
 window.addEventListener("scroll", function() {
     if (!heroSection || !stickyCta) return;
     var heroBottom = heroSection.offsetTop + heroSection.offsetHeight;
-    if (window.scrollY > heroBottom) {
+    var footerVisible = siteFooter && siteFooter.getBoundingClientRect().top < window.innerHeight;
+    if (window.scrollY > heroBottom && !footerVisible) {
         stickyCta.classList.add("visible");
     } else {
         stickyCta.classList.remove("visible");
@@ -1624,16 +1722,77 @@ function showExitPopup() {
     try { sessionStorage.setItem("aa_exit_shown", "1"); } catch(e) {}
     var popup = document.getElementById("exitPopup");
     if (popup) popup.style.display = "flex";
+    trackEvent("exit_popup_shown", {});
 }
 function closeExitPopup() {
     var popup = document.getElementById("exitPopup");
     if (popup) popup.style.display = "none";
 }
+// ── GA4 Conversion Tracking ──
+function trackEvent(eventName, params) {
+    if (typeof gtag === "function") {
+        gtag("event", eventName, params || {});
+    }
+}
+
+// ── Scroll depth tracking ──
+var scrollMilestones = {};
+window.addEventListener("scroll", function() {
+    var scrollPct = Math.round((window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100);
+    [25, 50, 75, 90].forEach(function(m) {
+        if (scrollPct >= m && !scrollMilestones[m]) {
+            scrollMilestones[m] = true;
+            trackEvent("scroll_depth", { percent: m });
+        }
+    });
+}, { passive: true });
+
 document.addEventListener("mouseout", function(e) {
     if (e.clientY < 5 && e.relatedTarget === null) showExitPopup();
 });
 var exitEl = document.getElementById("exitPopup");
 if (exitEl) exitEl.addEventListener("click", function(e) { if (e.target === exitEl) closeExitPopup(); });
+
+// Track all CTA clicks
+document.addEventListener("click", function(e) {
+    var link = e.target.closest("a, button");
+    if (!link) return;
+    var href = link.getAttribute("href") || "";
+    var text = (link.textContent || "").trim().substring(0, 50);
+
+    // Signup / paid CTA clicks
+    if (href.indexOf("signup") !== -1) {
+        var location = "unknown";
+        if (link.classList.contains("hero-cta")) location = "hero";
+        else if (link.classList.contains("nav-cta")) location = "nav";
+        else if (link.classList.contains("btn-gold")) {
+            if (link.closest(".pricing")) location = "pricing";
+            else if (link.closest("#exitPopup")) location = "exit_popup";
+        }
+        else if (link.closest(".sticky-cta")) location = "sticky_bar";
+        trackEvent("signup_click", { cta_location: location, cta_text: text });
+    }
+
+    // Free Telegram channel clicks
+    if (href.indexOf("t.me/") !== -1) {
+        trackEvent("telegram_join", { channel: href.indexOf("_free") !== -1 ? "free" : "paid", cta_location: link.closest(".free-channel") ? "free_channel_section" : "footer" });
+    }
+
+    // Referral link clicks
+    if (href.indexOf("/refer") !== -1) {
+        trackEvent("referral_click", { cta_location: "footer" });
+    }
+
+    // Price guide clicks
+    if (href.indexOf("/guides") !== -1) {
+        trackEvent("guide_click", { cta_location: link.closest("nav") ? "nav" : "footer" });
+    }
+
+    // Calculator clicks
+    if (href.indexOf("resale-calculator") !== -1) {
+        trackEvent("calculator_click", { cta_location: link.closest("nav") ? "nav" : "footer" });
+    }
+});
 
 // ── Email capture ──
 var AA_API = "https://app.archivearbitrage.com";
@@ -1649,6 +1808,22 @@ function handleEmailCapture(e) {
     }).catch(function() {});
     document.getElementById("emailCaptureForm").style.display = "none";
     document.getElementById("emailSuccess").style.display = "block";
+    trackEvent("email_capture", { source: "landing_page", utm_source: utm.utm_source || "", utm_campaign: utm.utm_campaign || "" });
+}
+
+function handleFreeAlerts(e) {
+    e.preventDefault();
+    var email = document.getElementById("freeAlertsEmail").value;
+    var utm = {};
+    try { utm = JSON.parse(sessionStorage.getItem("aa_utm") || "{}"); } catch(err) {}
+    fetch(AA_API + "/api/subscribe", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({email: email, source: "free_alerts", utm_source: utm.utm_source || "", utm_campaign: utm.utm_campaign || "", ref: utm.ref || ""})
+    }).catch(function() {});
+    document.getElementById("freeAlertsForm").style.display = "none";
+    document.getElementById("freeAlertsSuccess").style.display = "block";
+    trackEvent("email_capture", { source: "free_alerts", utm_source: utm.utm_source || "", utm_campaign: utm.utm_campaign || "" });
 }
 </script>
 
