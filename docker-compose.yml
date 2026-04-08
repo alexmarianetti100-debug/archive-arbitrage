@@ -1,4 +1,19 @@
 services:
+  # ── Nginx reverse proxy — serves landing + dashboard + proxies API ──
+  nginx:
+    image: nginx:alpine
+    container_name: archive-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./landing:/usr/share/nginx/landing:ro
+      - ./frontend-user/dist:/usr/share/nginx/dashboard:ro
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
   # ── Primary: gap_hunter pipeline (one-shot or long-running) ──
   gap-hunter:
     build: .
@@ -12,7 +27,6 @@ services:
       - scraper-data:/app/data
       - scraper-logs:/app/logs
     restart: unless-stopped
-    # Override for one-shot runs: docker compose run --rm gap-hunter gap_hunter.py --once
     command: ["gap_hunter.py"]
 
   # ── Scheduled scraper (cron-driven inside container) ──
@@ -36,15 +50,16 @@ services:
     user: root
     restart: unless-stopped
 
-  # ── API server (serves deal data to frontend/subscribers) ──
+  # ── API server (internal — Nginx proxies /api/* to this) ──
   api:
     build: .
     container_name: archive-api
     env_file: .env
     volumes:
       - scraper-data:/app/data
-    ports:
-      - "${API_PORT:-8000}:8000"
+    # No public port exposure — Nginx handles all external traffic
+    expose:
+      - "8000"
     command: ["-m", "uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
     restart: unless-stopped
     healthcheck:
