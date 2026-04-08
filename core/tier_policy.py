@@ -217,6 +217,9 @@ def classify_discord_tiers(
         tier = "beginner"
         reasons.append(f"unrecognized brand '{brand}' → beginner fallback")
 
-    channels = _nested_tiers(tier)
-    reasons.append(f"nested entitlement → {channels}")
+    # Exclusive routing: each deal posts to its single tier channel only.
+    # Discord permissions handle visibility (whale sees all channels,
+    # pro sees pro+beginner, beginner sees beginner only).
+    channels = [tier]
+    reasons.append(f"exclusive routing → #{tier}-signals")
     return TierDecision(minimum_tier=tier, channel_tiers=channels, reasons=reasons)
