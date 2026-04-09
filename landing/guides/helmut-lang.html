@@ -489,12 +489,11 @@
         e.preventDefault();
         var form = e.target;
         var email = form.querySelector('input[type="email"]').value;
-        // Store signup (replace with real endpoint)
-        try {
-            var signups = JSON.parse(localStorage.getItem('aa_guide_signups') || '[]');
-            signups.push({ email: email, brand: brand, time: new Date().toISOString() });
-            localStorage.setItem('aa_guide_signups', JSON.stringify(signups));
-        } catch(ex) {}
+        fetch('https://app.archivearbitrage.com/api/subscribe', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({email: email, source: 'guide_' + brand, brand_interest: brand.replace(/-/g, ' ')})
+        }).catch(function() {});
         form.innerHTML = '<p style="color: #16a34a; font-weight: 700;">You\'re in! ' + brand.replace(/-/g, ' ') + ' alerts start this week.</p>';
         if (typeof gtag === 'function') {
             gtag('event', 'guide_email_signup', { brand: brand });
